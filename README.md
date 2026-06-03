@@ -79,8 +79,11 @@ The `dev` script generates photo content, starts the admin server (port 3001), a
 ## Environment Variables
 
 | Variable | Required | Default | Description |
-|---|---|---|---|
+|---|---|---|---|---|
 | `ADMIN_PASSWORD` | Yes | `admin` | Password for the admin dashboard at `/admin` |
 | `PUBLIC_SITE_URL` | No | `http://localhost:4321` | Public URL for canonical links and sitemap |
+| `LISTEN_PORT` | No | `8080` | Nginx listen port inside the container |
+| `PUID` | No | `1001` | User ID for volume permissions |
+| `PGID` | No | `1001` | Group ID for volume permissions |
 | `PUBLIC_HERO_INTERVAL` | No | `6000` | Hero slideshow transition interval in milliseconds |
 | `PUBLIC_HERO_OVERLAY_OPACITY` | No | `0.2` | Hero overlay opacity (0–1) |
