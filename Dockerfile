@@ -25,7 +25,7 @@ COPY --from=builder /app/tsconfig.json ./
 COPY --from=builder /app/tailwind.config.mjs ./
 COPY --from=builder /app/admin ./admin
 
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/nginx.conf.template /app/docker/nginx.conf.template
 COPY docker/entrypoint.sh /entrypoint.sh
 
 RUN mkdir -p /photos /config && \

@@ -4,6 +4,9 @@ set -e
 PUID=${PUID:-1001}
 PGID=${PGID:-1001}
 
+LISTEN_PORT=${LISTEN_PORT:-8080}
+export LISTEN_PORT
+
 usermod -u "$PUID" appuser
 groupmod -g "$PGID" appuser
 
@@ -32,6 +35,9 @@ su-exec appuser npx astro build
 
 echo "Starting admin server..."
 su-exec appuser node /app/admin/server.mjs &
+
+echo "Templating nginx config..."
+envsubst '${LISTEN_PORT}' < /app/docker/nginx.conf.template > /etc/nginx/nginx.conf
 
 echo "Starting nginx..."
 exec su-exec appuser nginx -g "daemon off;"

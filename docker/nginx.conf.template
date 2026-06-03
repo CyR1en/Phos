@@ -22,7 +22,7 @@ http {
   gzip_types text/plain text/css text/javascript application/javascript application/json image/svg+xml font/woff2;
 
   server {
-    listen 8080;
+    listen ${LISTEN_PORT};
     server_name _;
 
     root /app/dist;
