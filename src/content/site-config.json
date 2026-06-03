@@ -1,0 +1,83 @@
+{
+   "site":{
+      "page_description":"Site title and meta description",
+      "title":"Phos",
+      "description":"Photography portfolio.",
+      "social":[
+         {
+            "platform":"instagram",
+            "url":""
+         }
+      ]
+   },
+   "home":{
+      "page_description":"Hero, services, portfolio, testimonials, and CTA sections",
+      "hero":{
+         "heading":"Light through the lens",
+         "subheading":"Portfolio",
+         "cta1":"View Portfolio",
+         "cta2":"Get in Touch"
+      },
+      "services":{
+         "heading":"Services",
+         "subheading":""
+      },
+      "portfolio":{
+         "heading":"Featured Work"
+      },
+      "testimonials":{
+         "heading":"Testimonials"
+      },
+      "cta":{
+         "heading":"Let's work together",
+         "body":"",
+         "button":"Get in Touch"
+      }
+   },
+   "about":{
+      "page_description":"Photographer name, email, bio, gear, and CTA",
+      "photographer":{
+         "name":"Your Name",
+         "email":""
+      },
+      "intro":"a photographer based in your area with a passion for storytelling through imagery.",
+      "bio":"I've been behind the lens for over a decade, capturing moments that tell stories. My approach is to blend into the background and let authentic moments unfold naturally.\n\nEvery shoot is a collaboration, and my goal is always to make you feel comfortable and confident in front of the camera.",
+      "photo":"",
+      "photoFull":"",
+      "gear":{
+         "heading":"My Gear",
+         "equipment":[
+            "Sony A7 IV",
+            "Sigma 24-70mm f/2.8",
+            "Sony 85mm f/1.4",
+            "DJI Mavic 3 Pro"
+         ]
+      },
+      "ctaHeading":"Let's work together",
+      "ctaLink":"Get in touch"
+   },
+   "contact":{
+      "page_description":"Form labels and Formbricks integration",
+      "format":{
+         "heading":"Get in Touch",
+         "subheading":"",
+         "submitBtn":"Send Message"
+      },
+      "formbricks":{
+         "host":"",
+         "workspaceId":"",
+         "surveyId":"",
+         "questionIds":{
+            "name":"",
+            "email":"",
+            "message":""
+         }
+      }
+   },
+   "notFound":{
+      "page_description":"404 error page text",
+      "heading":"Page not found",
+      "message":"",
+      "button":"Back to home"
+   }
+}

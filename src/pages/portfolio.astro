@@ -1,0 +1,114 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro'
+import PhotoCard from '@components/PhotoCard.astro'
+import Lightbox from '@components/Lightbox.astro'
+import manifest from '@content/categories.json'
+
+const { categories } = manifest
+
+interface FlatPhoto {
+  filename: string
+  title: string
+  full: string
+  thumb: string
+  width: number | null
+  height: number | null
+  blur: string
+  category: string
+  categoryName: string
+}
+
+const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
+  cat.photos.map((p) => ({
+    ...p,
+    category: cat.slug,
+    categoryName: cat.name,
+  }))
+)
+
+---
+
+<BaseLayout title="Portfolio" page="portfolio">
+  <section data-animate class="animate-reveal mx-auto max-w-7xl px-4 pt-16 sm:pt-20 sm:px-6 lg:px-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Portfolio</h1>
+    <p class="mt-2 text-subtle">All photos across every category</p>
+  </section>
+
+  <section data-animate class="animate-reveal mx-auto max-w-7xl px-4 pb-16 pt-6 sm:pb-24 sm:pt-8 sm:px-6 lg:px-8">
+    <!-- Filter pills -->
+    <div id="filters" class="mb-6 sm:mb-10 flex flex-wrap gap-1.5 sm:gap-2">
+      <button class="filter-btn rounded-full border px-3 py-1.5 sm:px-4 sm:py-1.5 text-sm font-medium transition-colors bg-ink dark:bg-ink-dark text-surface dark:text-surface-dark border-ink dark:border-ink-dark min-h-[36px] touch-manipulation" data-filter="all" aria-pressed="true">
+        All
+      </button>
+      {categories.map((cat) => (
+        <button class="filter-btn rounded-full border px-3 py-1.5 sm:px-4 sm:py-1.5 text-sm font-medium transition-colors border-border dark:border-border-dark text-subtle dark:text-subtle-dark min-h-[36px] touch-manipulation" data-filter={cat.slug} aria-pressed="false">
+          {cat.name}
+        </button>
+      ))}
+    </div>
+
+    <!-- Photo grid -->
+    <div id="gallery-grid" class="masonry">
+      {allPhotos.map((photo, i) => (
+        <div class="gallery-item" data-category={photo.category}>
+          <PhotoCard
+            filename={photo.filename}
+            title={photo.title}
+            thumb={photo.thumb}
+            full={photo.full}
+            width={photo.width}
+            height={photo.height}
+            blur={photo.blur}
+            index={i}
+            category={photo.category}
+          />
+        </div>
+      ))}
+    </div>
+
+    <div id="empty-state" class="hidden py-24 text-center text-subtle">
+      No photos match the selected category.
+    </div>
+  </section>
+
+  <Lightbox photos={allPhotos} />
+
+  <script>
+    const filterBtns = document.querySelectorAll('.filter-btn')
+    const items = document.querySelectorAll('.gallery-item')
+    const emptyState = document.getElementById('empty-state')
+    const fullData = JSON.parse(document.getElementById('lightbox-data')?.textContent || '[]')
+
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter
+
+        filterBtns.forEach((b) => {
+          b.classList.remove('bg-ink', 'text-surface', 'border-ink', 'dark:bg-ink-dark', 'dark:text-surface-dark', 'dark:border-ink-dark')
+          b.classList.add('border-border', 'dark:border-border-dark', 'text-subtle', 'dark:text-subtle-dark')
+          b.setAttribute('aria-pressed', 'false')
+        })
+        btn.classList.add('bg-ink', 'text-surface', 'border-ink', 'dark:bg-ink-dark', 'dark:text-surface-dark', 'dark:border-ink-dark')
+        btn.classList.remove('border-border', 'dark:border-border-dark', 'text-subtle', 'dark:text-subtle-dark')
+        btn.setAttribute('aria-pressed', 'true')
+
+        let visible = 0
+        let newIdx = 0
+        items.forEach((item) => {
+          const matches = filter === 'all' || item.dataset.category === filter
+          item.style.display = matches ? '' : 'none'
+          if (matches) {
+            visible++
+            const btn = item.querySelector('[data-index]')
+            if (btn) btn.dataset.index = newIdx++
+          }
+        })
+
+        emptyState.classList.toggle('hidden', visible > 0)
+
+        const filtered = filter === 'all' ? fullData : fullData.filter(p => p.category === filter)
+        window.__updateLightboxData(filtered)
+      })
+    })
+  </script>
+</BaseLayout>

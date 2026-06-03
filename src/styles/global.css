@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+@layer components {
+  .masonry {
+    column-count: 1;
+    column-gap: 1.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .masonry { column-count: 2; }
+  }
+
+  @media (min-width: 1024px) {
+    .masonry { column-count: 3; }
+  }
+
+  @media (min-width: 1536px) {
+    .masonry { column-count: 4; }
+  }
+
+  .masonry-item {
+    break-inside: avoid;
+    margin-bottom: 1.25rem;
+  }
+}
+
+@layer utilities {
+  .fade-in {
+    animation: fadeIn 0.5s ease-out both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .animate-reveal[data-visible] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .lightbox-enter {
+    animation: lightboxIn 0.25s ease-out both;
+  }
+
+  .lightbox-exit {
+    animation: lightboxOut 0.2s ease-in both;
+  }
+
+  @keyframes lightboxIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes lightboxOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  .hero-parallax {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .mobile-nav-open {
+    overflow: hidden;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes slideOut {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+  }
+
+  .nav-enter {
+    animation: slideIn 0.3s ease-out both;
+  }
+
+  .nav-exit {
+    animation: slideOut 0.25s ease-in both;
+  }
+
+  .nav-backdrop-enter {
+    animation: fadeIn 0.3s ease-out both;
+  }
+
+  .nav-backdrop-exit {
+    animation: fadeIn 0.25s ease-in both reverse;
+  }
+}

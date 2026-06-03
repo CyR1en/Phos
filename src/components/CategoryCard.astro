@@ -1,0 +1,40 @@
+---
+export interface Props {
+  name: string
+  slug: string
+  description: string
+  cover: string
+  coverWidth: number | null
+  coverHeight: number | null
+  photoCount: number
+  blur: string
+}
+
+const { name, slug, description, cover, coverWidth, coverHeight, photoCount, blur } = Astro.props
+---
+
+<a
+  href={`/photos/${slug}/`}
+  class="group relative block aspect-[4/3] overflow-hidden rounded-xl bg-muted dark:bg-muted-dark fade-in bg-cover bg-center"
+  style={blur ? `background-image: url('${blur}')` : undefined}
+  aria-label={`${name} — ${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
+>
+  <img
+    src={cover}
+    alt=""
+    class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+    loading="lazy"
+    fetchpriority="low"
+    decoding="async"
+    width={coverWidth ?? undefined}
+    height={coverHeight ?? undefined}
+  />
+
+  <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+  <div class="absolute bottom-0 left-0 right-0 p-5">
+    <h2 class="text-xl font-semibold text-white">{name}</h2>
+    {description && <p class="mt-1 text-sm text-white/70">{description}</p>}
+    <p class="mt-1 text-xs text-white/50">{photoCount} photo{photoCount !== 1 ? 's' : ''}</p>
+  </div>
+</a>

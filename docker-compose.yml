@@ -1,0 +1,43 @@
+services:
+  phos:
+    build: .
+    container_name: phos
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - ${PHOTOS_PATH:-./AppData/photos}:/photos:rw
+      - ${CONFIG_DIR:-./AppData/config}:/config:rw
+    env_file:
+      - .env
+    environment:
+      - PHOTOS_SOURCE=/photos
+      - CONFIG_PATH=/config/site-config.json
+      - PUBLIC_SITE_URL=${PUBLIC_SITE_URL:-http://localhost:8080}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - ADMIN_PORT=3001
+      - PUBLIC_FORMSPREE_ID=${PUBLIC_FORMSPREE_ID:-}
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+networks:
+  internal:
+    driver: bridge
+    internal: false

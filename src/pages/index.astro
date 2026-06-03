@@ -1,0 +1,68 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro'
+import Hero from '@components/Hero.astro'
+import Services from '@components/Services.astro'
+import Testimonials from '@components/Testimonials.astro'
+import CTA from '@components/CTA.astro'
+import CategoryCard from '@components/CategoryCard.astro'
+import manifest from '@content/categories.json'
+import config from '@content/site-config.json'
+
+const { categories, featured } = manifest
+const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://yourdomain.com'
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: config.about.photographer.name,
+  description: config.site.description,
+  url: siteUrl,
+  sameAs: [],
+  image: featured.length > 0 ? `${siteUrl}${featured[0].full}` : undefined,
+}
+---
+
+<BaseLayout title={config.site.title} description={config.site.description}>
+  <Hero featured={manifest.featured} />
+
+  <div data-animate class="animate-reveal">
+    <Services />
+  </div>
+
+  <section id="portfolio" data-animate class="animate-reveal mx-auto max-w-7xl px-4 py-6 sm:pb-12 sm:pt-12 sm:px-6 lg:px-8">
+    <div class="text-center">
+      <p class="text-sm font-medium uppercase tracking-widest text-subtle">Portfolio</p>
+      <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{config.home.portfolio.heading}</h2>
+    </div>
+
+    {categories.length > 0 ? (
+      <div class="mt-8 sm:mt-12 grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {categories.map((cat) => (
+          <CategoryCard
+            name={cat.name}
+            slug={cat.slug}
+            description={cat.description}
+            cover={cat.cover}
+            coverWidth={cat.coverWidth}
+            coverHeight={cat.coverHeight}
+            photoCount={cat.photoCount}
+            blur={cat.coverBlur}
+          />
+        ))}
+      </div>
+    ) : (
+      <div class="mt-12 py-24 text-center">
+        <p class="text-subtle dark:text-subtle-dark">No galleries yet. Add photo folders to <code class="rounded bg-muted dark:bg-muted-dark px-2 py-0.5 text-sm">photos/</code> and rebuild.</p>
+      </div>
+    )}
+  </section>
+
+  <div data-animate class="animate-reveal">
+    <Testimonials />
+  </div>
+
+  <div data-animate class="animate-reveal">
+    <CTA />
+  </div>
+
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+</BaseLayout>

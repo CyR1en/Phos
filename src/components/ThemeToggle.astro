@@ -1,0 +1,61 @@
+---
+---
+
+<button id="theme-toggle" class="flex h-8 w-8 items-center justify-center rounded-lg text-subtle dark:text-subtle-dark hover:bg-muted dark:hover:bg-muted-dark transition-colors" aria-label="Toggle theme">
+  <svg id="sun-icon" class="hidden size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="5" />
+    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+  </svg>
+  <svg id="moon-icon" class="hidden size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+  </svg>
+  <svg id="auto-icon" class="hidden size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="9" />
+    <text x="12" y="16" text-anchor="middle" font-size="12" font-weight="bold" fill="currentColor" stroke="none">A</text>
+  </svg>
+</button>
+
+<script>
+  const btn = document.getElementById('theme-toggle')
+  const sun = document.getElementById('sun-icon')
+  const moon = document.getElementById('moon-icon')
+  const auto = document.getElementById('auto-icon')
+  const states = ['light', 'dark', 'auto']
+  const mq = window.matchMedia('(prefers-color-scheme: dark)')
+
+  function updateIcons(mode) {
+    sun.classList.toggle('hidden', mode !== 'light')
+    moon.classList.toggle('hidden', mode !== 'dark')
+    auto.classList.toggle('hidden', mode !== 'auto')
+  }
+
+  function applyTheme(mode) {
+    if (mode === 'auto') {
+      document.documentElement.classList.toggle('dark', mq.matches)
+    } else {
+      document.documentElement.classList.toggle('dark', mode === 'dark')
+    }
+    updateIcons(mode)
+  }
+
+  function getMode() {
+    return localStorage.getItem('theme') || 'auto'
+  }
+
+  function setMode(mode) {
+    localStorage.setItem('theme', mode)
+    applyTheme(mode)
+  }
+
+  mq.addEventListener('change', function () {
+    if (getMode() === 'auto') applyTheme('auto')
+  })
+
+  applyTheme(getMode())
+
+  btn.addEventListener('click', function () {
+    var current = getMode()
+    var next = states[(states.indexOf(current) + 1) % states.length]
+    setMode(next)
+  })
+</script>

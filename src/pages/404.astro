@@ -1,0 +1,17 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro'
+import config from '@content/site-config.json'
+---
+
+<BaseLayout title={config.notFound.heading}>
+  <section class="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 text-center">
+    <h1 class="text-6xl font-bold tracking-tight sm:text-8xl">{config.notFound.heading}</h1>
+    <p class="mt-4 text-lg text-subtle dark:text-subtle-dark">{config.notFound.message}</p>
+    <a
+      href="/"
+      class="mt-8 rounded-lg bg-ink dark:bg-ink-dark px-6 py-3 text-sm font-medium text-surface dark:text-surface-dark hover:opacity-90 transition-opacity"
+    >
+      {config.notFound.button}
+    </a>
+  </section>
+</BaseLayout>

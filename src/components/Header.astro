@@ -1,0 +1,95 @@
+---
+import ThemeToggle from './ThemeToggle.astro'
+import config from '@content/site-config.json'
+---
+
+<header class="sticky top-0 z-40 border-b border-border dark:border-border-dark bg-surface/80 dark:bg-surface-dark/80 backdrop-blur-lg">
+  <nav class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+    <a href="/" class="text-lg font-semibold tracking-tight">{config.site.title}</a>
+
+    <!-- Desktop nav -->
+    <div class="hidden items-center gap-6 sm:flex">
+      <a href="/" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">Home</a>
+      <a href="/portfolio" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">Portfolio</a>
+      <a href="/about" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">About</a>
+      <a href="/contact" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">Contact</a>
+      <ThemeToggle />
+    </div>
+
+    <!-- Mobile hamburger -->
+    <div class="flex items-center gap-3 sm:hidden">
+      <ThemeToggle />
+      <button id="menu-btn" class="flex h-9 w-9 items-center justify-center rounded-lg text-subtle dark:text-subtle-dark hover:bg-muted dark:hover:bg-muted-dark transition-colors" aria-label="Open menu">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h18M3 6h18M3 18h18" />
+        </svg>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<!-- Mobile nav overlay -->
+<div id="mobile-nav" class="fixed inset-0 z-50 hidden sm:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
+  <div id="nav-backdrop" class="absolute inset-0 bg-black/60 dark:bg-surface-dark/80 backdrop-blur-sm"></div>
+  <div id="nav-drawer" class="absolute right-0 top-0 h-full w-full max-w-sm bg-surface dark:bg-surface-dark shadow-2xl">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-border dark:border-border-dark">
+      <span class="text-lg font-semibold tracking-tight">{config.site.title}</span>
+      <button id="menu-close" class="flex h-9 w-9 items-center justify-center rounded-lg text-subtle dark:text-subtle-dark hover:bg-muted dark:hover:bg-muted-dark transition-colors" aria-label="Close menu">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <nav class="flex flex-col gap-2 px-6 pt-8">
+      <a href="/" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">Home</a>
+      <a href="/portfolio" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">Portfolio</a>
+      <a href="/about" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">About</a>
+      <a href="/contact" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">Contact</a>
+    </nav>
+  </div>
+</div>
+
+<script>
+  const menuBtn = document.getElementById('menu-btn')
+  const menuClose = document.getElementById('menu-close')
+  const mobileNav = document.getElementById('mobile-nav')
+  const navDrawer = document.getElementById('nav-drawer')
+  const navBackdrop = document.getElementById('nav-backdrop')
+
+  function openMenu() {
+    mobileNav.classList.remove('hidden')
+    mobileNav.classList.add('flex')
+    document.body.classList.add('mobile-nav-open')
+    navBackdrop.classList.add('nav-backdrop-enter')
+    navDrawer.classList.add('nav-enter')
+    menuClose?.focus()
+  }
+
+  function closeMenu() {
+    navBackdrop.classList.remove('nav-backdrop-enter')
+    navBackdrop.classList.add('nav-backdrop-exit')
+    navDrawer.classList.remove('nav-enter')
+    navDrawer.classList.add('nav-exit')
+    menuBtn?.focus()
+    setTimeout(() => {
+      mobileNav.classList.add('hidden')
+      mobileNav.classList.remove('flex')
+      navBackdrop.classList.remove('nav-backdrop-exit')
+      navDrawer.classList.remove('nav-exit')
+      document.body.classList.remove('mobile-nav-open')
+    }, 250)
+  }
+
+  menuBtn?.addEventListener('click', openMenu)
+  menuClose?.addEventListener('click', closeMenu)
+  navBackdrop?.addEventListener('click', closeMenu)
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !mobileNav.classList.contains('hidden')) {
+      closeMenu()
+    }
+  })
+
+  // Close nav on route change (View Transitions)
+  document.addEventListener('astro:before-swap', closeMenu)
+</script>

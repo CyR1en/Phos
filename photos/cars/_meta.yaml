@@ -1,0 +1,15 @@
+name: Automotive
+description: From classic restorations to modern supercars
+order: 2
+cover: sample-01.jpg
+photos:
+  sample-01.jpg:
+    title: Toyota Supra
+    description: Yellow Supra in the showroom
+    featured: 2
+  sample-02.jpg:
+    title: Pagani Utopia
+    description: Exquisite hypercar detail shot
+  sample-03.jpg:
+    title: City Cruise
+    description: Silver sports car in Hamburg

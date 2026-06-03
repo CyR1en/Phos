@@ -1,0 +1,40 @@
+---
+import PhotoCard from '@components/PhotoCard.astro'
+
+export interface Photo {
+  filename: string
+  title: string
+  full: string
+  thumb: string
+  thumbMobile: string
+  width: number | null
+  height: number | null
+  blur: string
+}
+
+export interface Props {
+  photos: Photo[]
+  category: string
+}
+
+const { photos, category } = Astro.props
+---
+
+<div class="masonry">
+  {
+    photos.map((photo, i) => (
+      <PhotoCard
+        filename={photo.filename}
+        title={photo.title}
+        thumb={photo.thumb}
+        thumbMobile={photo.thumbMobile}
+        full={photo.full}
+        width={photo.width}
+        height={photo.height}
+        blur={photo.blur}
+        index={i}
+        category={category}
+      />
+    ))
+  }
+</div>

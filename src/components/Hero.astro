@@ -1,0 +1,187 @@
+---
+export interface Props {
+  featured: Array<{
+    full: string
+    thumb: string
+    title: string
+    description: string
+    blur: string
+    width: number | null
+    height: number | null
+    category: string
+    categoryName: string
+    featured: number
+  }>
+}
+
+import config from '@content/site-config.json'
+
+const { featured } = Astro.props
+const hasSlideshow = featured.length > 1
+const overlayOpacity = parseFloat(import.meta.env.PUBLIC_HERO_OVERLAY_OPACITY) || 0.2
+const first = featured[0]
+---
+
+{/* Preload thumbnail (59KB) instead of full JPEG (5.7MB) for instant first paint */}
+{first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
+<section class="relative flex min-h-[80vh] items-center justify-center overflow-hidden">
+  {featured.length > 0 ? (
+    <div class="absolute inset-0 hero-parallax" id="hero-bg">
+      {featured.map((photo, i) => (
+        <div
+          class="absolute inset-0 bg-cover bg-center"
+          id={i === 0 ? 'hero-active-slide' : undefined}
+          style={`background-image: url('${photo.blur}'); opacity: ${i === 0 ? 1 : 0};${hasSlideshow ? ' transition: opacity 1.5s ease;' : ''}`}
+          data-hero-slide={i}
+          role="img"
+          aria-label={photo.title}
+        >
+          <img
+            src={photo.thumb}
+            data-full-src={photo.full}
+            alt={photo.title}
+            class="absolute inset-0 h-full w-full object-cover"
+            fetchpriority={i === 0 ? 'high' : 'low'}
+          />
+        </div>
+      ))}
+      <div class="absolute inset-0" style={`background-color: rgba(0,0,0,${overlayOpacity})`} />
+    </div>
+  ) : (
+    <div class="absolute inset-0" style={`background-color: rgba(0,0,0,${overlayOpacity})`} />
+  )}
+
+  <div class="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl">
+      <p class="text-sm font-medium uppercase tracking-widest text-white/60">{config.about.photographer.name}</p>
+      <h1 class="mt-4 text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
+        {config.home.hero.heading}
+      </h1>
+      <p class="mt-4 max-w-2xl text-lg text-white/70 sm:text-xl">
+        {config.home.hero.subheading}
+      </p>
+      <div class="mt-8 flex flex-col items-start gap-4 sm:flex-row">
+        <a
+          href="/portfolio"
+          class="rounded-lg bg-white px-8 py-3 text-sm font-semibold text-black hover:bg-white/90 transition-colors"
+        >
+          {config.home.hero.cta1}
+        </a>
+        <a
+          href="/contact"
+          class="rounded-lg border border-white/30 px-8 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+        >
+          {config.home.hero.cta2}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {featured.length > 0 && (
+    <div class="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 flex gap-2">
+      {featured.map((_, i) => (
+        <button
+          class="h-1.5 rounded-full transition-all duration-500"
+          class:list={[
+            i === 0 ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60',
+          ]}
+          data-hero-dot={i}
+          aria-label={`Slide ${i + 1}`}
+        />
+      ))}
+    </div>
+  )}
+</section>
+
+<script>
+  const slides = document.querySelectorAll('[data-hero-slide]')
+  const dots = document.querySelectorAll('[data-hero-dot]')
+  const heroBg = document.getElementById('hero-bg')
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  // Upgrade thumbnail to full-res after page load
+  if (slides.length > 0) {
+    window.addEventListener('load', () => {
+      slides.forEach((slide) => {
+        const img = slide.querySelector('img[data-full-src]')
+        if (!img) return
+        const fullSrc = img.dataset.fullSrc
+        const fullImg = new Image()
+        fullImg.onload = () => { img.src = fullSrc; img.removeAttribute('data-full-src') }
+        fullImg.src = fullSrc
+      })
+    }, { once: true, passive: true })
+  }
+
+  if (slides.length > 1 && !prefersReducedMotion) {
+    let current = 0
+    let interval = null
+
+    function showSlide(index) {
+      slides.forEach((s, i) => {
+        s.style.opacity = i === index ? '1' : '0'
+      })
+      dots.forEach((d, i) => {
+        if (i === index) {
+          d.classList.add('w-6', 'bg-white')
+          d.classList.remove('w-1.5', 'bg-white/40', 'hover:bg-white/60')
+        } else {
+          d.classList.remove('w-6', 'bg-white')
+          d.classList.add('w-1.5', 'bg-white/40', 'hover:bg-white/60')
+        }
+      })
+      current = index
+    }
+
+    function next() {
+      showSlide((current + 1) % slides.length)
+    }
+
+    function start() {
+      if (interval) clearInterval(interval)
+      const heroInterval = parseInt(import.meta.env.PUBLIC_HERO_INTERVAL, 10) || 6000
+      interval = setInterval(next, heroInterval)
+    }
+
+    function stop() {
+      if (interval) {
+        clearInterval(interval)
+        interval = null
+      }
+    }
+
+    dots.forEach((dot) => {
+      dot.addEventListener('click', () => {
+        const idx = parseInt(dot.dataset.heroDot, 10)
+        if (!isNaN(idx) && idx !== current) showSlide(idx)
+        start()
+      })
+    })
+
+    if (heroBg) {
+      heroBg.addEventListener('mouseenter', stop)
+      heroBg.addEventListener('mouseleave', start)
+    }
+
+    start()
+
+
+  }
+
+  if (heroBg) {
+    let ticking = false
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!prefersReduced) {
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            const y = window.scrollY * 0.4
+            heroBg.style.transform = `translate3d(0, ${y}px, 0)`
+            ticking = false
+          })
+          ticking = true
+        }
+      }, { passive: true })
+    }
+  }
+</script>

@@ -1,0 +1,45 @@
+---
+export interface Props {
+  filename: string
+  title: string
+  thumb: string
+  thumbMobile: string
+  full: string
+  width: number | null
+  height: number | null
+  blur: string
+  index: number
+  category?: string
+}
+
+const { filename, title, thumb, thumbMobile, full, width, height, blur, index, category } = Astro.props
+
+const aspectRatio = width && height ? `${width}/${height}` : '4/3'
+const isFirstScreen = index < 6
+---
+
+<button
+  class="masonry-item group relative w-full cursor-pointer overflow-hidden rounded-lg bg-muted dark:bg-muted-dark fade-in bg-cover bg-center"
+  style={`animation-delay: ${index * 50}ms; aspect-ratio: ${aspectRatio}; background-image: url('${blur}')`}
+  data-index={index}
+  data-photo={filename}
+  data-title={title}
+  aria-label={`View ${title}`}
+>
+  <img
+    src={thumb}
+    srcset={`${thumbMobile} 400w, ${thumb} 800w`}
+    sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 50vw, 33vw"
+    alt={title}
+    class="h-full w-full object-cover transition-opacity duration-500 group-hover:scale-105"
+    style="opacity:0"
+    onload="this.style.opacity='1'"
+    loading={isFirstScreen ? 'eager' : 'lazy'}
+    fetchpriority={isFirstScreen ? 'low' : 'auto'}
+    decoding="async"
+    width={width ?? undefined}
+    height={height ?? undefined}
+  />
+
+  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+</button>

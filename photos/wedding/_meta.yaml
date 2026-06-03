@@ -1,0 +1,25 @@
+name: "Wedding Photography"
+description: "Capturing love stories on the most special days"
+order: 1
+cover: sample-01.jpg
+photos:
+  sample-01.jpg:
+    title: "Outdoor Ceremony"
+    description: "Elegant outdoor wedding under the trees"
+    featured: 3
+  sample-02.jpg:
+    title: "Golden Hour Embrace"
+    description: "Bride and groom at sunset"
+    featured: 2
+  sample-03.jpg:
+    title: "Under the Veil"
+    description: "Intimate moment beneath the wedding veil"
+  sample-04.jpg:
+    title: "Dock at Sunset"
+    description: "Bride and groom on a dock at golden hour"
+  sample-05.jpg:
+    title: "Golden Wheat Field"
+    description: "Romantic embrace in a wheat field"
+  sample-06.jpg:
+    title: "Sparkler Send-off"
+    description: "Magical sparkler-filled wedding exit"

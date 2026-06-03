@@ -1,0 +1,28 @@
+---
+import testimonials from '@content/testimonials.json'
+import config from '@content/site-config.json'
+---
+
+<section data-animate class="animate-reveal bg-muted dark:bg-muted-dark">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:py-12 sm:px-6 lg:px-8">
+    <div class="text-center">
+      <p class="text-sm font-medium uppercase tracking-widest text-subtle">Testimonials</p>
+      <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{config.home.testimonials.heading}</h2>
+    </div>
+
+    <div class="mt-8 sm:mt-12 grid gap-4 sm:gap-8 md:grid-cols-3">
+      {testimonials.map((t) => (
+        <blockquote class="rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark p-5 sm:p-6">
+          <svg class="mb-4 h-6 w-6 text-subtle/30 dark:text-subtle-dark/30" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/>
+          </svg>
+          <p class="text-sm leading-relaxed text-subtle">&ldquo;{t.quote}&rdquo;</p>
+          <footer class="mt-4">
+            <strong class="block text-sm font-semibold">{t.author}</strong>
+            {t.role && <span class="text-xs text-subtle">{t.role}</span>}
+          </footer>
+        </blockquote>
+      ))}
+    </div>
+  </div>
+</section>

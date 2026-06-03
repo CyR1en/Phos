@@ -1,0 +1,21 @@
+name: Portraits
+description: Environmental and studio portrait photography
+order: 3
+cover: sample-01.jpg
+photos:
+  sample-01.jpg:
+    title: Natural Light Portrait
+    description: Studio portrait with natural lighting
+    featured: 2
+  sample-02.jpg:
+    title: Editorial Style
+    description: Modern fashion portrait
+  sample-03.jpg:
+    title: Floral Elegance
+    description: Artistic portrait in floral dress
+  sample-04.jpg:
+    title: Golden Hour Glow
+    description: Warm environmental portrait
+  sample-05.jpg:
+    title: Hands & Grace
+    description: Elegant studio pose
