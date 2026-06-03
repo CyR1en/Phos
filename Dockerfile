@@ -11,7 +11,7 @@ COPY . .
 
 FROM node:22-alpine AS runner
 
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx shadow su-exec
 
 WORKDIR /app
 
@@ -28,12 +28,10 @@ COPY --from=builder /app/admin ./admin
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 
-RUN mkdir -p /photos && \
+RUN mkdir -p /photos /config && \
     adduser -D -u 1001 appuser && \
-    chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx && \
+    chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config && \
     chmod +x /entrypoint.sh
-
-USER appuser
 
 EXPOSE 8080
 
