@@ -46,11 +46,41 @@ The `dev` script generates photo content, starts the admin server (port 3001), a
 
 ## Docker
 
-```bash
-docker compose up -d --build
+Deploy with the pre-built image from GitHub Container Registry:
+
+```yaml
+services:
+  phos:
+    image: ghcr.io/cyr1en/phos:latest
+    container_name: phos
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./AppData/photos:/photos:rw
+      - ./AppData/config:/config:rw
+    environment:
+      ADMIN_PASSWORD: "your-password-here"
+      PUBLIC_SITE_URL: "https://yourdomain.com"
 ```
 
-The container binds two volumes by default — one for photos, one for config. Both paths are configurable via `PHOTOS_PATH` and `CONFIG_DIR` in your `.env` or `docker-compose.override.yml`. The admin dashboard is available at `/admin` on the same port.
+### Volumes
+
+| Volume | Container path | Purpose |
+|---|---|---|
+| `./AppData/photos` | `/photos` | Drop category folders here (e.g. `wildlife/`, `wedding/`) |
+| `./AppData/config` | `/config` | Persists site configuration across restarts |
+
+Photos are automatically processed on container startup — the generation pipeline runs every boot.
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `ADMIN_PASSWORD` | Yes | — | Password for the admin dashboard at `/admin` |
+| `PUBLIC_SITE_URL` | No | `http://localhost:4321` | Public URL of your site (SEO meta tags, sitemap) |
+| `PHOTOS_PATH` | No | `/photos` | Photos directory inside the container |
+| `CONFIG_DIR` | No | `/config` | Site config persistence directory |
 
 ## Adding Photos
 
