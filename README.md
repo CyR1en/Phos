@@ -1,4 +1,4 @@
-# Phos — Photography Portfolio
+# Phos
 
 A static-site photography portfolio built with [Astro](https://astro.build) 6, [Tailwind CSS](https://tailwindcss.com) 3, and [Sharp](https://sharp.pixelplumbing.com/).
 
@@ -9,44 +9,40 @@ Drop photos into category folders — galleries, thumbnails, blur placeholders, 
 **Photo Pipeline**
 - Drop category folders into your photos directory — each becomes a gallery at `/photos/{category}`
 - EXIF stripped from all served images
-- WebP thumbnails generated automatically with Sharp
-- Blur hash placeholders (LQIP) for fast initial paint
-- Masonry gallery layout with lightbox viewer
+- WebP thumbnails and blur hash placeholders (LQIP) generated automatically
+- Masonry gallery layout with full-screen lightbox viewer
 
 **Admin Dashboard** (`/admin`)
 - Edit homepage, about, contact, and 404 page copy
 - Manage photographer name, email, and social links
 - Edit category metadata — display names, descriptions, per-photo titles, featured priority
 - Formbricks integration for contact form submissions
-- Password-protected (set via `ADMIN_PASSWORD`), auto-starts with `npm run dev`
+- Password-protected (set via `ADMIN_PASSWORD`)
 
-**Design & UX**
-- Dark mode with system-aware theme toggle
-- Responsive mobile navigation with slide-in drawer
-- Fade-in scroll animations on all sections
-- Hero section with configurable interval and overlay opacity
-- Astro 6 prefetching (all links, viewport strategy)
-- Full-screen lightbox gallery
+## Adding Photos
 
-**Deployment**
-- Multi-stage Docker build (Node 22 → Nginx Alpine)
-- Non-root container, read-only rootfs, dropped capabilities
-- Security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy
-- Persisted site config on Docker volumes — survives container restarts
-- Static HTML output — no server-side rendering
+Create a folder in your photos directory with a descriptive name (e.g. `wildlife/`, `wedding/`), drop images inside (jpg, png, webp, or avif), and rebuild or restart the container. The folder automatically becomes a gallery at `/photos/wildlife`.
 
-## Quick Start
+For display names, descriptions, and per-photo captions, add a `_meta.yaml` file inside the folder:
 
-```bash
-npm install
-ADMIN_PASSWORD=admin npm run dev
+```yaml
+name: "Wildlife"
+description: "Animals in their natural habitat"
+cover: "lion.jpg"
+order: 1
+photos:
+  lion.jpg:
+    title: "Mountain Lion"
+    description: "Captured in the Rockies"
+    featured: 2
 ```
 
-The `dev` script generates photo content, starts the admin server (port 3001), and launches the Astro dev server (port 4321). The admin dashboard is proxied to `/admin` on the same port — visit **`http://localhost:4321/admin`**.
+Photos with `featured > 0` appear in the hero slideshow on the homepage.
 
-## Docker
 
-Deploy with the pre-built image from GitHub Container Registry:
+## Deployment
+
+### Production (Docker)
 
 ```yaml
 services:
@@ -64,40 +60,27 @@ services:
       PUBLIC_SITE_URL: "https://yourdomain.com"
 ```
 
-### Volumes
-
 | Volume | Container path | Purpose |
 |---|---|---|
 | `./AppData/photos` | `/photos` | Drop category folders here (e.g. `wildlife/`, `wedding/`) |
 | `./AppData/config` | `/config` | Persists site configuration across restarts |
 
-Photos are automatically processed on container startup — the generation pipeline runs every boot.
+On container startup, photos are automatically processed — the generation pipeline runs every boot, then the site is built and served on port 8080.
 
-### Environment Variables
+### Local Development
+
+```bash
+npm install
+ADMIN_PASSWORD=admin npm run dev
+```
+
+The `dev` script generates photo content, starts the admin server (port 3001), and launches the Astro dev server (port 4321) with hot module replacement. The admin dashboard is proxied to `/admin` on the same port — visit **`http://localhost:4321/admin`**.
+
+## Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ADMIN_PASSWORD` | Yes | — | Password for the admin dashboard at `/admin` |
-| `PUBLIC_SITE_URL` | No | `http://localhost:4321` | Public URL of your site (SEO meta tags, sitemap) |
-| `PHOTOS_PATH` | No | `/photos` | Photos directory inside the container |
-| `CONFIG_DIR` | No | `/config` | Site config persistence directory |
-
-## Adding Photos
-
-Create a folder in your photos directory with a descriptive name (e.g. `wildlife/`, `wedding/`), drop images inside (jpg, png, webp, or avif), and rebuild. The folder automatically becomes a gallery at `/photos/wildlife`.
-
-For display names, descriptions, and per-photo captions, add a `_meta.yaml` file inside the folder:
-
-```yaml
-name: "Wildlife"
-description: "Animals in their natural habitat"
-cover: "lion.jpg"
-order: 1
-photos:
-  lion.jpg:
-    title: "Mountain Lion"
-    description: "Captured in the Rockies"
-    featured: 2
-```
-
-Photos with `featured > 0` appear in the hero slideshow on the homepage.
+| `ADMIN_PASSWORD` | Yes | `admin` | Password for the admin dashboard at `/admin` |
+| `PUBLIC_SITE_URL` | No | `http://localhost:4321` | Public URL for canonical links and sitemap |
+| `PUBLIC_HERO_INTERVAL` | No | `6000` | Hero slideshow transition interval in milliseconds |
+| `PUBLIC_HERO_OVERLAY_OPACITY` | No | `0.2` | Hero overlay opacity (0–1) |
