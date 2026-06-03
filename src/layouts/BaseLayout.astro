@@ -14,9 +14,17 @@ export interface Props {
 const { title, description, image, page } = Astro.props
 
 const pageTitle = title ? `${title} — ${config.site.title}` : config.site.title
-const canonical = import.meta.env.PUBLIC_SITE_URL
-  ? `${import.meta.env.PUBLIC_SITE_URL}/${page || ''}`
-  : undefined
+
+const siteUrl = import.meta.env.PUBLIC_SITE_URL
+const canonical = siteUrl ? `${siteUrl}/${page || ''}` : undefined
+
+const configOg = config.site?.og
+const resolveUrl = (path) => siteUrl ? `${siteUrl}${path}` : undefined
+const ogImage = image
+  ? (image.startsWith('http') ? image : resolveUrl(image))
+  : (configOg?.image ? resolveUrl(configOg.image) : undefined)
+
+const ogDescription = description || config.site.description
 ---
 
 <!DOCTYPE html>
@@ -26,15 +34,23 @@ const canonical = import.meta.env.PUBLIC_SITE_URL
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{pageTitle}</title>
-    <meta name="description" content={description || config.site.description} />
+    <meta name="description" content={ogDescription} />
     {canonical && <link rel="canonical" href={canonical} />}
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={description || config.site.description} />
-    {image && <meta property="og:image" content={image} />}
+    <meta property="og:description" content={ogDescription} />
+    <meta property="og:site_name" content={config.site.title} />
+    <meta property="og:locale" content="en_US" />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    {ogImage && configOg?.imageWidth && <meta property="og:image:width" content={configOg.imageWidth} />}
+    {ogImage && configOg?.imageHeight && <meta property="og:image:height" content={configOg.imageHeight} />}
 
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={ogDescription} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -19,9 +19,11 @@ const jsonLd = {
   sameAs: [],
   image: featured.length > 0 ? `${siteUrl}${featured[0].full}` : undefined,
 }
+
+const ogImage = config.site?.og?.image || (featured.length > 0 ? featured[0].full : undefined)
 ---
 
-<BaseLayout title={config.site.title} description={config.site.description}>
+<BaseLayout title={config.site.title} description={config.site.description} image={ogImage}>
   <Hero featured={manifest.featured} />
 
   <div data-animate class="animate-reveal">
