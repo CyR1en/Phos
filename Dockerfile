@@ -11,7 +11,7 @@ COPY . .
 
 FROM node:22-alpine AS runner
 
-RUN apk add --no-cache nginx shadow su-exec
+RUN apk add --no-cache nginx shadow su-exec gettext
 
 WORKDIR /app
 
