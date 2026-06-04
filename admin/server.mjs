@@ -182,7 +182,10 @@ createServer(async (req, res) => {
       writeFileSync(metaPath, stringifyYaml(body), 'utf-8')
       return json(res, { ok: true })
     } catch (err) {
-      return json(res, { error: err.message }, 500)
+      const hint = err.code === 'EACCES'
+        ? `Permission denied writing to ${metaPath}. Ensure the PUID/PGID environment variables match the host user that owns the photos directory, or run "chown -R <host-user> <photos-dir>" on the host.`
+        : err.message
+      return json(res, { error: hint }, 500)
     }
   }
 

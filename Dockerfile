@@ -28,7 +28,8 @@ COPY --from=builder /app/admin ./admin
 COPY docker/nginx.conf.template /app/docker/nginx.conf.template
 COPY docker/entrypoint.sh /entrypoint.sh
 
-RUN mkdir -p /photos /config && \
+RUN deluser node && delgroup node; \
+    mkdir -p /photos /config && \
     adduser -D -u 1001 appuser && \
     chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config && \
     chmod +x /entrypoint.sh

@@ -7,6 +7,14 @@ PGID=${PGID:-1001}
 LISTEN_PORT=${LISTEN_PORT:-8080}
 export LISTEN_PORT
 
+# Free up requested PUID/PGID if occupied by another user/group
+if getent passwd "$PUID" > /dev/null 2>&1; then
+  deluser "$(getent passwd "$PUID" | cut -d: -f1)"
+fi
+if getent group "$PGID" > /dev/null 2>&1; then
+  delgroup "$(getent group "$PGID" | cut -d: -f1)"
+fi
+
 usermod -u "$PUID" appuser
 groupmod -g "$PGID" appuser
 
