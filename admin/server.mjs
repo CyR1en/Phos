@@ -7,10 +7,15 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
-const CONFIG_PATH = process.env.CONFIG_PATH || join(ROOT, 'src', 'content', 'site-config.json')
-const CONFIG_DEST = join(ROOT, 'src', 'content', 'site-config.json')
+const DEFAULT_CONFIG_PATH = join(ROOT, 'src', 'content', 'site-config.json')
+const CONFIG_PATH = process.env.CONFIG_PATH || DEFAULT_CONFIG_PATH
+const CONFIG_DEST = DEFAULT_CONFIG_PATH
 const DASHBOARD_PATH = join(__dirname, 'dashboard.html')
 const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || join(ROOT, 'photos')
+
+function readJSON(p) {
+  try { return JSON.parse(readFileSync(p, 'utf-8')) } catch { return null }
+}
 const PORT = parseInt(process.env.ADMIN_PORT || '3001', 10)
 const PASSWORD = process.env.ADMIN_PASSWORD || 'admin'
 
@@ -133,12 +138,12 @@ createServer(async (req, res) => {
     return json(res, { error: 'Invalid password' }, 401)
   }
 
-  // API: Get config
+  // API: Get config (deep-merge defaults so missing sections like `og` appear)
   if (path === '/api/config' && req.method === 'GET') {
     if (!requireAuth(req, res)) return
-    const config = existsSync(CONFIG_PATH)
-      ? JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'))
-      : {}
+    const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
+    const existing = readJSON(CONFIG_PATH)
+    const config = existing ? deepMerge(defaults, existing) : defaults
     return json(res, config)
   }
 

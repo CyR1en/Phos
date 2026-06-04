@@ -21,11 +21,12 @@ if [ ! -f "$CONFIG_PATH" ] && [ -f "$CONFIG_DEST" ]; then
   echo "Copied default config to $CONFIG_PATH"
 fi
 
-# Sync persisted config to where Astro expects it
-if [ -f "$CONFIG_PATH" ]; then
-  su-exec appuser cp "$CONFIG_PATH" "$CONFIG_DEST"
-  echo "Synced config from $CONFIG_PATH"
-fi
+# Merge default config into persisted config (preserves user edits, adds new fields)
+node /app/scripts/merge-config.mjs "$CONFIG_DEST" "$CONFIG_PATH"
+
+# Sync merged config to where Astro expects it
+su-exec appuser cp "$CONFIG_PATH" "$CONFIG_DEST"
+echo "Synced config from $CONFIG_PATH"
 
 echo "Generating photo content..."
 su-exec appuser node /app/scripts/generate-content.mjs
