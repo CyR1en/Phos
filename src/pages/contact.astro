@@ -2,7 +2,7 @@
 import BaseLayout from '@layouts/BaseLayout.astro'
 import config from '@content/site-config.json'
 
-const { heading, subheading, submitBtn } = config.contact
+const { heading, subheading, submitBtn } = config.contact.format
 const { host, port, user, pass, fromEmail, toEmail } = config.contact.smtp
 const hasSmtp = Boolean(host && port && user && pass && fromEmail && toEmail)
 const email = config.about.photographer?.email || ''
