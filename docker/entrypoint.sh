@@ -13,6 +13,7 @@ groupmod -g "$PGID" appuser
 chown -R appuser:appuser /photos /config
 
 CONFIG_PATH="${CONFIG_PATH:-/config/site-config.json}"
+export CONFIG_PATH
 CONFIG_DEST="/app/src/content/site-config.json"
 
 # Persist default config if none exists
