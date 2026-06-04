@@ -40,7 +40,7 @@ fi
 node /app/scripts/merge-config.mjs "$CONFIG_DEST" "$CONFIG_PATH"
 
 # Sync merged config to where Astro expects it
-su-exec appuser cp "$CONFIG_PATH" "$CONFIG_DEST"
+su-exec appuser cp -f "$CONFIG_PATH" "$CONFIG_DEST"
 echo "Synced config from $CONFIG_PATH"
 
 echo "Generating photo content..."
