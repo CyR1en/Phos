@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process'
 import { join, dirname, extname, parse as parsePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
+import nodemailer from 'nodemailer'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -212,6 +213,50 @@ createServer(async (req, res) => {
       return json(res, { ok: true })
     } catch (err) {
       return json(res, { error: err.stderr?.toString() || 'Build failed' }, 500)
+    }
+  }
+
+  // API: Contact form (send email via SMTP)
+  if (path === '/api/contact' && req.method === 'POST') {
+    const body = await parseBody(req)
+    if (!body || !body.name || !body.email || !body.message) {
+      return json(res, { error: 'Name, email, and message are required' }, 400)
+    }
+
+    try {
+      const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
+      const existing = readJSON(CONFIG_PATH) || {}
+      const fullConfig = deepMerge(defaults, existing)
+
+      // Demo mode — silently accept without sending
+      if (fullConfig.site?.toggle_demo) {
+        return json(res, { ok: true })
+      }
+
+      const smtp = fullConfig.contact?.smtp
+      if (!smtp || !smtp.host || !smtp.port || !smtp.user || !smtp.pass || !smtp.fromEmail || !smtp.toEmail) {
+        return json(res, { error: 'SMTP not configured' }, 400)
+      }
+
+      const transporter = nodemailer.createTransport({
+        host: smtp.host,
+        port: parseInt(smtp.port, 10),
+        secure: parseInt(smtp.port, 10) === 465,
+        auth: { user: smtp.user, pass: smtp.pass },
+      })
+
+      await transporter.sendMail({
+        from: `"${body.name}" <${smtp.fromEmail}>`,
+        replyTo: body.email,
+        to: smtp.toEmail,
+        subject: `Contact form submission from ${body.name}`,
+        text: `Name: ${body.name}\nEmail: ${body.email}\n\nMessage:\n${body.message}`,
+        html: `<p><strong>Name:</strong> ${body.name}</p><p><strong>Email:</strong> ${body.email}</p><p><strong>Message:</strong></p><p>${body.message}</p>`,
+      })
+
+      return json(res, { ok: true })
+    } catch (err) {
+      return json(res, { error: err.message || 'Failed to send email' }, 500)
     }
   }
 

@@ -3,6 +3,7 @@
       "page_description": "Site title and meta description",
       "title": "Phos",
       "description": "Photography portfolio.",
+      "toggle_demo": false,
       "og": {
          "image": "",
          "imageWidth": 1200,
@@ -79,21 +80,19 @@
       "ctaLink": "Get in touch"
    },
    "contact": {
-      "page_description": "Form labels and Formbricks integration",
+      "page_description": "Form labels, SMTP settings, and demo mode",
       "format": {
          "heading": "Get in Touch",
          "subheading": "",
          "submitBtn": "Send Message"
       },
-      "formbricks": {
+      "smtp": {
          "host": "",
-         "workspaceId": "",
-         "surveyId": "",
-         "questionIds": {
-            "name": "",
-            "email": "",
-            "message": ""
-         }
+         "port": 587,
+         "user": "",
+         "pass": "",
+         "fromEmail": "",
+         "toEmail": ""
       }
    },
    "notFound": {
