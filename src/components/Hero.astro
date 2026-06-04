@@ -97,8 +97,6 @@ const first = featured[0]
   const slides = document.querySelectorAll('[data-hero-slide]')
   const dots = document.querySelectorAll('[data-hero-dot]')
   const heroBg = document.getElementById('hero-bg')
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
   // Upgrade thumbnail to full-res after page load
   if (slides.length > 0) {
     window.addEventListener('load', () => {
@@ -113,7 +111,7 @@ const first = featured[0]
     }, { once: true, passive: true })
   }
 
-  if (slides.length > 1 && !prefersReducedMotion) {
+  if (slides.length > 1) {
     let current = 0
     let interval = null
 
