@@ -34,6 +34,7 @@ http {
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
+    absolute_redirect off;
     port_in_redirect off;
 
     location = /admin {
