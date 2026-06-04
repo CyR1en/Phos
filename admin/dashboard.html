@@ -576,6 +576,32 @@
       return ta
     }
 
+    function renderToggle(path, value, label) {
+      const row = document.createElement('div')
+      row.className = 'toggle-row'
+
+      const switchLabel = document.createElement('label')
+      switchLabel.textContent = label
+      switchLabel.style.cursor = 'pointer'
+
+      const switchDiv = document.createElement('label')
+      switchDiv.className = 'toggle-switch'
+
+      const input = document.createElement('input')
+      input.type = 'checkbox'
+      input.checked = !!value
+      input.onchange = () => setValue(path, input.checked)
+
+      const slider = document.createElement('span')
+      slider.className = 'toggle-slider'
+
+      switchDiv.appendChild(input)
+      switchDiv.appendChild(slider)
+      row.appendChild(switchLabel)
+      row.appendChild(switchDiv)
+      return row
+    }
+
     function renderArray(path, arr) {
       const wrapper = document.createElement('div')
       wrapper.style.marginTop = '0.75rem'
