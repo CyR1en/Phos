@@ -354,6 +354,67 @@
       transform: translateX(18px)
     }
 
+    .photo-preview {
+      display: flex;
+      gap: 1rem;
+      align-items: stretch;
+      margin-top: 0.75rem
+    }
+
+    .photo-preview .photo-side {
+      flex: 0 0 50%;
+      display: flex;
+      align-items: center
+    }
+
+    .photo-preview .photo-side img {
+      width: 100%;
+      max-height: 260px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #f0f0f0
+    }
+
+    .photo-preview .photo-fields {
+      flex: 1;
+      min-width: 0
+    }
+
+    .cover-badge {
+      display: inline-block;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      cursor: default
+    }
+
+    .make-cover-btn {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      background: #e5e5e5;
+      border: 1px solid #d4d4d4;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #525252
+    }
+
+    .make-cover-btn:hover {
+      background: #d4d4d4
+    }
+
+    .cat-btn-thumb {
+      width: 28px;
+      height: 20px;
+      object-fit: cover;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-right: 6px;
+      background: #f0f0f0
+    }
+
     @media(max-width:640px) {
       .sidebar {
         width: 160px
@@ -676,7 +737,20 @@
         const btn = document.createElement('button')
         btn.className = 'cat-btn'
         if (cat.slug === selectedCategory) btn.classList.add('active')
-        btn.textContent = cat.slug
+
+        const coverFile = cat.meta?.cover || cat.photos[0]
+        if (coverFile) {
+          const thumbUrl = `/photos/thumbs/${cat.slug}/${coverFile.replace(/\.[^.]+$/, '.webp')}`
+          const thumbImg = document.createElement('img')
+          thumbImg.className = 'cat-btn-thumb'
+          thumbImg.src = thumbUrl
+          thumbImg.alt = ''
+          thumbImg.loading = 'lazy'
+          thumbImg.onerror = function () { this.style.display = 'none' }
+          btn.appendChild(thumbImg)
+        }
+
+        btn.appendChild(document.createTextNode(cat.slug))
         btn.onclick = () => {
           selectedCategory = cat.slug
           updateCategoryMeta()
@@ -733,6 +807,26 @@
       form.appendChild(orderLabel)
       form.appendChild(orderInput)
 
+      const serviceRow = document.createElement('div')
+      serviceRow.className = 'toggle-row'
+      serviceRow.style.marginTop = '1rem'
+      const serviceLabel = document.createElement('label')
+      serviceLabel.textContent = 'offer_service'
+      serviceLabel.style.cursor = 'pointer'
+      const serviceSwitch = document.createElement('label')
+      serviceSwitch.className = 'toggle-switch'
+      const serviceCheck = document.createElement('input')
+      serviceCheck.type = 'checkbox'
+      serviceCheck.checked = currentCategoryMeta.offer_service !== false
+      serviceCheck.onchange = () => { currentCategoryMeta.offer_service = serviceCheck.checked }
+      const serviceSlider = document.createElement('span')
+      serviceSlider.className = 'toggle-slider'
+      serviceSwitch.appendChild(serviceCheck)
+      serviceSwitch.appendChild(serviceSlider)
+      serviceRow.appendChild(serviceLabel)
+      serviceRow.appendChild(serviceSwitch)
+      form.appendChild(serviceRow)
+
       container.appendChild(form)
 
       const photosSection = document.createElement('div')
@@ -744,18 +838,61 @@
       cat.photos.forEach(f => {
         if (!currentCategoryMeta.photos[f]) currentCategoryMeta.photos[f] = {}
         const photoMeta = currentCategoryMeta.photos[f]
+        const isCover = (currentCategoryMeta.cover || cat.photos[0]) === f
 
         const item = document.createElement('div')
         item.className = 'array-item'
-        item.innerHTML = `<strong style="font-size:0.85rem">${f}</strong>`
+
+        const header = document.createElement('div')
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem'
+
+        const nameSpan = document.createElement('strong')
+        nameSpan.style.cssText = 'font-size:0.85rem'
+        nameSpan.textContent = f
+        header.appendChild(nameSpan)
+
+        if (isCover) {
+          const badge = document.createElement('span')
+          badge.className = 'cover-badge'
+          badge.textContent = '★ Cover'
+          header.appendChild(badge)
+        } else {
+          const coverBtn = document.createElement('button')
+          coverBtn.className = 'make-cover-btn'
+          coverBtn.textContent = 'Make cover'
+          coverBtn.onclick = () => {
+            currentCategoryMeta.cover = f
+            renderCurrentPage()
+          }
+          header.appendChild(coverBtn)
+        }
+
+        item.appendChild(header)
+
+        const preview = document.createElement('div')
+        preview.className = 'photo-preview'
+
+        const photoSide = document.createElement('div')
+        photoSide.className = 'photo-side'
+        const thumbUrl = `/photos/thumbs/${cat.slug}/${f.replace(/\.[^.]+$/, '.webp')}`
+        const img = document.createElement('img')
+        img.src = thumbUrl
+        img.alt = f
+        img.loading = 'lazy'
+        img.onerror = function () { this.style.display = 'none' }
+        photoSide.appendChild(img)
+        preview.appendChild(photoSide)
+
+        const fields = document.createElement('div')
+        fields.className = 'photo-fields'
 
         const titleLbl = document.createElement('label')
         titleLbl.textContent = 'title'
         const titleInput = document.createElement('input')
         titleInput.value = photoMeta.title || ''
         titleInput.oninput = () => { photoMeta.title = titleInput.value || undefined }
-        item.appendChild(titleLbl)
-        item.appendChild(titleInput)
+        fields.appendChild(titleLbl)
+        fields.appendChild(titleInput)
 
         const descLbl = document.createElement('label')
         descLbl.textContent = 'description'
@@ -763,30 +900,32 @@
         descInput2.rows = 2
         descInput2.value = photoMeta.description || ''
         descInput2.oninput = () => { photoMeta.description = descInput2.value || undefined }
-        item.appendChild(descLbl)
-        item.appendChild(descInput2)
+        fields.appendChild(descLbl)
+        fields.appendChild(descInput2)
 
         const featLbl = document.createElement('label')
-        featLbl.textContent = 'featured'
+        featLbl.textContent = 'hero_priority'
         const sliderRow = document.createElement('div')
         sliderRow.className = 'slider-row'
         const slider = document.createElement('input')
         slider.type = 'range'
         slider.min = 0
         slider.max = 5
-        slider.value = photoMeta.featured ?? 0
+        slider.value = photoMeta.hero_priority ?? 0
         const valSpan = document.createElement('span')
         valSpan.textContent = slider.value
         slider.oninput = () => {
           const v = parseInt(slider.value, 10)
           valSpan.textContent = v
-          photoMeta.featured = v
+          photoMeta.hero_priority = v
         }
         sliderRow.appendChild(slider)
         sliderRow.appendChild(valSpan)
-        item.appendChild(featLbl)
-        item.appendChild(sliderRow)
+        fields.appendChild(featLbl)
+        fields.appendChild(sliderRow)
 
+        preview.appendChild(fields)
+        item.appendChild(preview)
         photosSection.appendChild(item)
       })
 
@@ -795,7 +934,7 @@
       const meta = currentCategoryMeta
       function cleanPhotos() {
         for (const [f, m] of Object.entries(meta.photos)) {
-          const cleaned = Object.fromEntries(Object.entries(m).filter(([_, v]) => v !== undefined && v !== ''))
+          const cleaned = Object.fromEntries(Object.entries(m).filter(([_, v]) => v !== undefined))
           if (Object.keys(cleaned).length === 0) delete meta.photos[f]
           else meta.photos[f] = cleaned
         }
@@ -866,6 +1005,7 @@
         }
         await api('POST', '/api/rebuild')
         flash('Rebuild complete!', 'success')
+        await loadConfig()
       } catch (e) {
         flash(e.message)
       }

@@ -8,7 +8,7 @@ import CategoryCard from '@components/CategoryCard.astro'
 import manifest from '@content/categories.json'
 import config from '@content/site-config.json'
 
-const { categories, featured } = manifest
+const { categories, heroPriority } = manifest
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://yourdomain.com'
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -17,14 +17,14 @@ const jsonLd = {
   description: config.site.description,
   url: siteUrl,
   sameAs: [],
-  image: featured.length > 0 ? `${siteUrl}${featured[0].full}` : undefined,
+  image: heroPriority.length > 0 ? `${siteUrl}${heroPriority[0].full}` : undefined,
 }
 
-const ogImage = config.site?.og?.image || (featured.length > 0 ? featured[0].full : undefined)
+const ogImage = config.site?.og?.image || (heroPriority.length > 0 ? heroPriority[0].full : undefined)
 ---
 
 <BaseLayout title={config.site.title} description={config.site.description} image={ogImage}>
-  <Hero featured={manifest.featured} />
+  <Hero heroPriority={heroPriority} />
 
   <div data-animate class="animate-reveal">
     <Services />

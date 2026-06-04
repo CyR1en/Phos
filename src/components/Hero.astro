@@ -1,6 +1,6 @@
 ---
 export interface Props {
-  featured: Array<{
+  heroPriority: Array<{
     full: string
     thumb: string
     title: string
@@ -10,24 +10,24 @@ export interface Props {
     height: number | null
     category: string
     categoryName: string
-    featured: number
+    hero_priority: number
   }>
 }
 
 import config from '@content/site-config.json'
 
-const { featured } = Astro.props
-const hasSlideshow = featured.length > 1
+const { heroPriority } = Astro.props
+const hasSlideshow = heroPriority.length > 1
 const overlayOpacity = parseFloat(import.meta.env.PUBLIC_HERO_OVERLAY_OPACITY) || 0.2
-const first = featured[0]
+const first = heroPriority[0]
 ---
 
 {/* Preload thumbnail (59KB) instead of full JPEG (5.7MB) for instant first paint */}
 {first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
 <section class="relative flex min-h-[80vh] items-center justify-center overflow-hidden">
-  {featured.length > 0 ? (
+  {heroPriority.length > 0 ? (
     <div class="absolute inset-0 hero-parallax" id="hero-bg">
-      {featured.map((photo, i) => (
+      {heroPriority.map((photo, i) => (
         <div
           class="absolute inset-0 bg-cover bg-center"
           id={i === 0 ? 'hero-active-slide' : undefined}
@@ -77,9 +77,9 @@ const first = featured[0]
     </div>
   </div>
 
-  {featured.length > 0 && (
+  {heroPriority.length > 0 && (
     <div class="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 flex gap-2">
-      {featured.map((_, i) => (
+      {heroPriority.map((_, i) => (
         <button
           class="h-1.5 rounded-full transition-all duration-500"
           class:list={[

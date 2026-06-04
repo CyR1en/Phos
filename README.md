@@ -28,7 +28,7 @@ Drop photos into category folders — galleries, thumbnails, blur placeholders, 
 **Admin Dashboard** (`/admin`)
 - Edit homepage, about, contact, and 404 page copy
 - Manage photographer name, email, and social links
-- Edit category metadata — display names, descriptions, per-photo titles, featured priority
+- Edit category metadata — display names, descriptions, per-photo titles, hero_priority
 - SMTP-powered contact form — sends submissions directly to your email
 - Password-protected (set via `ADMIN_PASSWORD`)
 
@@ -47,10 +47,10 @@ photos:
   lion.jpg:
     title: "Mountain Lion"
     description: "Captured in the Rockies"
-    featured: 2
+    hero_priority: 2
 ```
 
-Photos with `featured > 0` appear in the hero slideshow on the homepage.
+Photos with `hero_priority > 0` appear in the hero slideshow (higher = earlier).
 
 
 ## Deployment

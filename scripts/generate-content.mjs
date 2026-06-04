@@ -146,7 +146,7 @@ async function scanPhotos(sourceDir) {
         width: imgMeta.width,
         height: imgMeta.height,
         blur,
-        featured: metaInfo.featured || 0,
+        hero_priority: metaInfo.hero_priority || 0,
       })
     }
 
@@ -162,6 +162,7 @@ async function scanPhotos(sourceDir) {
       coverHeight: coverPhoto?.height || null,
       coverBlur: coverPhoto?.blur || '',
       order: meta.order ?? 99,
+      offer_service: meta.offer_service !== false,
       photoCount: photos.length,
       photos,
     })
@@ -169,10 +170,10 @@ async function scanPhotos(sourceDir) {
 
   categories.sort((a, b) => a.order - b.order)
 
-  const featured = categories
+  const heroPriority = categories
     .flatMap((cat) =>
       cat.photos
-        .filter((p) => p.featured > 0)
+        .filter((p) => p.hero_priority > 0)
         .map((p) => ({
           full: p.full,
           thumb: p.thumb,
@@ -184,24 +185,24 @@ async function scanPhotos(sourceDir) {
           height: p.height,
           category: cat.slug,
           categoryName: cat.name,
-          featured: p.featured,
+          hero_priority: p.hero_priority,
         }))
     )
-    .sort((a, b) => b.featured - a.featured)
+    .sort((a, b) => b.hero_priority - a.hero_priority)
 
-  return { categories, featured }
+  return { categories, heroPriority }
 }
 
 async function main() {
   console.log('Scanning photos directory...')
-  const { categories, featured } = await scanPhotos(PHOTOS_SOURCE)
+  const { categories, heroPriority } = await scanPhotos(PHOTOS_SOURCE)
 
   if (categories.length === 0) {
     console.log('No photos found. Place photos in the photos/ directory.')
   } else {
     const total = categories.reduce((s, c) => s + c.photos.length, 0)
-    const featuredCount = featured.length
-    console.log(`Found ${categories.length} categories with ${total} photos (${featuredCount} featured)`)
+    const heroCount = heroPriority.length
+    console.log(`Found ${categories.length} categories with ${total} photos (${heroCount} in hero)`)
   }
 
   if (existsSync(OUTPUT_DIR)) {
@@ -216,7 +217,7 @@ async function main() {
     }
   }
 
-  const manifest = { categories, featured }
+  const manifest = { categories, heroPriority }
 
   await ensureDir(parse(MANIFEST_PATH).dir)
   await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2))

@@ -1,12 +1,13 @@
 name: Portraits
 description: Environmental and studio portrait photography
 order: 3
+offer_service: true
 cover: sample-01.jpg
 photos:
   sample-01.jpg:
     title: Natural Light Portrait
     description: Studio portrait with natural lighting
-    featured: 2
+    hero_priority: 0
   sample-02.jpg:
     title: Editorial Style
     description: Modern fashion portrait

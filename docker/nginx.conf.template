@@ -69,8 +69,7 @@ http {
 
     location / {
       try_files $uri $uri.html $uri/index.html =404;
-      expires -1;
-      add_header Cache-Control "no-cache";
+      add_header Cache-Control "no-store" always;
     }
 
     location = /404.html {
