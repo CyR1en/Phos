@@ -415,6 +415,24 @@
       background: #f0f0f0
     }
 
+    .save-indicator {
+      display: inline-block;
+      font-size: 0.8rem;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+      color: #a3a3a3;
+      transition: color 0.2s
+    }
+    .save-indicator.saving {
+      color: #2563eb
+    }
+    .save-indicator.saved {
+      color: #16a34a
+    }
+    .save-indicator.error {
+      color: #dc2626
+    }
+
     @media(max-width:640px) {
       .sidebar {
         width: 160px
@@ -455,6 +473,7 @@
       <div id="config-forms"></div>
       <div class="btn-row" id="btn-row">
         <button class="primary" id="save-btn">Save</button>
+        <span id="save-indicator" class="save-indicator"></span>
         <button class="secondary" id="rebuild-btn">Rebuild &amp; Deploy</button>
       </div>
     </div>
@@ -479,6 +498,59 @@
       { id: 'notFound', title: '404', path: 'notFound' },
       { id: 'categories' },
     ]
+
+    // --- Autosave ---
+    let _autoSaveTimer = null
+    let _dirty = false
+
+    function markDirty() {
+      if (_dirty) return
+      _dirty = true
+      updateSaveIndicator('dirty')
+      clearTimeout(_autoSaveTimer)
+      _autoSaveTimer = setTimeout(doAutoSave, 1500)
+    }
+
+    function flushAutoSave() {
+      if (!_dirty) return
+      clearTimeout(_autoSaveTimer)
+      return doAutoSave()
+    }
+
+    async function doAutoSave() {
+      if (!_dirty) return
+      updateSaveIndicator('saving')
+      try {
+        if (currentPage === 'categories') {
+          if (window.__cleanCategoryMeta) window.__cleanCategoryMeta()
+          const cat = categoriesData.find(c => c.slug === selectedCategory)
+          if (!cat) return
+          await api('PUT', `/api/categories/${cat.slug}`, currentCategoryMeta)
+        } else {
+          await api('PUT', '/api/config', config)
+        }
+        _dirty = false
+        updateSaveIndicator('saved')
+      } catch {
+        updateSaveIndicator('error')
+      }
+    }
+
+    function updateSaveIndicator(state) {
+      const el = document.getElementById('save-indicator')
+      if (!el) return
+      const labels = { dirty: 'Unsaved changes', saving: 'Saving\u2026', saved: 'All changes saved', error: 'Save failed' }
+      el.textContent = labels[state] || ''
+      el.className = 'save-indicator' + (state !== 'dirty' ? ' ' + state : '')
+      if (state === 'saved') {
+        clearTimeout(el._fadeTimer)
+        el._fadeTimer = setTimeout(() => { el.textContent = ''; el.className = 'save-indicator' }, 2500)
+      }
+    }
+
+    function addAutoSaveBlur(el) {
+      el.addEventListener('blur', flushAutoSave)
+    }
 
     function flash(msg, type = 'error') {
       let el = document.querySelector('.toast')
@@ -524,7 +596,8 @@
 
     // Sidebar navigation
     document.querySelectorAll('#page-nav button').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        await flushAutoSave()
         document.querySelectorAll('#page-nav button').forEach((b) => b.classList.remove('active'))
         btn.classList.add('active')
         currentPage = btn.dataset.page
@@ -589,6 +662,7 @@
         obj = obj[parts[i]]
       }
       obj[parts[parts.length - 1]] = val
+      markDirty()
     }
 
     // --- Unified recursive renderer ---
@@ -626,6 +700,7 @@
       const input = document.createElement('input')
       input.value = value
       input.oninput = () => setValue(path, input.value)
+      addAutoSaveBlur(input)
       return input
     }
 
@@ -634,6 +709,7 @@
       ta.value = value
       ta.rows = typeof value === 'string' ? Math.min(value.split('\n').length + 1, 8) : 3
       ta.oninput = () => setValue(path, ta.value)
+      addAutoSaveBlur(ta)
       return ta
     }
 
@@ -652,6 +728,7 @@
       input.type = 'checkbox'
       input.checked = !!value
       input.onchange = () => setValue(path, input.checked)
+      addAutoSaveBlur(input)
 
       const slider = document.createElement('span')
       slider.className = 'toggle-slider'
@@ -751,7 +828,8 @@
         }
 
         btn.appendChild(document.createTextNode(cat.slug))
-        btn.onclick = () => {
+        btn.onclick = async () => {
+          await flushAutoSave()
           selectedCategory = cat.slug
           updateCategoryMeta()
           renderCurrentPage()
@@ -771,7 +849,8 @@
       nameLabel.textContent = 'name'
       const nameInput = document.createElement('input')
       nameInput.value = currentCategoryMeta.name || ''
-      nameInput.oninput = () => { currentCategoryMeta.name = nameInput.value }
+      nameInput.oninput = () => { currentCategoryMeta.name = nameInput.value; markDirty() }
+      addAutoSaveBlur(nameInput)
       form.appendChild(nameLabel)
       form.appendChild(nameInput)
 
@@ -780,7 +859,8 @@
       const descInput = document.createElement('textarea')
       descInput.rows = 2
       descInput.value = currentCategoryMeta.description || ''
-      descInput.oninput = () => { currentCategoryMeta.description = descInput.value }
+      descInput.oninput = () => { currentCategoryMeta.description = descInput.value; markDirty() }
+      addAutoSaveBlur(descInput)
       form.appendChild(descLabel)
       form.appendChild(descInput)
 
@@ -794,7 +874,8 @@
         if (f === (currentCategoryMeta.cover || cat.photos[0])) opt.selected = true
         coverSelect.appendChild(opt)
       })
-      coverSelect.onchange = () => { currentCategoryMeta.cover = coverSelect.value }
+      coverSelect.onchange = () => { currentCategoryMeta.cover = coverSelect.value; markDirty() }
+      addAutoSaveBlur(coverSelect)
       form.appendChild(coverLabel)
       form.appendChild(coverSelect)
 
@@ -803,7 +884,8 @@
       const orderInput = document.createElement('input')
       orderInput.type = 'number'
       orderInput.value = currentCategoryMeta.order ?? ''
-      orderInput.oninput = () => { currentCategoryMeta.order = orderInput.value ? parseInt(orderInput.value, 10) : undefined }
+      orderInput.oninput = () => { currentCategoryMeta.order = orderInput.value ? parseInt(orderInput.value, 10) : undefined; markDirty() }
+      addAutoSaveBlur(orderInput)
       form.appendChild(orderLabel)
       form.appendChild(orderInput)
 
@@ -818,7 +900,7 @@
       const serviceCheck = document.createElement('input')
       serviceCheck.type = 'checkbox'
       serviceCheck.checked = currentCategoryMeta.offer_service !== false
-      serviceCheck.onchange = () => { currentCategoryMeta.offer_service = serviceCheck.checked }
+      serviceCheck.onchange = () => { currentCategoryMeta.offer_service = serviceCheck.checked; markDirty() }
       const serviceSlider = document.createElement('span')
       serviceSlider.className = 'toggle-slider'
       serviceSwitch.appendChild(serviceCheck)
@@ -862,6 +944,7 @@
           coverBtn.textContent = 'Make cover'
           coverBtn.onclick = () => {
             currentCategoryMeta.cover = f
+            markDirty()
             renderCurrentPage()
           }
           header.appendChild(coverBtn)
@@ -890,7 +973,8 @@
         titleLbl.textContent = 'title'
         const titleInput = document.createElement('input')
         titleInput.value = photoMeta.title || ''
-        titleInput.oninput = () => { photoMeta.title = titleInput.value || undefined }
+        titleInput.oninput = () => { photoMeta.title = titleInput.value || undefined; markDirty() }
+        addAutoSaveBlur(titleInput)
         fields.appendChild(titleLbl)
         fields.appendChild(titleInput)
 
@@ -899,7 +983,8 @@
         const descInput2 = document.createElement('textarea')
         descInput2.rows = 2
         descInput2.value = photoMeta.description || ''
-        descInput2.oninput = () => { photoMeta.description = descInput2.value || undefined }
+        descInput2.oninput = () => { photoMeta.description = descInput2.value || undefined; markDirty() }
+        addAutoSaveBlur(descInput2)
         fields.appendChild(descLbl)
         fields.appendChild(descInput2)
 
@@ -918,7 +1003,9 @@
           const v = parseInt(slider.value, 10)
           valSpan.textContent = v
           photoMeta.hero_priority = v
+          markDirty()
         }
+        addAutoSaveBlur(slider)
         sliderRow.appendChild(slider)
         sliderRow.appendChild(valSpan)
         fields.appendChild(featLbl)
@@ -945,14 +1032,18 @@
 
     // --- Save / Rebuild ---
 
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', async (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
+        await flushAutoSave()
+        if (!_dirty) return
         document.getElementById('save-btn').click()
       }
     })
 
     document.getElementById('save-btn').onclick = async () => {
+      await flushAutoSave()
+      if (!_dirty) return
       if (currentPage === 'categories') {
         await saveCategory()
       } else {
@@ -966,8 +1057,11 @@
       btn.textContent = 'Saving...'
       try {
         await api('PUT', '/api/config', config)
+        _dirty = false
+        updateSaveIndicator('saved')
         flash('Saved!', 'success')
       } catch (e) {
+        updateSaveIndicator('error')
         flash(e.message)
       }
       btn.disabled = false
@@ -986,8 +1080,11 @@
 
       try {
         await api('PUT', `/api/categories/${cat.slug}`, currentCategoryMeta)
+        _dirty = false
+        updateSaveIndicator('saved')
         flash('Saved!', 'success')
       } catch (e) {
+        updateSaveIndicator('error')
         flash(e.message)
       }
       btn.disabled = false
@@ -995,6 +1092,7 @@
     }
 
     document.getElementById('rebuild-btn').onclick = async () => {
+      await flushAutoSave()
       document.getElementById('rebuild-btn').disabled = true
       document.getElementById('rebuild-btn').textContent = 'Rebuilding...'
       try {
@@ -1003,6 +1101,7 @@
         } else {
           await api('PUT', '/api/config', config)
         }
+        _dirty = false
         await api('POST', '/api/rebuild')
         flash('Rebuild complete!', 'success')
         await loadConfig()

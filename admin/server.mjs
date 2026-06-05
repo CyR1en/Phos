@@ -17,6 +17,9 @@ const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || join(ROOT, 'photos')
 function readJSON(p) {
   try { return JSON.parse(readFileSync(p, 'utf-8')) } catch { return null }
 }
+function slugify(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
 const PORT = parseInt(process.env.ADMIN_PORT || '3001', 10)
 const PASSWORD = process.env.ADMIN_PASSWORD || 'admin'
 
@@ -80,8 +83,8 @@ function listPhotoFiles(dir) {
   }
 }
 
-function loadCategoryMeta(slug) {
-  const metaPath = join(PHOTOS_SOURCE, slug, '_meta.yaml')
+function loadCategoryMeta(folderName) {
+  const metaPath = join(PHOTOS_SOURCE, folderName, '_meta.yaml')
   if (!existsSync(metaPath)) return {}
   try {
     return parseYaml(readFileSync(metaPath, 'utf-8'))
@@ -102,10 +105,10 @@ function scanCategories() {
       const p = join(PHOTOS_SOURCE, e)
       try { return readdirSync(p).length >= 0 } catch { return false }
     })
-    .filter((e) => !e.startsWith('.'))
-    .map((slug) => {
-      const photos = listPhotoFiles(join(PHOTOS_SOURCE, slug))
-      const meta = loadCategoryMeta(slug)
+    .map((folderName) => {
+      const slug = slugify(folderName)
+      const photos = listPhotoFiles(join(PHOTOS_SOURCE, folderName))
+      const meta = loadCategoryMeta(folderName)
       return { slug, photos, meta }
     })
 }
@@ -174,7 +177,10 @@ createServer(async (req, res) => {
   if (catMatch && req.method === 'PUT') {
     if (!requireAuth(req, res)) return
     const slug = catMatch[1]
-    const metaPath = join(PHOTOS_SOURCE, slug, '_meta.yaml')
+    const entries = readdirSync(PHOTOS_SOURCE).filter((e) => !e.startsWith('.'))
+    const folderName = entries.find((e) => slugify(e) === slug)
+    if (!folderName) return json(res, { error: 'Category not found' }, 404)
+    const metaPath = join(PHOTOS_SOURCE, folderName, '_meta.yaml')
     const body = await parseBody(req)
     if (!body) return json(res, { error: 'Invalid JSON' }, 400)
 
