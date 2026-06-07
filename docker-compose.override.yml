@@ -1,4 +1,0 @@
-services:
-  phos:
-    volumes:
-      - ./plugins/what-is-phos:/app/plugins/what-is-phos:ro
