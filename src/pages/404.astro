@@ -1,9 +1,11 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
 import config from '@content/site-config.json'
+const ogTitle = config.notFound?.og_title || config.notFound.heading
+const ogDescription = config.notFound?.og_description
 ---
 
-<BaseLayout title={config.notFound.heading}>
+<BaseLayout title={ogTitle} description={ogDescription}>
   <section class="mx-auto flex min-h-[80vh] max-w-4xl flex-col items-start justify-center px-6 sm:px-6 lg:px-8">
     <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Error 404</p>
     <h1 class="mt-6 font-display text-phos-hero text-phos-ink dark:text-phos-ink" data-config="notFound.heading">{config.notFound.heading}</h1>

@@ -6,9 +6,11 @@ const { heading, subheading, submitBtn } = config.contact.format
 const { host, port, user, pass, fromEmail, toEmail } = config.contact.smtp
 const hasSmtp = Boolean(host && port && user && pass && fromEmail && toEmail)
 const email = config.about.photographer?.email || ''
+const ogTitle = config.contact?.og_title || config.contact.format.heading
+const ogDescription = config.contact?.og_description
 ---
 
-<BaseLayout title={heading}>
+<BaseLayout title={ogTitle} description={ogDescription}>
   <section class="bg-phos-pale-blue dark:bg-phos-pale-blue">
     <div class="mx-auto max-w-3xl px-6 py-24 sm:px-6 lg:px-8">
       <div class="rounded-phos-lg bg-phos-canvas dark:bg-phos-canvas p-8 sm:p-12 border border-phos-card-border dark:border-phos-card-border">

@@ -10,9 +10,11 @@ const gearList = gear.equipment || []
 const hasGear = gearList.length > 0
 const bio = config.about.photographer?.bio || ''
 const cta = config.about.call_to_action
+const ogTitle = config.about?.og_title || 'About'
+const ogDescription = config.about?.og_description
 ---
 
-<BaseLayout title="About">
+<BaseLayout title={ogTitle} description={ogDescription}>
   <section class="mx-auto max-w-7xl px-6 pt-24 pb-phos-section sm:px-6 lg:px-8">
     <div class="grid gap-8 lg:grid-cols-12 lg:gap-12">
       <div class="lg:col-span-8 flex flex-col justify-center">

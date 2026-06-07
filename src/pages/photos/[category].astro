@@ -21,7 +21,7 @@ const siteUrl = import.meta.env.PUBLIC_SITE_URL || ''
 const ogImage = category.coverFull ? `${siteUrl}${category.coverFull}` : undefined
 ---
 
-<BaseLayout title={category.name} description={category.description} image={ogImage} page={`photos/${category.slug}`}>
+<BaseLayout title={category.name} description={category.description} image={ogImage} page={`photos/${category.slug}`} type="article">
   <section class="mx-auto max-w-7xl px-6 pt-24 sm:px-6 lg:px-8">
     <a href="/portfolio/" class="inline-flex items-center gap-1 phos-caption text-phos-body-muted dark:text-phos-body-muted hover:text-phos-ink dark:hover:text-phos-ink transition-colors mb-8">
       <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>

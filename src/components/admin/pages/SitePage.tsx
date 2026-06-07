@@ -60,10 +60,12 @@ export function SitePage() {
         </Section>
         <Section title="Open Graph">
           <TextField path="site.og.image" label="OG Image URL" placeholder="/og.png" />
+          <TextField path="site.og.imageAlt" label="OG Image Alt Text" placeholder="Description of the image" />
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <NumberField path="site.og.imageWidth" label="OG Image Width" />
             <NumberField path="site.og.imageHeight" label="OG Image Height" />
           </div>
+          <TextField path="site.og.locale" label="OG Locale" placeholder="en_US" />
         </Section>
         <Section title="Social links">
         <div class="space-y-3">

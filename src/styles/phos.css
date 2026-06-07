@@ -50,9 +50,9 @@
   --phos-space-section: 80px;
 
   /* Typography */
-  --font-display: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Inter', Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Cormorant Garamond', Georgia, ui-serif, serif;
+  --font-body: 'DM Sans', Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
 }
 
 .dark {
@@ -74,7 +74,7 @@
   --phos-coral: #ff8b73;
 }
 
-/* Base typography — display headings use Space Grotesk; body uses Inter. */
+/* Base typography — display headings use Cormorant Garamond; body uses DM Sans. */
 body {
   font-family: var(--font-body);
   font-size: 16px;

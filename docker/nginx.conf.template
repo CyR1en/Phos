@@ -10,6 +10,9 @@ http {
   fastcgi_temp_path /tmp/nginx_fastcgi;
   uwsgi_temp_path /tmp/nginx_uwsgi;
   scgi_temp_path /tmp/nginx_scgi;
+  access_log /var/log/nginx/access.log;
+  error_log /var/log/nginx/error.log warn;
+
   include       /etc/nginx/mime.types;
   default_type  application/octet-stream;
 
@@ -75,10 +78,11 @@ http {
     }
 
     location / {
-      try_files $uri $uri.html $uri/index.html =404;
+      try_files $uri $uri.html $uri/index.html /404.html;
       add_header Cache-Control "no-store" always;
     }
 
+    error_page 404 /404.html;
     location = /404.html {
       internal;
     }

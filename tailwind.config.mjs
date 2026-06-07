@@ -36,11 +36,11 @@ export default {
         },
       },
       fontFamily: {
-        display: ['Space Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"IBM Plex Mono"', 'ui-monospace', 'monospace'],
-        sans: ['Inter', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        serif: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Cormorant Garamond"', 'Georgia', 'ui-serif', 'serif'],
+        body: ['"DM Sans"', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['ui-monospace', 'monospace'],
+        sans: ['"DM Sans"', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'ui-serif', 'serif'],
       },
       borderRadius: {
         'phos-xs': 'var(--phos-radius-xs)',

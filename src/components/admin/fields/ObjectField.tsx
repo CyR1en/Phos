@@ -18,7 +18,7 @@ function prettify(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-const SKIP_KEYS = new Set(['page_description'])
+const SKIP_KEYS = new Set(['page_description', 'og_title', 'og_description'])
 
 export function ObjectField({ path }: Props) {
   const { getValue } = useConfig()

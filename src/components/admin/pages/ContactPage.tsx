@@ -1,5 +1,6 @@
 import { useConfig } from '../../../lib/admin/store'
 import { ObjectField } from '../fields/ObjectField'
+import { TextField } from '../fields/TextField'
 import { Section } from '../ui/Section'
 
 export function ContactPage() {
@@ -16,6 +17,10 @@ export function ContactPage() {
         </p>
       </div>
       <div class="space-y-6">
+        <Section title="Open Graph">
+          <TextField path="contact.og_title" label="Title" />
+          <TextField path="contact.og_description" label="Description" />
+        </Section>
         <Section title="Form">
           <ObjectField path="contact.format" />
         </Section>

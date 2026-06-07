@@ -17,6 +17,7 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - ADMIN_PORT=3001
       - LISTEN_PORT=${LISTEN_PORT:-8080}
+      - DB_PATH=/config/site.db
       - PUBLIC_FORMSPREE_ID=${PUBLIC_FORMSPREE_ID:-}
     networks:
       - internal
@@ -37,6 +38,11 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
+      - SETUID
+      - SETGID
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
 
 networks:
   internal:

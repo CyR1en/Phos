@@ -63,4 +63,4 @@ echo "Templating nginx config..."
 envsubst '${LISTEN_PORT}' < /app/docker/nginx.conf.template > /etc/nginx/nginx.conf
 
 echo "Starting nginx..."
-exec su-exec appuser nginx -g "daemon off;"
+exec nginx -g "daemon off;"

@@ -20,9 +20,11 @@ const jsonLd = {
 }
 
 const ogImage = config.site?.og?.image || (heroPriority.length > 0 ? heroPriority[0].full : undefined)
+const ogTitle = config.home?.og_title || config.site.title
+const ogDescription = config.home?.og_description || config.site.description
 ---
 
-<BaseLayout title={config.site.title} description={config.site.description} image={ogImage}>
+<BaseLayout title={ogTitle} description={ogDescription} image={ogImage}>
   <Hero heroPriority={heroPriority} />
 
   {config.home.services.enabled !== false && (

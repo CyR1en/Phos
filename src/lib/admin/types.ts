@@ -6,13 +6,17 @@ export interface SiteConfig {
     toggle_demo: boolean
     og: {
       image: string
+      imageAlt: string
       imageWidth: number
       imageHeight: number
+      locale: string
     }
     social: Array<{ platform: string; url: string }>
   }
   home: {
     page_description: string
+    og_title: string
+    og_description: string
     hero: {
       heading: string
       subheading: string
@@ -38,6 +42,8 @@ export interface SiteConfig {
   }
   about: {
     page_description: string
+    og_title: string
+    og_description: string
     photographer: {
       name: string
       email: string
@@ -56,6 +62,8 @@ export interface SiteConfig {
   }
   contact: {
     page_description: string
+    og_title: string
+    og_description: string
     format: {
       heading: string
       subheading: string
@@ -72,9 +80,16 @@ export interface SiteConfig {
   }
   notFound: {
     page_description: string
+    og_title: string
+    og_description: string
     heading: string
     message: string
     button: string
+  }
+  portfolio: {
+    page_description: string
+    og_title: string
+    og_description: string
   }
 }
 

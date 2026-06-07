@@ -3,6 +3,7 @@ import BaseLayout from '@layouts/BaseLayout.astro'
 import PhotoCard from '@components/PhotoCard.astro'
 import Lightbox from '@components/Lightbox.astro'
 import manifest from '@content/categories.json'
+import config from '@content/site-config.json'
 
 const { categories } = manifest
 
@@ -27,9 +28,11 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
   }))
 )
 
+const ogTitle = config.portfolio?.og_title || 'Portfolio'
+const ogDescription = config.portfolio?.og_description
 ---
 
-<BaseLayout title="Portfolio" page="portfolio">
+<BaseLayout title={ogTitle} description={ogDescription} page="portfolio">
   <section class="mx-auto max-w-7xl px-6 pt-24 pb-12 sm:px-6 lg:px-8">
     <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Portfolio</p>
     <h1 class="mt-4 font-display text-phos-display-heading text-phos-ink dark:text-phos-ink">All work</h1>

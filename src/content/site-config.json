@@ -6,13 +6,17 @@
     "toggle_demo": false,
     "og": {
       "image": "",
+      "imageAlt": "",
       "imageWidth": 1200,
-      "imageHeight": 630
+      "imageHeight": 630,
+      "locale": "en_US"
     },
     "social": []
   },
   "home": {
     "page_description": "Hero, services, portfolio, testimonials, and CTA sections",
+    "og_title": "",
+    "og_description": "",
     "hero": {
       "heading": "Light through the lens",
       "subheading": "Portfolio",
@@ -58,6 +62,8 @@
   },
   "about": {
     "page_description": "Photographer name, email, bio, gear, and CTA",
+    "og_title": "",
+    "og_description": "",
     "photographer": {
       "name": "Your Name",
       "email": "",
@@ -81,6 +87,8 @@
   },
   "contact": {
     "page_description": "Form labels, SMTP settings, and demo mode",
+    "og_title": "",
+    "og_description": "",
     "format": {
       "heading": "Get in Touch",
       "subheading": "",
@@ -97,8 +105,15 @@
   },
   "notFound": {
     "page_description": "404 error page text",
+    "og_title": "",
+    "og_description": "",
     "heading": "Page not found",
     "message": "",
     "button": "Back to home"
+  },
+  "portfolio": {
+    "page_description": "All photos with category filter and masonry lightbox",
+    "og_title": "",
+    "og_description": ""
   }
 }
