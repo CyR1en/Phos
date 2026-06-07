@@ -117,10 +117,13 @@ To regenerate content without building: `npm run generate`. For a full productio
 ## Environment Variables
 
 | Variable | Required | Default | Description |
-|---|---|---|---|
+|---|---|---|---|---|
 | `ADMIN_PASSWORD` | Yes | `admin` | Password for the admin dashboard |
 | `PUBLIC_SITE_URL` | No | `http://localhost:4321` | Public URL for canonical links and sitemap |
 | `DB_PATH` | No | `config/site.db` | SQLite database path (set to `/config/site.db` in Docker) |
+| `PHOTOS_SOURCE` | No | `/photos` | Directory containing category folders with photos |
+| `ADMIN_PORT` | No | `3001` | Internal admin API server port |
+| `CONFIG_PATH` | No | `src/content/site-config.json` | Persisted site configuration JSON path |
 | `LISTEN_PORT` | No | `8080` | Nginx listen port inside the container |
 | `PUID` | No | `1001` | User ID for volume permissions |
 | `PGID` | No | `1001` | Group ID for volume permissions |
