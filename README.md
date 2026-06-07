@@ -10,10 +10,7 @@
   <a href="https://ko-fi.com/cyr1en"><img src="https://img.shields.io/badge/Kofi-Support_Development-f5a97f?style=for-the-badge&logo=Kofi&logoColor=cad3f5&labelColor=363a4f"></a>
 </p>
 
-
-
-
-A generated static-site photography portfolio built with [Astro](https://astro.build) 6, [Tailwind CSS](https://tailwindcss.com) 3, and [Sharp](https://sharp.pixelplumbing.com/).
+A static-site photography portfolio built with [Astro](https://astro.build) 6, [Tailwind CSS](https://tailwindcss.com) 3, and [Sharp](https://sharp.pixelplumbing.com/).
 
 Drop photos into category folders — galleries, thumbnails, blur placeholders, and hero slideshows are generated automatically. Everything is configurable through the admin dashboard at `/admin`.
 
@@ -22,15 +19,27 @@ Drop photos into category folders — galleries, thumbnails, blur placeholders, 
 **Photo Pipeline**
 - Drop category folders into your photos directory — each becomes a gallery at `/photos/{category}`
 - EXIF stripped from all served images
-- WebP thumbnails and blur hash placeholders (LQIP) generated automatically
-- Masonry gallery layout with full-screen lightbox viewer
+- WebP thumbnails + mobile thumbnails and blur placeholders generated automatically
+- Masonry gallery layout with full-screen lightbox viewer and swipe support
 
 **Admin Dashboard** (`/admin`)
+- Built with Preact, React Query, and Tailwind — persistent pages, toast notifications, auto-save
 - Edit homepage, about, contact, and 404 page copy
-- Manage photographer name, email, and social links
-- Edit category metadata — display names, descriptions, per-photo titles, hero_priority
+- Manage photographer name, bio, gear list, social links, and call-to-action sections
+- Edit category metadata — display names, descriptions, per-photo titles, hero priority
 - SMTP-powered contact form — sends submissions directly to your email
-- Password-protected (set via `ADMIN_PASSWORD`)
+- Debounced auto-save with visual save indicator
+- Live config patching — changes take effect on next page load without a full rebuild
+
+**Plugin System** (v1.2.0)
+- Extend the site with deploy-time plugins under `plugins/<name>/`
+- Define an Astro component, slot target (e.g. `about.after-gear`), and optional config
+- Plugins with `"admin": true` get their config editable from the admin dashboard
+- Config merges JSON defaults with SQLite-persisted admin overrides
+
+**Dark Mode**
+- Tailwind `darkMode: 'class'`, persisted in localStorage, defaults to system preference
+- Three-state toggle: light / dark / auto
 
 ## Adding Photos
 
@@ -52,6 +61,18 @@ photos:
 
 Photos with `hero_priority > 0` appear in the hero slideshow (higher = earlier).
 
+## Plugins
+
+Plugins are Astro components that render at named insertion points on the site. Create a folder under `plugins/<name>/`:
+
+```
+plugins/my-plugin/
+  plugin.json       # { "name": "my-plugin", "entry": "./MyPlugin.astro", "slot": "about.after-gear", "admin": true }
+  MyPlugin.astro    # your component (receives config as props)
+  my-plugin.json    # default config values (optional)
+```
+
+Enable admin editing by setting `"admin": true` — the config UI appears in the dashboard under Plugins. Edits are stored in SQLite and merged on top of the JSON defaults at build time.
 
 ## Deployment
 
@@ -78,7 +99,9 @@ services:
 | `./AppData/photos` | `/photos` | Drop category folders here (e.g. `wildlife/`, `wedding/`) |
 | `./AppData/config` | `/config` | Persists site configuration across restarts |
 
-On container startup, photos are automatically processed — the generation pipeline runs every boot, then the site is built and served on port 8080.
+On container startup, photos are processed, plugins are discovered, and the site is built. The admin server runs alongside nginx, serving both the public site (port 8080) and the dashboard.
+
+Mount custom plugins: `- ./plugins/what-is-phos:/app/plugins/what-is-phos:ro`
 
 ### Local Development
 
@@ -87,19 +110,22 @@ npm install
 ADMIN_PASSWORD=admin npm run dev
 ```
 
-The `dev` script generates photo content, starts the admin server (port 3001), and launches the Astro dev server (port 4321) with hot module replacement. The admin dashboard is proxied to `/admin` on the same port — visit **`http://localhost:4321/admin`**.
+The `dev` script runs: discover plugins → generate photo content → start admin server (port 3001, proxied at `/api`) → launch Astro dev server (port 4321) with HMR. Visit **`http://localhost:4321`**.
+
+To regenerate content without building: `npm run generate`. For a full production build: `npm run build`.
 
 ## Environment Variables
 
-| Variable                      | Required | Default                 | Description                                        |
-|-------------------------------|----------|-------------------------|----------------------------------------------------|
-| `ADMIN_PASSWORD`              | Yes      | `admin`                 | Password for the admin dashboard at `/admin`       |
-| `PUBLIC_SITE_URL`             | No       | `http://localhost:4321` | Public URL for canonical links and sitemap         |
-| `LISTEN_PORT`                 | No       | `8080`                  | Nginx listen port inside the container             |
-| `PUID`                        | No       | `1001`                  | User ID for volume permissions                     |
-| `PGID`                        | No       | `1001`                  | Group ID for volume permissions                    |
-| `PUBLIC_HERO_INTERVAL`        | No       | `6000`                  | Hero slideshow transition interval in milliseconds |
-| `PUBLIC_HERO_OVERLAY_OPACITY` | No       | `0.2`                   | Hero overlay opacity (0–1)                         |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `ADMIN_PASSWORD` | Yes | `admin` | Password for the admin dashboard |
+| `PUBLIC_SITE_URL` | No | `http://localhost:4321` | Public URL for canonical links and sitemap |
+| `DB_PATH` | No | `config/site.db` | SQLite database path (set to `/config/site.db` in Docker) |
+| `LISTEN_PORT` | No | `8080` | Nginx listen port inside the container |
+| `PUID` | No | `1001` | User ID for volume permissions |
+| `PGID` | No | `1001` | Group ID for volume permissions |
+| `PUBLIC_HERO_INTERVAL` | No | `6000` | Hero slideshow transition interval in milliseconds |
+| `PUBLIC_HERO_OVERLAY_OPACITY` | No | `0.2` | Hero overlay opacity (0–1) |
 
 ## Contact Form Setup
 
@@ -129,4 +155,3 @@ Any SMTP provider works — SendGrid, Mailgun, your hosting provider's mail serv
 ### Demo Mode
 
 When `site.toggle_demo` is enabled in the admin dashboard, form submissions are silently accepted without sending emails — useful for testing.
-
