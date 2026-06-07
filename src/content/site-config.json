@@ -1,104 +1,104 @@
 {
-   "site": {
-      "page_description": "Site title and meta description",
-      "title": "Phos",
-      "description": "Photography portfolio.",
-      "toggle_demo": false,
-      "og": {
-         "image": "",
-         "imageWidth": 1200,
-         "imageHeight": 630
-      },
-      "social": [
-         {
-            "platform": "instagram",
-            "url": ""
-         }
+  "site": {
+    "page_description": "",
+    "title": "",
+    "description": "",
+    "toggle_demo": false,
+    "og": {
+      "image": "",
+      "imageWidth": 1200,
+      "imageHeight": 630
+    },
+    "social": []
+  },
+  "home": {
+    "page_description": "Hero, services, portfolio, testimonials, and CTA sections",
+    "hero": {
+      "heading": "Light through the lens",
+      "subheading": "Portfolio",
+      "cta1": "View Portfolio",
+      "cta2": "Get in Touch"
+    },
+    "services": {
+      "enabled": true,
+      "heading": "Services",
+      "subheading": ""
+    },
+    "portfolio": {
+      "enabled": true,
+      "heading": "Featured Work"
+    },
+    "testimonials": {
+      "enabled": true,
+      "heading": "Testimonials",
+      "testimonials": [
+        {
+          "quote": "Absolutely stunning work. The photos captured every emotion of our wedding day perfectly. We couldn't be happier.",
+          "author": "Sarah & Michael",
+          "role": "Wedding Clients"
+        },
+        {
+          "quote": "Professional, creative, and a pleasure to work with. The automotive shoot turned out better than I imagined.",
+          "author": "James Wilson",
+          "role": "Car Collector"
+        },
+        {
+          "quote": "The portrait session was relaxed and fun. The results were natural, authentic, and truly beautiful.",
+          "author": "Emily Chen",
+          "role": "Portrait Client"
+        }
       ]
-   },
-   "home": {
-      "page_description": "Hero, services, portfolio, testimonials, and CTA sections",
-      "hero": {
-         "heading": "Light through the lens",
-         "subheading": "Portfolio",
-         "cta1": "View Portfolio",
-         "cta2": "Get in Touch"
-      },
-      "services": {
-         "heading": "Services",
-         "subheading": ""
-      },
-      "portfolio": {
-         "heading": "Featured Work"
-      },
-      "testimonials": {
-         "heading": "Testimonials",
-         "testimonials": [
-            {
-               "quote": "Absolutely stunning work. The photos captured every emotion of our wedding day perfectly. We couldn't be happier.",
-               "author": "Sarah & Michael",
-               "role": "Wedding Clients"
-            },
-            {
-               "quote": "Professional, creative, and a pleasure to work with. The automotive shoot turned out better than I imagined.",
-               "author": "James Wilson",
-               "role": "Car Collector"
-            },
-            {
-               "quote": "The portrait session was relaxed and fun. The results were natural, authentic, and truly beautiful.",
-               "author": "Emily Chen",
-               "role": "Portrait Client"
-            }
-         ]
-      },
-      "cta": {
-         "heading": "Let's work together",
-         "body": "",
-         "button": "Get in Touch"
-      }
-   },
-   "about": {
-      "page_description": "Photographer name, email, bio, gear, and CTA",
-      "photographer": {
-         "name": "Your Name",
-         "email": ""
-      },
+    },
+    "cta": {
+      "enabled": true,
+      "heading": "Let's work together",
+      "body": "",
+      "button": "Get in Touch"
+    }
+  },
+  "about": {
+    "page_description": "Photographer name, email, bio, gear, and CTA",
+    "photographer": {
+      "name": "Your Name",
+      "email": "",
       "intro": "a photographer based in your area with a passion for storytelling through imagery.",
       "bio": "I've been behind the lens for over a decade, capturing moments that tell stories. My approach is to blend into the background and let authentic moments unfold naturally.\n\nEvery shoot is a collaboration, and my goal is always to make you feel comfortable and confident in front of the camera.",
-      "photo": "",
-      "photoFull": "",
-      "gear": {
-         "heading": "My Gear",
-         "equipment": [
-            "Sony A7 IV",
-            "Sigma 24-70mm f/2.8",
-            "Sony 85mm f/1.4",
-            "DJI Mavic 3 Pro"
-         ]
-      },
-      "ctaHeading": "Let's work together",
-      "ctaLink": "Get in touch"
-   },
-   "contact": {
-      "page_description": "Form labels, SMTP settings, and demo mode",
-      "format": {
-         "heading": "Get in Touch",
-         "subheading": "",
-         "submitBtn": "Send Message"
-      },
-      "smtp": {
-         "host": "",
-         "port": 587,
-         "user": "",
-         "pass": "",
-         "fromEmail": "",
-         "toEmail": ""
-      }
-   },
-   "notFound": {
-      "page_description": "404 error page text",
-      "heading": "Page not found",
-      "message": "",
-      "button": "Back to home"
-   }
+      "photo": ""
+    },
+    "gear": {
+      "heading": "My Gear",
+      "equipment": [
+        "Sony A7 IV",
+        "Sigma 24-70mm f/2.8",
+        "Sony 85mm f/1.4",
+        "DJI Mavic 3 Pro"
+      ]
+    },
+    "call_to_action": {
+      "heading": "Let's work together",
+      "link": "Get in touch"
+    }
+  },
+  "contact": {
+    "page_description": "Form labels, SMTP settings, and demo mode",
+    "format": {
+      "heading": "Get in Touch",
+      "subheading": "",
+      "submitBtn": "Send Message"
+    },
+    "smtp": {
+      "host": "",
+      "port": 587,
+      "user": "",
+      "pass": "",
+      "fromEmail": "",
+      "toEmail": ""
+    }
+  },
+  "notFound": {
+    "page_description": "404 error page text",
+    "heading": "Page not found",
+    "message": "",
+    "button": "Back to home"
+  }
 }

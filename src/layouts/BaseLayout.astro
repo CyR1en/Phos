@@ -33,13 +33,13 @@ const ogDescription = description || config.site.description
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{pageTitle}</title>
-    <meta name="description" content={ogDescription} />
+    <title data-config="site.title">{pageTitle}</title>
+    <meta name="description" content={ogDescription} data-config="site.description" data-config-attr="content" />
     {canonical && <link rel="canonical" href={canonical} />}
 
     <meta property="og:type" content="website" />
-    <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={ogDescription} />
+    <meta property="og:title" content={pageTitle} data-config="site.title" data-config-attr="content" />
+    <meta property="og:description" content={ogDescription} data-config="site.description" data-config-attr="content" />
     <meta property="og:site_name" content={config.site.title} />
     <meta property="og:locale" content="en_US" />
     {canonical && <meta property="og:url" content={canonical} />}
@@ -54,7 +54,7 @@ const ogDescription = description || config.site.description
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
     <script is:inline>
       (function() {
@@ -70,8 +70,51 @@ const ogDescription = description || config.site.description
         } catch(e) {}
       })();
     </script>
+
+    <script is:inline>
+      (function() {
+        if (document.querySelector('[data-config]') === null) return;
+        fetch('/site-config.json', { credentials: 'same-origin' })
+          .then(function(r) { return r.ok ? r.json() : null })
+          .then(function(cfg) { if (cfg) applyConfig(cfg); })
+          .catch(function() {});
+
+        function applyConfig(cfg) {
+          var els = document.querySelectorAll('[data-config]');
+          for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            var path = el.getAttribute('data-config');
+            var value = resolve(cfg, path);
+            if (value === undefined || value === null) continue;
+            if (typeof value === 'object') continue;
+            if (el.tagName === 'TITLE') {
+              el.textContent = value;
+            } else if (el.tagName === 'META') {
+              var attr = el.getAttribute('data-config-attr') || 'content';
+              el.setAttribute(attr, value);
+            } else if (el.tagName === 'A' || el.tagName === 'LINK') {
+              var hrefAttr = el.getAttribute('data-config-attr') || 'href';
+              el.setAttribute(hrefAttr, value);
+            } else {
+              el.textContent = value;
+            }
+          }
+        }
+
+        function resolve(obj, path) {
+          if (!obj) return undefined;
+          var parts = path.split('.');
+          var cur = obj;
+          for (var i = 0; i < parts.length; i++) {
+            if (cur == null) return undefined;
+            cur = cur[parts[i]];
+          }
+          return cur;
+        }
+      })();
+    </script>
   </head>
-  <body class="flex min-h-screen flex-col bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark antialiased">
+  <body class="flex min-h-screen flex-col bg-phos-canvas dark:bg-phos-canvas text-phos-ink dark:text-phos-ink antialiased">
     <Header />
     <main class="flex-1">
       <slot />

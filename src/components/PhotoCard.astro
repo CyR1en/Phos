@@ -19,7 +19,7 @@ const isFirstScreen = index < 6
 ---
 
 <button
-  class="masonry-item group relative w-full cursor-pointer overflow-hidden rounded-lg bg-muted dark:bg-muted-dark fade-in bg-cover bg-center"
+  class="masonry-item group relative w-full cursor-pointer overflow-hidden rounded-phos-lg bg-phos-stone dark:bg-phos-stone fade-in bg-cover bg-center"
   style={`animation-delay: ${index * 50}ms; aspect-ratio: ${aspectRatio}; background-image: url('${blur}')`}
   data-index={index}
   data-photo={filename}
@@ -35,11 +35,11 @@ const isFirstScreen = index < 6
     style="opacity:0"
     onload="this.style.opacity='1'"
     loading={isFirstScreen ? 'eager' : 'lazy'}
-    fetchpriority={isFirstScreen ? 'low' : 'auto'}
+    fetchpriority={isFirstScreen ? 'high' : 'auto'}
     decoding="async"
     width={width ?? undefined}
     height={height ?? undefined}
   />
 
-  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+  <div class="absolute inset-0 bg-transparent group-hover:bg-black/10 transition-colors duration-300" />
 </button>

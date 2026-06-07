@@ -1,12 +1,16 @@
 import { readdir, stat, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join, extname, parse } from 'node:path'
+import { join, extname, parse, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { execSync } from 'node:child_process'
 import sharp from 'sharp'
 import yaml from 'yaml'
 
-const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || join(import.meta.dirname, '..', 'photos')
-const OUTPUT_DIR = join(import.meta.dirname, '..', 'public', 'photos')
-const MANIFEST_PATH = join(import.meta.dirname, '..', 'src', 'content', 'categories.json')
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || join(__dirname, '..', 'photos')
+const OUTPUT_DIR = join(__dirname, '..', 'public', 'photos')
+const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
+const ROOT = join(__dirname, '..')
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff', '.bmp'])
 
@@ -194,6 +198,13 @@ async function scanPhotos(sourceDir) {
 }
 
 async function main() {
+  console.log('Syncing site config from SQLite...')
+  try {
+    execSync('node scripts/merge-config.mjs', { cwd: ROOT, stdio: 'pipe' })
+  } catch (err) {
+    console.warn(`merge-config failed: ${err.message}`)
+  }
+
   console.log('Scanning photos directory...')
   const { categories, heroPriority } = await scanPhotos(PHOTOS_SOURCE)
 

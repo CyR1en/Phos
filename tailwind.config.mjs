@@ -1,34 +1,68 @@
 /** @type {import('tailwindcss').Config} */
+// See DESIGN.md for the source of truth for all design tokens.
 export default {
-  content: ['./src/**/*.{astro,html,js,jsx,ts,tsx}'],
+  content: ['./src/**/*.{astro,html,js,jsx,ts,tsx}', './plugins/**/*.{astro,html,js,ts,jsx,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        surface: {
-          DEFAULT: '#ffffff',
-          dark: '#0a0a0a',
-        },
-        muted: {
-          DEFAULT: '#f5f5f5',
-          dark: '#1a1a1a',
-        },
-        ink: {
-          DEFAULT: '#1a1a1a',
-          dark: '#f0f0f0',
-        },
-        subtle: {
-          DEFAULT: '#737373',
-          dark: '#a3a3a3',
-        },
-        border: {
-          DEFAULT: '#e5e5e5',
-          dark: '#2a2a2a',
+        // Brand & accents
+        phos: {
+          black: 'var(--phos-black)',
+          primary: 'var(--phos-primary)',
+          ink: 'var(--phos-ink)',
+          'deep-green': 'var(--phos-deep-green)',
+          'dark-navy': 'var(--phos-dark-navy)',
+          canvas: 'var(--phos-canvas)',
+          stone: 'var(--phos-stone)',
+          'pale-green': 'var(--phos-pale-green)',
+          'pale-blue': 'var(--phos-pale-blue)',
+          coral: 'var(--phos-coral)',
+          'coral-soft': 'var(--phos-coral-soft)',
+          hairline: 'var(--phos-hairline)',
+          border: 'var(--phos-border)',
+          'card-border': 'var(--phos-card-border)',
+          muted: 'var(--phos-muted)',
+          slate: 'var(--phos-slate)',
+          'body-muted': 'var(--phos-body-muted)',
+          'action-blue': 'var(--phos-action-blue)',
+          'focus-blue': 'var(--phos-focus-blue)',
+          'form-focus': 'var(--phos-form-focus)',
+          error: 'var(--phos-error)',
+          button: 'var(--phos-button-bg)',
+          'on-button': 'var(--phos-button-text)',
+          'button-hover': 'var(--phos-button-bg-hover)',
+          'on-primary': 'var(--phos-on-primary)',
         },
       },
       fontFamily: {
-        sans: ['DM Sans', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Playfair Display', 'Georgia', 'serif'],
+        display: ['Space Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+        sans: ['Inter', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        serif: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        'phos-xs': 'var(--phos-radius-xs)',
+        'phos-sm': 'var(--phos-radius-sm)',
+        'phos-md': 'var(--phos-radius-md)',
+        'phos-lg': 'var(--phos-radius-lg)',
+        'phos-xl': 'var(--phos-radius-xl)',
+        'phos-pill': 'var(--phos-radius-pill)',
+      },
+      fontSize: {
+        'phos-hero': ['96px', { lineHeight: '1', letterSpacing: '-1.92px' }],
+        'phos-product': ['72px', { lineHeight: '1', letterSpacing: '-1.44px' }],
+        'phos-section': ['60px', { lineHeight: '1', letterSpacing: '-1.2px' }],
+        'phos-heading': ['48px', { lineHeight: '1.2', letterSpacing: '-0.48px' }],
+        'phos-card': ['32px', { lineHeight: '1.2', letterSpacing: '-0.32px' }],
+        'phos-feature': ['24px', { lineHeight: '1.3' }],
+        'phos-body-lg': ['18px', { lineHeight: '1.4' }],
+        'phos-mono-label': ['14px', { lineHeight: '1.4', letterSpacing: '0.28px' }],
+      },
+      spacing: {
+        'phos-section': '80px',
+        'phos-xxl': '32px',
       },
     },
   },

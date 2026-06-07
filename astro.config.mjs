@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config'
 import sitemap from '@astrojs/sitemap'
+import preact from '@astrojs/preact'
 import tailwindcss from 'tailwindcss'
 import autoprefixer from 'autoprefixer'
 
@@ -10,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   site: import.meta.env.PUBLIC_SITE_URL || 'https://yourdomain.com',
-  integrations: [sitemap()],
+  integrations: [sitemap(), preact({ compat: true })],
   prefetch: {
     prefetchAll: true,
     defaultStrategy: 'viewport',
@@ -38,7 +39,6 @@ export default defineConfig({
     },
     server: {
       proxy: {
-        '/admin': 'http://localhost:3001',
         '/api': 'http://localhost:3001',
       },
     },

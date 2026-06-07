@@ -11,6 +11,7 @@ interface FlatPhoto {
   title: string
   full: string
   thumb: string
+  thumbMobile: string
   width: number | null
   height: number | null
   blur: string
@@ -29,25 +30,24 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
 ---
 
 <BaseLayout title="Portfolio" page="portfolio">
-  <section data-animate class="animate-reveal mx-auto max-w-7xl px-4 pt-16 sm:pt-20 sm:px-6 lg:px-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Portfolio</h1>
-    <p class="mt-2 text-subtle">All photos across every category</p>
+  <section class="mx-auto max-w-7xl px-6 pt-24 pb-12 sm:px-6 lg:px-8">
+    <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Portfolio</p>
+    <h1 class="mt-4 font-display text-phos-display-heading text-phos-ink dark:text-phos-ink">All work</h1>
+    <p class="mt-4 phos-body-lg text-phos-body-muted dark:text-phos-body-muted">All photos across every category</p>
   </section>
 
-  <section class="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:pb-24 sm:pt-8 sm:px-6 lg:px-8">
-    <!-- Filter pills -->
-    <div id="filters" class="mb-6 sm:mb-10 flex flex-wrap gap-1.5 sm:gap-2">
-      <button class="filter-btn rounded-full border px-3 py-1.5 sm:px-4 sm:py-1.5 text-sm font-medium transition-colors bg-ink dark:bg-ink-dark text-surface dark:text-surface-dark border-ink dark:border-ink-dark min-h-[36px] touch-manipulation" data-filter="all" aria-pressed="true">
+  <section class="mx-auto max-w-7xl px-6 pb-16 pt-6 sm:pb-24 sm:pt-8 sm:px-6 lg:px-8">
+    <div id="filters" class="mb-10 flex flex-wrap gap-2">
+      <button class="filter-btn phos-button rounded-phos-pill border border-phos-primary dark:border-phos-primary bg-phos-primary dark:bg-phos-primary px-4 py-2 text-phos-canvas dark:text-phos-canvas min-h-[36px] transition-colors" data-filter="all" aria-pressed="true">
         All
       </button>
       {categories.map((cat) => (
-        <button class="filter-btn rounded-full border px-3 py-1.5 sm:px-4 sm:py-1.5 text-sm font-medium transition-colors border-border dark:border-border-dark text-subtle dark:text-subtle-dark min-h-[36px] touch-manipulation" data-filter={cat.slug} aria-pressed="false">
+        <button class="filter-btn phos-button rounded-phos-pill border border-phos-border dark:border-phos-border px-4 py-2 phos-button text-phos-ink dark:text-phos-ink hover:border-phos-primary dark:hover:border-phos-primary min-h-[36px] transition-colors" data-filter={cat.slug} aria-pressed="false">
           {cat.name}
         </button>
       ))}
     </div>
 
-    <!-- Photo grid -->
     <div id="gallery-grid" class="masonry">
       {allPhotos.map((photo, i) => (
         <div class="gallery-item" data-category={photo.category}>
@@ -55,6 +55,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
             filename={photo.filename}
             title={photo.title}
             thumb={photo.thumb}
+            thumbMobile={photo.thumbMobile}
             full={photo.full}
             width={photo.width}
             height={photo.height}
@@ -66,7 +67,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
       ))}
     </div>
 
-    <div id="empty-state" class="hidden py-24 text-center text-subtle">
+    <div id="empty-state" class="hidden py-24 text-center phos-body-lg text-phos-muted dark:text-phos-muted">
       No photos match the selected category.
     </div>
   </section>
@@ -84,12 +85,12 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
         const filter = btn.dataset.filter
 
         filterBtns.forEach((b) => {
-          b.classList.remove('bg-ink', 'text-surface', 'border-ink', 'dark:bg-ink-dark', 'dark:text-surface-dark', 'dark:border-ink-dark')
-          b.classList.add('border-border', 'dark:border-border-dark', 'text-subtle', 'dark:text-subtle-dark')
+          b.classList.remove('bg-phos-primary', 'dark:bg-phos-primary', 'text-phos-canvas', 'dark:text-phos-canvas', 'border-phos-primary', 'dark:border-phos-primary')
+          b.classList.add('border-phos-border', 'dark:border-phos-border', 'text-phos-ink', 'dark:text-phos-ink')
           b.setAttribute('aria-pressed', 'false')
         })
-        btn.classList.add('bg-ink', 'text-surface', 'border-ink', 'dark:bg-ink-dark', 'dark:text-surface-dark', 'dark:border-ink-dark')
-        btn.classList.remove('border-border', 'dark:border-border-dark', 'text-subtle', 'dark:text-subtle-dark')
+        btn.classList.add('bg-phos-primary', 'dark:bg-phos-primary', 'text-phos-canvas', 'dark:text-phos-canvas', 'border-phos-primary', 'dark:border-phos-primary')
+        btn.classList.remove('border-phos-border', 'dark:border-phos-border', 'text-phos-ink', 'dark:text-phos-ink')
         btn.setAttribute('aria-pressed', 'true')
 
         let visible = 0
@@ -99,12 +100,12 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
           item.style.display = matches ? '' : 'none'
           if (matches) {
             visible++
-            const btn = item.querySelector('[data-index]')
-            if (btn) btn.dataset.index = newIdx++
+            const indexBtn = item.querySelector('[data-index]')
+            if (indexBtn) indexBtn.dataset.index = newIdx++
           }
         })
 
-        emptyState.classList.toggle('hidden', visible > 0)
+        emptyState?.classList.toggle('hidden', visible > 0)
 
         const filtered = filter === 'all' ? fullData : fullData.filter(p => p.category === filter)
         window.__updateLightboxData(filtered)

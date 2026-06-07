@@ -1,0 +1,176 @@
+/* Design tokens — see DESIGN.md for source of truth.
+   Light mode is the default; dark mode is defined under .dark. */
+
+:root {
+  /* Brand & accents */
+  --phos-black: #000000;
+  --phos-primary: #17171c;
+  --phos-ink: #212121;
+  --phos-deep-green: #003c33;
+  --phos-dark-navy: #071829;
+  --phos-canvas: #ffffff;
+  --phos-stone: #eeece7;
+  --phos-pale-green: #edfce9;
+  --phos-pale-blue: #f1f5ff;
+  --phos-coral: #ff7759;
+  --phos-coral-soft: #ffad9b;
+  --phos-hairline: #d9d9dd;
+  --phos-border: #e5e7eb;
+  --phos-card-border: #f2f2f2;
+  --phos-muted: #93939f;
+  --phos-slate: #75758a;
+  --phos-body-muted: #616161;
+  --phos-action-blue: #1863dc;
+  --phos-focus-blue: #4c6ee6;
+  --phos-form-focus: #9b60aa;
+  --phos-error: #b30000;
+
+  /* Fixed (do NOT swap in .dark) — used for primary buttons/CTAs */
+  --phos-button-bg: #17171c;
+  --phos-button-text: #ffffff;
+  --phos-button-bg-hover: #000000;
+  --phos-on-primary: #ffffff;
+
+  /* Radii */
+  --phos-radius-xs: 4px;
+  --phos-radius-sm: 8px;
+  --phos-radius-md: 16px;
+  --phos-radius-lg: 22px;
+  --phos-radius-xl: 30px;
+  --phos-radius-pill: 32px;
+
+  /* Spacing scale (8px base) */
+  --phos-space-xxs: 2px;
+  --phos-space-xs: 6px;
+  --phos-space-sm: 8px;
+  --phos-space-md: 12px;
+  --phos-space-lg: 16px;
+  --phos-space-xl: 24px;
+  --phos-space-xxl: 32px;
+  --phos-space-section: 80px;
+
+  /* Typography */
+  --font-display: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.dark {
+  --phos-black: #000000;
+  --phos-primary: #f5f5f7;
+  --phos-ink: #ededee;
+  --phos-canvas: #0a0a0d;
+  --phos-stone: #1a1a1f;
+  --phos-pale-green: #0f1f15;
+  --phos-pale-blue: #0f1626;
+  --phos-hairline: #2a2a31;
+  --phos-border: #232329;
+  --phos-card-border: #1d1d22;
+  --phos-muted: #6a6a76;
+  --phos-slate: #8a8a99;
+  --phos-body-muted: #a0a0a8;
+  --phos-deep-green: #0a4a3d;
+  --phos-dark-navy: #0c2238;
+  --phos-coral: #ff8b73;
+}
+
+/* Base typography — display headings use Space Grotesk; body uses Inter. */
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: var(--phos-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+/* Uppercase mono labels — 14px JetBrains Mono, slight letter-spacing */
+.phos-mono-label {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.28px;
+  text-transform: uppercase;
+}
+
+.phos-micro {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+.phos-caption {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+.phos-button {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.71;
+  letter-spacing: 0;
+}
+
+.phos-display-hero {
+  font-family: var(--font-display);
+  font-size: 96px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1.92px;
+}
+
+.phos-display-product {
+  font-family: var(--font-display);
+  font-size: 72px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1.44px;
+}
+
+.phos-display-section {
+  font-family: var(--font-display);
+  font-size: 60px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1.2px;
+}
+
+.phos-display-heading {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.48px;
+}
+
+.phos-display-card {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.32px;
+}
+
+.phos-display-feature {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: 0;
+}

@@ -1,4 +1,13 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const ROOT = join(__dirname, '..')
+
+const DB_PATH = process.env.DB_PATH || join(ROOT, 'config', 'site.db')
+const SOURCE_JSON = process.argv[2] || join(ROOT, 'src', 'content', 'site-config.json')
+const DEST_JSON = process.argv[3] || join(ROOT, 'src', 'content', 'site-config.json')
 
 function deepMerge(target, source) {
   const result = { ...target }
@@ -13,9 +22,39 @@ function deepMerge(target, source) {
   return result
 }
 
-const [, , defaultPath, persistedPath] = process.argv
+function readJSON(p) {
+  try {
+    return JSON.parse(readFileSync(p, 'utf-8'))
+  } catch {
+    return null
+  }
+}
 
-const defaults = JSON.parse(readFileSync(defaultPath, 'utf-8'))
-const existing = existsSync(persistedPath) ? JSON.parse(readFileSync(persistedPath, 'utf-8')) : {}
-const merged = deepMerge(defaults, existing)
-writeFileSync(persistedPath, JSON.stringify(merged, null, 2), 'utf-8')
+async function readFromSqlite() {
+  const mod = await import('../lib/db.mjs')
+  const { assembleConfig } = mod
+  return assembleConfig()
+}
+
+async function main() {
+  const defaults = readJSON(SOURCE_JSON) || {}
+
+  let live = await readFromSqlite()
+  if (!live) {
+    const persistedJson = process.env.CONFIG_PATH && existsSync(process.env.CONFIG_PATH)
+      ? readJSON(process.env.CONFIG_PATH)
+      : null
+    live = persistedJson || {}
+  }
+
+  const merged = deepMerge(defaults, live)
+  const dir = dirname(DEST_JSON)
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+  writeFileSync(DEST_JSON, JSON.stringify(merged, null, 2), 'utf-8')
+  console.log(`Wrote merged config to ${DEST_JSON}`)
+}
+
+main().catch((err) => {
+  console.error('merge-config error:', err)
+  process.exit(1)
+})

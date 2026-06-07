@@ -1,0 +1,11 @@
+---
+import { plugins, components } from '../generated/plugins.mjs'
+
+const { name } = Astro.props
+const matches = plugins.filter((p) => p.slot === name)
+---
+{matches.map((p) => {
+  const Component = components[p.name]
+  if (!Component) return null
+  return <Component {...p.config} />
+})}

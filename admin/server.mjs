@@ -1,18 +1,19 @@
 import { createServer } from 'node:http'
-import { readFileSync, writeFileSync, existsSync, readdirSync, copyFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { execSync } from 'node:child_process'
-import { join, dirname, extname, parse as parsePath } from 'node:path'
+import { join, dirname, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import nodemailer from 'nodemailer'
+import { assembleConfig, writeFullConfig, getMeta, getPluginConfig, setPluginConfig } from '../lib/db.mjs'
+import { deepMerge } from '../lib/merge.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const DEFAULT_CONFIG_PATH = join(ROOT, 'src', 'content', 'site-config.json')
-const CONFIG_PATH = process.env.CONFIG_PATH || DEFAULT_CONFIG_PATH
-const CONFIG_DEST = DEFAULT_CONFIG_PATH
-const DASHBOARD_PATH = join(__dirname, 'dashboard.html')
+const BUILT_ADMIN_PATH = join(ROOT, 'dist', 'admin', 'index.html')
 const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || join(ROOT, 'photos')
+const PLUGINS_DIR = join(ROOT, 'plugins')
 
 function readJSON(p) {
   try { return JSON.parse(readFileSync(p, 'utf-8')) } catch { return null }
@@ -25,18 +26,6 @@ const PASSWORD = process.env.ADMIN_PASSWORD || 'admin'
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif'])
 
-function deepMerge(target, source) {
-  const result = { ...target }
-  for (const key of Object.keys(source)) {
-    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
-      result[key] = deepMerge(result[key], source[key])
-    } else {
-      result[key] = source[key]
-    }
-  }
-  return result
-}
-
 function serveFile(res, path, type = 'text/html; charset=utf-8') {
   try {
     const content = readFileSync(path, 'utf-8')
@@ -48,8 +37,8 @@ function serveFile(res, path, type = 'text/html; charset=utf-8') {
   }
 }
 
-function json(res, data, status = 200) {
-  res.writeHead(status, { 'Content-Type': 'application/json' })
+function json(res, data, status = 200, extraHeaders = {}) {
+  res.writeHead(status, { 'Content-Type': 'application/json', ...extraHeaders })
   res.end(JSON.stringify(data))
 }
 
@@ -72,7 +61,6 @@ function requireAuth(req, res) {
   return true
 }
 
-// Categories helpers
 function listPhotoFiles(dir) {
   try {
     return readdirSync(dir)
@@ -91,6 +79,38 @@ function loadCategoryMeta(folderName) {
   } catch {
     return {}
   }
+}
+
+function discoverPluginManifests() {
+  if (!existsSync(PLUGINS_DIR)) return []
+  const manifests = []
+  for (const name of readdirSync(PLUGINS_DIR)) {
+    const dir = join(PLUGINS_DIR, name)
+    if (!statSync(dir).isDirectory()) continue
+    const manifestPath = join(dir, 'plugin.json')
+    if (!existsSync(manifestPath)) continue
+    const manifest = readJSON(manifestPath)
+    if (!manifest || !manifest.entry) continue
+    let config = {}
+    if (manifest.config) {
+      const configPath = join(dir, manifest.config)
+      if (existsSync(configPath)) {
+        config = readJSON(configPath) || {}
+      }
+    }
+    const sqliteRow = getPluginConfig(name)
+    if (sqliteRow) {
+      config = deepMerge(config, sqliteRow.config)
+    }
+    manifests.push({
+      name,
+      entry: manifest.entry,
+      slot: manifest.slot || null,
+      admin: manifest.admin === true,
+      config,
+    })
+  }
+  return manifests
 }
 
 function scanCategories() {
@@ -117,7 +137,6 @@ createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
   const path = url.pathname
 
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
@@ -128,12 +147,13 @@ createServer(async (req, res) => {
     return
   }
 
-  // Dashboard
   if (path === '/admin' || path === '/admin/') {
-    return serveFile(res, DASHBOARD_PATH)
+    if (existsSync(BUILT_ADMIN_PATH)) return serveFile(res, BUILT_ADMIN_PATH)
+    res.writeHead(500, { 'Content-Type': 'text/plain' })
+    res.end('Admin not built. Run `npm run build` first.')
+    return
   }
 
-  // API: Login
   if (path === '/api/login' && req.method === 'POST') {
     const body = await parseBody(req)
     if (body?.password === PASSWORD) {
@@ -142,37 +162,32 @@ createServer(async (req, res) => {
     return json(res, { error: 'Invalid password' }, 401)
   }
 
-  // API: Get config (deep-merge defaults so missing sections like `og` appear)
   if (path === '/api/config' && req.method === 'GET') {
     if (!requireAuth(req, res)) return
     const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
-    const existing = readJSON(CONFIG_PATH)
-    const config = existing ? deepMerge(defaults, existing) : defaults
-    return json(res, config)
+    const live = assembleConfig()
+    const merged = deepMerge(defaults, live)
+    return json(res, merged)
   }
 
-  // API: Update config (deep merge)
   if (path === '/api/config' && req.method === 'PUT') {
     if (!requireAuth(req, res)) return
     const body = await parseBody(req)
     if (!body) return json(res, { error: 'Invalid JSON' }, 400)
-    const existing = existsSync(CONFIG_PATH)
-      ? JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'))
-      : {}
-    const merged = deepMerge(existing, body)
-    writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2), 'utf-8')
+    const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
+    const current = assembleConfig()
+    const baseline = deepMerge(defaults, current)
+    const merged = deepMerge(baseline, body)
+    writeFullConfig(merged)
     return json(res, { ok: true })
   }
 
-  // API: Get categories (scan photos/ folders + _meta.yaml)
   if (path === '/api/categories' && req.method === 'GET') {
     if (!requireAuth(req, res)) return
     const categories = scanCategories()
     return json(res, { categories })
   }
 
-  // API: Update single category _meta.yaml
-  // Match /api/categories/:slug
   const catMatch = path.match(/^\/api\/categories\/([^/]+)$/)
   if (catMatch && req.method === 'PUT') {
     if (!requireAuth(req, res)) return
@@ -195,17 +210,37 @@ createServer(async (req, res) => {
     }
   }
 
-  function syncConfig() {
-    if (CONFIG_PATH !== CONFIG_DEST && existsSync(CONFIG_PATH)) {
-      copyFileSync(CONFIG_PATH, CONFIG_DEST)
-    }
+  if (path === '/api/plugins' && req.method === 'GET') {
+    if (!requireAuth(req, res)) return
+    const plugins = discoverPluginManifests().filter((p) => p.admin)
+    return json(res, { plugins })
   }
 
-  // API: Generate (content generation only — fast, no astro build)
-  if (path === '/api/generate' && req.method === 'POST') {
+  const pluginMatch = path.match(/^\/api\/plugins\/([^/]+)$/)
+  if (pluginMatch && req.method === 'GET') {
+    if (!requireAuth(req, res)) return
+    const name = pluginMatch[1]
+    const plugin = discoverPluginManifests().find((p) => p.name === name && p.admin)
+    if (!plugin) return json(res, { error: 'Plugin not found' }, 404)
+    return json(res, plugin)
+  }
+
+  if (pluginMatch && req.method === 'PUT') {
+    if (!requireAuth(req, res)) return
+    const name = pluginMatch[1]
+    const plugin = discoverPluginManifests().find((p) => p.name === name && p.admin)
+    if (!plugin) return json(res, { error: 'Plugin not found' }, 404)
+    const body = await parseBody(req)
+    if (!body || typeof body.config !== 'object' || body.config === null || Array.isArray(body.config)) {
+      return json(res, { error: 'Body must be { config: {...} }' }, 400)
+    }
+    setPluginConfig(name, body.config)
+    return json(res, { ok: true })
+  }
+
+  if (path === '/api/regenerate' && req.method === 'POST') {
     if (!requireAuth(req, res)) return
     try {
-      syncConfig()
       execSync('node scripts/generate-content.mjs', { cwd: ROOT, stdio: 'pipe', timeout: 120000 })
       return json(res, { ok: true })
     } catch (err) {
@@ -213,19 +248,25 @@ createServer(async (req, res) => {
     }
   }
 
-  // API: Rebuild (generate-content + astro build)
-  if (path === '/api/rebuild' && req.method === 'POST') {
+  if (path === '/api/republish' && req.method === 'POST') {
     if (!requireAuth(req, res)) return
     try {
-      syncConfig()
-      execSync('npm run build', { cwd: ROOT, stdio: 'pipe', timeout: 180000 })
+      execSync('npm run build', { cwd: ROOT, stdio: 'pipe', timeout: 300000 })
       return json(res, { ok: true })
     } catch (err) {
       return json(res, { error: err.stderr?.toString() || 'Build failed' }, 500)
     }
   }
 
-  // API: Contact form (send email via SMTP)
+  if (path === '/site-config.json' && req.method === 'GET') {
+    const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
+    const live = assembleConfig()
+    const merged = deepMerge(defaults, live)
+    return json(res, merged, 200, {
+      'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+    })
+  }
+
   if (path === '/api/contact' && req.method === 'POST') {
     const body = await parseBody(req)
     if (!body || !body.name || !body.email || !body.message) {
@@ -234,10 +275,9 @@ createServer(async (req, res) => {
 
     try {
       const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
-      const existing = readJSON(CONFIG_PATH) || {}
-      const fullConfig = deepMerge(defaults, existing)
+      const live = assembleConfig()
+      const fullConfig = deepMerge(defaults, live)
 
-      // Demo mode — silently accept without sending
       if (fullConfig.site?.toggle_demo) {
         return json(res, { ok: true })
       }
@@ -269,9 +309,11 @@ createServer(async (req, res) => {
     }
   }
 
-  // 404
   res.writeHead(404)
   res.end('Not found')
 }).listen(PORT, () => {
-  console.log(`admin server listening on http://localhost:${PORT}`)
+  const migratedAt = getMeta('migrated_at')
+  console.log(`admin server listening on http://localhost:${PORT}${migratedAt ? ` (db migrated ${migratedAt})` : ''}`)
 })
+
+

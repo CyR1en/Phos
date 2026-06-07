@@ -9,109 +9,110 @@ const email = config.about.photographer?.email || ''
 ---
 
 <BaseLayout title={heading}>
-  <section data-animate class="animate-reveal mx-auto max-w-2xl px-4 pt-16 pb-16 sm:pt-20 sm:pb-24 sm:px-6 lg:px-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{heading}</h1>
-    <p class="mt-4 text-subtle dark:text-subtle-dark">
-      {subheading}
-    </p>
-
-    {hasSmtp ? (
-      <>
-        {email && (
-          <p class="mt-6 text-sm text-subtle dark:text-subtle-dark">
-            Or reach out directly at <a href={`mailto:${email}`} class="font-medium text-ink dark:text-ink-dark underline underline-offset-2 hover:no-underline">{email}</a>
-          </p>
-        )}
-
-        <form id="contact-form" class="mt-6 sm:mt-8 space-y-5 sm:space-y-6">
-          <div>
-            <label for="name" class="block text-sm font-medium">Name</label>
-            <input
-              type="text" id="name" name="name" required
-              class="mt-1 block w-full rounded-lg border border-border dark:border-border-dark bg-transparent px-4 py-3 sm:py-2.5 text-sm outline-none focus:ring-2 focus:ring-ink/20 dark:focus:ring-ink-dark/20 transition-shadow"
-            />
-          </div>
-
-          <div>
-            <label for="email" class="block text-sm font-medium">Email</label>
-            <input
-              type="email" id="email" name="email" required
-              class="mt-1 block w-full rounded-lg border border-border dark:border-border-dark bg-transparent px-4 py-3 sm:py-2.5 text-sm outline-none focus:ring-2 focus:ring-ink/20 dark:focus:ring-ink-dark/20 transition-shadow"
-            />
-          </div>
-
-          <div>
-            <label for="message" class="block text-sm font-medium">Message</label>
-            <textarea
-              id="message" name="message" rows="5" required
-              class="mt-1 block w-full rounded-lg border border-border dark:border-border-dark bg-transparent px-4 py-3 sm:py-2.5 text-sm outline-none focus:ring-2 focus:ring-ink/20 dark:focus:ring-ink-dark/20 transition-shadow resize-y"
-            ></textarea>
-          </div>
-
-          <button type="submit"
-            class="w-full sm:w-auto rounded-lg bg-ink dark:bg-ink-dark px-6 py-3 sm:py-2.5 text-sm font-medium text-surface dark:text-surface-dark hover:opacity-90 transition-opacity"
-          >{submitBtn}</button>
-
-          <div id="form-status" class="hidden rounded-lg p-4 text-sm"></div>
-        </form>
-
-        <script>
-          const form = document.getElementById('contact-form')
-          const status = document.getElementById('form-status')
-          const btn = form.querySelector('button[type="submit"]')
-          const originalBtnText = btn.textContent
-
-          form.addEventListener('submit', async (e) => {
-            e.preventDefault()
-            status.className = 'hidden'
-            btn.disabled = true
-            btn.textContent = 'Sending...'
-
-            const formData = new FormData(form)
-
-            try {
-              const res = await fetch('/api/contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  name: formData.get('name'),
-                  email: formData.get('email'),
-                  message: formData.get('message'),
-                }),
-              })
-
-              const data = await res.json()
-
-              if (!res.ok) {
-                throw new Error(data.error || `Submission failed (${res.status})`)
-              }
-
-              status.className =
-                'rounded-lg p-4 text-sm bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
-              status.textContent = "Message sent! I'll get back to you soon."
-              form.reset()
-            } catch (err) {
-              status.className =
-                'rounded-lg p-4 text-sm bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-              status.textContent = err.message || 'Something went wrong. Please try again.'
-            } finally {
-              btn.disabled = false
-              btn.textContent = originalBtnText
-            }
-          })
-        </script>
-      </>
-    ) : (
-      <div class="mt-8 sm:mt-10 rounded-lg border border-border dark:border-border-dark p-5 sm:p-6 text-center">
-        <p class="text-subtle dark:text-subtle-dark">
-          Contact form is not configured yet. Configure SMTP settings in the admin dashboard to enable it.
+  <section class="bg-phos-pale-blue dark:bg-phos-pale-blue">
+    <div class="mx-auto max-w-3xl px-6 py-24 sm:px-6 lg:px-8">
+      <div class="rounded-phos-lg bg-phos-canvas dark:bg-phos-canvas p-8 sm:p-12 border border-phos-card-border dark:border-phos-card-border">
+        <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Contact</p>
+        <h1 class="mt-4 font-display text-phos-display-card text-phos-ink dark:text-phos-ink" data-config="contact.format.heading">{heading}</h1>
+        <p class="mt-4 phos-body-lg text-phos-body-muted dark:text-phos-body-muted" data-config="contact.format.subheading">
+          {subheading}
         </p>
-        {email && (
-          <p class="mt-2 text-sm text-subtle">
-            Reach out directly at <a href={`mailto:${email}`} class="font-medium text-ink dark:text-ink-dark underline underline-offset-2 hover:no-underline">{email}</a>
-          </p>
+
+        {hasSmtp ? (
+          <form id="contact-form" class="mt-10 grid gap-5 sm:grid-cols-2 sm:gap-6">
+            <div>
+              <label for="name" class="block phos-caption text-phos-ink dark:text-phos-ink">Name</label>
+              <input
+                type="text" id="name" name="name" required
+                class="mt-2 block w-full rounded-phos-sm border border-phos-border dark:border-phos-border bg-phos-canvas dark:bg-phos-canvas px-4 py-3 phos-caption text-phos-ink dark:text-phos-ink placeholder:text-phos-muted dark:placeholder:text-phos-muted focus:border-phos-form-focus focus:outline-none focus:ring-2 focus:ring-phos-form-focus/20 transition-shadow"
+              />
+            </div>
+
+            <div>
+              <label for="email" class="block phos-caption text-phos-ink dark:text-phos-ink">Email</label>
+              <input
+                type="email" id="email" name="email" required
+                class="mt-2 block w-full rounded-phos-sm border border-phos-border dark:border-phos-border bg-phos-canvas dark:bg-phos-canvas px-4 py-3 phos-caption text-phos-ink dark:text-phos-ink placeholder:text-phos-muted dark:placeholder:text-phos-muted focus:border-phos-form-focus focus:outline-none focus:ring-2 focus:ring-phos-form-focus/20 transition-shadow"
+              />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="message" class="block phos-caption text-phos-ink dark:text-phos-ink">Message</label>
+              <textarea
+                id="message" name="message" rows="5" required
+                class="mt-2 block w-full rounded-phos-sm border border-phos-border dark:border-phos-border bg-phos-canvas dark:bg-phos-canvas px-4 py-3 phos-caption text-phos-ink dark:text-phos-ink placeholder:text-phos-muted dark:placeholder:text-phos-muted focus:border-phos-form-focus focus:outline-none focus:ring-2 focus:ring-phos-form-focus/20 transition-shadow resize-y"
+              ></textarea>
+            </div>
+
+            <div class="sm:col-span-2 flex flex-wrap items-center gap-4">
+              <button type="submit"
+                class="inline-flex items-center rounded-phos-pill bg-phos-primary dark:bg-phos-primary px-6 py-3 phos-button text-phos-canvas dark:text-phos-canvas hover:opacity-90 transition-opacity"
+              ><span data-config="contact.format.submitBtn">{submitBtn}</span>
+                <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </button>
+              {email && (
+                <span class="phos-caption text-phos-body-muted dark:text-phos-body-muted">or email <a href={`mailto:${email}`} class="text-phos-action-blue dark:text-phos-action-blue underline underline-offset-2 hover:no-underline">{email}</a></span>
+              )}
+            </div>
+
+            <div id="form-status" class="sm:col-span-2 hidden rounded-phos-sm phos-caption p-4"></div>
+          </form>
+
+          <script>
+            const form = document.getElementById('contact-form')
+            const status = document.getElementById('form-status')
+            const btn = form.querySelector('button[type="submit"]')
+            const originalBtnText = btn.textContent
+
+            form.addEventListener('submit', async (e) => {
+              e.preventDefault()
+              status.className = 'sm:col-span-2 hidden rounded-phos-sm phos-caption p-4'
+              btn.disabled = true
+              const labelEl = btn.querySelector('span')
+              if (labelEl) labelEl.textContent = 'Sending...'
+
+              const formData = new FormData(form)
+
+              try {
+                const res = await fetch('/api/contact', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    message: formData.get('message'),
+                  }),
+                })
+
+                const data = await res.json()
+
+                if (!res.ok) {
+                  throw new Error(data.error || `Submission failed (${res.status})`)
+                }
+
+                status.className = 'sm:col-span-2 rounded-phos-sm phos-caption p-4 bg-phos-pale-green dark:bg-phos-pale-green text-phos-ink dark:text-phos-ink'
+                status.textContent = "Message sent! I'll get back to you soon."
+                form.reset()
+              } catch (err) {
+                status.className = 'sm:col-span-2 rounded-phos-sm phos-caption p-4 bg-red-900/10 text-phos-error dark:text-phos-error'
+                status.textContent = err.message || 'Something went wrong. Please try again.'
+              } finally {
+                btn.disabled = false
+                if (labelEl) labelEl.textContent = originalBtnText
+              }
+            })
+          </script>
+        ) : (
+          <div class="mt-10 rounded-phos-sm border border-phos-border dark:border-phos-border p-6 phos-caption text-phos-body-muted dark:text-phos-body-muted">
+            Contact form is not configured yet. Configure SMTP settings in the admin dashboard to enable it.
+            {email && (
+              <p class="mt-2">
+                Reach out directly at <a href={`mailto:${email}`} class="text-phos-action-blue dark:text-phos-action-blue underline underline-offset-2 hover:no-underline">{email}</a>
+              </p>
+            )}
+          </div>
         )}
       </div>
-    )}
+    </div>
   </section>
 </BaseLayout>

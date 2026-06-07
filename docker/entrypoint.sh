@@ -24,7 +24,7 @@ fi
 usermod -u "$PUID" appuser
 groupmod -g "$PGID" appuser
 
-chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config
+chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config 2>/dev/null || true
 
 CONFIG_PATH="${CONFIG_PATH:-/config/site-config.json}"
 export CONFIG_PATH
@@ -43,8 +43,14 @@ node /app/scripts/merge-config.mjs "$CONFIG_DEST" "$CONFIG_PATH"
 su-exec appuser cp -f "$CONFIG_PATH" "$CONFIG_DEST"
 echo "Synced config from $CONFIG_PATH"
 
+echo "Migrating config to SQLite..."
+su-exec appuser node /app/scripts/migrate-config.mjs
+
 echo "Generating photo content..."
 su-exec appuser node /app/scripts/generate-content.mjs
+
+echo "Discovering plugins..."
+su-exec appuser node /app/scripts/discover-plugins.mjs
 
 echo "Building static site..."
 su-exec appuser npx astro build

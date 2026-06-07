@@ -3,23 +3,23 @@ import ThemeToggle from './ThemeToggle.astro'
 import config from '@content/site-config.json'
 ---
 
-<header class="sticky top-0 z-40 border-b border-border dark:border-border-dark bg-surface/80 dark:bg-surface-dark/80 backdrop-blur-lg">
-  <nav class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-    <a href="/" class="text-lg font-semibold tracking-tight">{config.site.title}</a>
+<header class="sticky top-0 z-40 border-b border-phos-hairline dark:border-phos-hairline bg-white/85 dark:bg-neutral-950/85 backdrop-blur-md">
+  <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
+    <a href="/" class="font-display text-xl text-phos-primary dark:text-phos-primary">
+      <span data-config="site.title">{config.site.title}</span>
+    </a>
 
-    <!-- Desktop nav -->
-    <div class="hidden items-center gap-6 sm:flex">
-      <a href="/" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">Home</a>
-      <a href="/portfolio" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">Portfolio</a>
-      <a href="/about" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">About</a>
-      <a href="/contact" class="text-sm text-subtle dark:text-subtle-dark hover:text-ink dark:hover:text-ink-dark transition-colors">Contact</a>
-      <ThemeToggle />
+    <div class="hidden items-center gap-8 sm:flex">
+      <a href="/" class="phos-button text-phos-ink dark:text-phos-ink hover:text-phos-primary dark:hover:text-phos-primary transition-colors">Home</a>
+      <a href="/portfolio" class="phos-button text-phos-ink dark:text-phos-ink hover:text-phos-primary dark:hover:text-phos-primary transition-colors">Portfolio</a>
+      <a href="/about" class="phos-button text-phos-ink dark:text-phos-ink hover:text-phos-primary dark:hover:text-phos-primary transition-colors">About</a>
+      <a href="/contact" class="phos-button text-phos-ink dark:text-phos-ink hover:text-phos-primary dark:hover:text-phos-primary transition-colors">Contact</a>
     </div>
 
-    <!-- Mobile hamburger -->
-    <div class="flex items-center gap-3 sm:hidden">
+    <div class="flex items-center gap-3">
+      <a href="/contact" class="hidden sm:inline-flex phos-button items-center rounded-phos-pill bg-phos-primary dark:bg-phos-primary px-5 py-2 text-phos-canvas dark:text-phos-canvas hover:opacity-90 transition-opacity">Get in touch</a>
       <ThemeToggle />
-      <button id="menu-btn" class="flex h-9 w-9 items-center justify-center rounded-lg text-subtle dark:text-subtle-dark hover:bg-muted dark:hover:bg-muted-dark transition-colors" aria-label="Open menu">
+      <button id="menu-btn" class="flex h-9 w-9 items-center justify-center rounded-phos-sm text-phos-ink dark:text-phos-ink hover:bg-phos-stone dark:hover:bg-phos-stone transition-colors sm:hidden" aria-label="Open menu">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18M3 6h18M3 18h18" />
         </svg>
@@ -30,21 +30,21 @@ import config from '@content/site-config.json'
 
 <!-- Mobile nav overlay -->
 <div id="mobile-nav" class="fixed inset-0 z-50 hidden sm:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
-  <div id="nav-backdrop" class="absolute inset-0 bg-black/60 dark:bg-surface-dark/80 backdrop-blur-sm"></div>
-  <div id="nav-drawer" class="absolute right-0 top-0 h-full w-full max-w-sm bg-surface dark:bg-surface-dark shadow-2xl">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-border dark:border-border-dark">
-      <span class="text-lg font-semibold tracking-tight">{config.site.title}</span>
-      <button id="menu-close" class="flex h-9 w-9 items-center justify-center rounded-lg text-subtle dark:text-subtle-dark hover:bg-muted dark:hover:bg-muted-dark transition-colors" aria-label="Close menu">
+  <div id="nav-backdrop" class="absolute inset-0 bg-black/60 dark:bg-neutral-950/80 backdrop-blur-sm"></div>
+  <div id="nav-drawer" class="absolute right-0 top-0 h-full w-full max-w-sm bg-phos-canvas dark:bg-phos-canvas">
+    <div class="flex items-center justify-between border-b border-phos-hairline dark:border-phos-hairline px-6 py-5">
+      <span class="font-display text-xl text-phos-primary dark:text-phos-primary" data-config="site.title">{config.site.title}</span>
+      <button id="menu-close" class="flex h-9 w-9 items-center justify-center rounded-phos-sm text-phos-ink dark:text-phos-ink hover:bg-phos-stone dark:hover:bg-phos-stone transition-colors" aria-label="Close menu">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6L6 18M6 6l12 12" />
         </svg>
       </button>
     </div>
     <nav class="flex flex-col gap-2 px-6 pt-8">
-      <a href="/" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">Home</a>
-      <a href="/portfolio" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">Portfolio</a>
-      <a href="/about" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">About</a>
-      <a href="/contact" class="rounded-lg px-4 py-3 text-base font-medium hover:bg-muted dark:hover:bg-muted-dark transition-colors">Contact</a>
+      <a href="/" class="rounded-phos-sm px-4 py-3 phos-button text-phos-ink dark:text-phos-ink hover:bg-phos-stone dark:hover:bg-phos-stone transition-colors">Home</a>
+      <a href="/portfolio" class="rounded-phos-sm px-4 py-3 phos-button text-phos-ink dark:text-phos-ink hover:bg-phos-stone dark:hover:bg-phos-stone transition-colors">Portfolio</a>
+      <a href="/about" class="rounded-phos-sm px-4 py-3 phos-button text-phos-ink dark:text-phos-ink hover:bg-phos-stone dark:hover:bg-phos-stone transition-colors">About</a>
+      <a href="/contact" class="rounded-phos-sm px-4 py-3 phos-button text-phos-ink dark:text-phos-ink hover:bg-phos-stone dark:hover:bg-phos-stone transition-colors">Contact</a>
     </nav>
   </div>
 </div>
@@ -90,6 +90,5 @@ import config from '@content/site-config.json'
     }
   })
 
-  // Close nav on route change (View Transitions)
   document.addEventListener('astro:before-swap', closeMenu)
 </script>

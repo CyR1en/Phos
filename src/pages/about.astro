@@ -1,48 +1,47 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
 import config from '@content/site-config.json'
-import CTA from '@components/CTA.astro'
+import Plugins from '@components/Plugins.astro'
 
-const aboutPhoto = config.about.photo || ''
-const aboutPhotoFull = config.about.photoFull || ''
+const aboutPhoto = config.about.photographer?.photo || ''
 const gear = config.about.gear || {}
 const gearLabel = gear.heading || 'My Gear'
 const gearList = gear.equipment || []
 const hasGear = gearList.length > 0
-const bio = config.about.bio || ''
+const bio = config.about.photographer?.bio || ''
+const cta = config.about.call_to_action
 ---
 
 <BaseLayout title="About">
-  <!-- Photo + Intro -->
-  <section data-animate class="animate-reveal mx-auto max-w-7xl px-4 pt-12 sm:pt-16 pb-0 sm:px-6 lg:px-8">
-    <div class="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
-      {aboutPhoto && (
-        <div class="overflow-hidden rounded-xl bg-muted dark:bg-muted-dark">
-          <img
-            src={aboutPhoto}
-            alt=""
-            class="h-full w-full object-cover"
-            data-full-src={aboutPhotoFull || undefined}
-            loading="eager"
-          />
-        </div>
-      )}
-      <div class={aboutPhoto ? '' : 'lg:col-span-2'}>
-        <p class="text-sm font-medium uppercase tracking-widest text-subtle dark:text-subtle-dark">About</p>
-        <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+  <section class="mx-auto max-w-7xl px-6 pt-24 pb-phos-section sm:px-6 lg:px-8">
+    <div class="grid gap-8 lg:grid-cols-12 lg:gap-12">
+      <div class="lg:col-span-8 flex flex-col justify-center">
+        <p class="phos-mono-label text-phos-coral">About</p>
+        <h1 class="mt-4 font-display text-phos-display-product text-phos-ink dark:text-phos-ink" data-config="about.photographer.name">
           {config.about.photographer.name}
         </h1>
-        <p class="mt-4 text-lg leading-relaxed text-subtle dark:text-subtle-dark">
-          {config.about.intro}
+        <p class="mt-8 phos-body-lg text-phos-body-muted dark:text-phos-body-muted leading-relaxed" data-config="about.photographer.intro">
+          {config.about.photographer.intro}
         </p>
+      </div>
+      <div class="lg:col-span-4">
+        {aboutPhoto && (
+          <div class="overflow-hidden rounded-phos-lg bg-phos-stone dark:bg-phos-stone aspect-[4/5]">
+            <img
+              src={aboutPhoto}
+              alt=""
+              class="h-full w-full object-cover"
+              loading="eager"
+            />
+          </div>
+        )}
       </div>
     </div>
   </section>
 
-  <!-- Bio -->
   {bio.trim() && (
-    <section data-animate class="animate-reveal mx-auto max-w-3xl px-4 py-12 sm:py-16 sm:px-6 lg:px-8">
-      <div class="space-y-5 text-base leading-relaxed text-subtle dark:text-subtle-dark sm:text-lg">
+    <section class="mx-auto max-w-3xl px-6 py-12 sm:py-16 sm:px-6 lg:px-8">
+      <div class="space-y-6 phos-body-lg text-phos-ink dark:text-phos-ink leading-relaxed">
         {bio.split('\n\n').map((para) => (
           <p>{para}</p>
         ))}
@@ -50,17 +49,21 @@ const bio = config.about.bio || ''
     </section>
   )}
 
-  <!-- Gear -->
   {hasGear && (
-    <section data-animate class="animate-reveal mx-auto max-w-3xl px-4 pb-4 sm:px-6 lg:px-8">
-      <div class="rounded-xl border border-border dark:border-border-dark p-6 sm:p-8">
-        <h2 class="text-xl font-semibold text-ink dark:text-ink-dark">
-          {gearLabel}
-        </h2>
-        <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+    <section class="mx-auto max-w-7xl px-6 pb-12 sm:px-6 lg:px-8">
+      <div class="rounded-phos-lg bg-phos-dark-navy dark:bg-phos-dark-navy px-8 py-16 sm:px-16 sm:py-20">
+        <div class="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p class="phos-mono-label text-phos-coral">Equipment</p>
+            <h2 class="mt-4 font-display text-phos-display-heading text-phos-canvas dark:text-phos-canvas" data-config="about.gear.heading">
+              {gearLabel}
+            </h2>
+          </div>
+        </div>
+        <ul class="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {gearList.map((item) => (
-            <li class="flex items-center gap-3 text-subtle dark:text-subtle-dark">
-              <svg class="h-4 w-4 shrink-0 text-ink/40 dark:text-ink-dark/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <li class="flex items-center gap-3 phos-caption text-white/80">
+              <svg class="h-4 w-4 shrink-0 text-phos-coral" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
               </svg>
               <span>{item}</span>
@@ -71,18 +74,25 @@ const bio = config.about.bio || ''
     </section>
   )}
 
-  <!-- CTA -->
-  <CTA />
-</BaseLayout>
+  <Plugins name="about.after-gear" />
 
-<script>
-  window.addEventListener('load', () => {
-    const img = document.querySelector('img[data-full-src]')
-    if (img && img.dataset.fullSrc) {
-      const full = img.dataset.fullSrc
-      const fullImg = new Image()
-      fullImg.onload = () => { img.src = full; img.removeAttribute('data-full-src') }
-      fullImg.src = full
-    }
-  }, { once: true, passive: true })
-</script>
+  {cta && (
+    <section data-animate class="animate-reveal mx-auto max-w-7xl px-6 py-phos-section sm:px-6 lg:px-8">
+      <div class="rounded-phos-lg bg-phos-deep-green dark:bg-phos-deep-green px-8 py-16 sm:px-16 sm:py-20 lg:py-phos-section">
+        <div class="max-w-3xl">
+          <p class="phos-mono-label text-phos-coral">Contact</p>
+          <h2 class="mt-4 font-display text-phos-display-heading text-phos-canvas dark:text-phos-canvas" data-config="about.call_to_action.heading">
+            {cta.heading}
+          </h2>
+          <a
+            href="/contact"
+            class="mt-10 inline-flex items-center rounded-phos-pill bg-phos-canvas dark:bg-phos-canvas px-6 py-3 phos-button text-phos-primary dark:text-phos-primary hover:opacity-90 transition-opacity"
+          >
+            <span data-config="about.call_to_action.link">{cta.link}</span>
+            <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  )}
+</BaseLayout>
