@@ -91,17 +91,17 @@ services:
       - ./AppData/config:/config:rw
     environment:
       ADMIN_PASSWORD: "your-password-here"
+      DB_PATH: "/config/site.db"
       PUBLIC_SITE_URL: "https://yourdomain.com"
 ```
 
 | Volume | Container path | Purpose |
 |---|---|---|
-| `./AppData/photos` | `/photos` | Drop category folders here (e.g. `wildlife/`, `wedding/`) |
-| `./AppData/config` | `/config` | Persists site configuration across restarts |
+| `./AppData/photos` | `/photos` | Drop category folders here (e.g. `wildlife/`, `wedding/`). Requires `PHOTOS_SOURCE=/photos`. |
+| `./AppData/config` | `/config` | Persists site-config.json and SQLite database (`DB_PATH=/config/site.db`) across restarts |
+| `./AppData/plugins/*` | `/app/plugins/*` | Optional: mount custom plugins from host |
 
-On container startup, photos are processed, plugins are discovered, and the site is built. The admin server runs alongside nginx, serving both the public site (port 8080) and the dashboard.
-
-Mount custom plugins: `- ./plugins/what-is-phos:/app/plugins/what-is-phos:ro`
+On each container start, the entrypoint runs: merge default config → migrate to SQLite → generate photos → discover plugins → build static site → start admin server (port 3001) and nginx (port 8080). The admin dashboard is available at `/admin` behind nginx.
 
 ### Local Development
 

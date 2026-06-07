@@ -12,7 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const DEFAULT_CONFIG_PATH = join(ROOT, 'src', 'content', 'site-config.json')
 const BUILT_ADMIN_PATH = join(ROOT, 'dist', 'admin', 'index.html')
-const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || join(ROOT, 'photos')
+const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || '/photos'
 const PLUGINS_DIR = join(ROOT, 'plugins')
 
 function readJSON(p) {

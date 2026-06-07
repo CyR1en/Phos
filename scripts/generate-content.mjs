@@ -7,7 +7,7 @@ import sharp from 'sharp'
 import yaml from 'yaml'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || join(__dirname, '..', 'photos')
+const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || '/photos'
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'photos')
 const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
 const ROOT = join(__dirname, '..')
@@ -82,7 +82,7 @@ async function scanPhotos(sourceDir) {
     entries = await readdir(sourceDir)
   } catch {
     console.warn(`Warning: photos directory not found at ${sourceDir}`)
-    return { categories: [], featured: [] }
+    return { categories: [], heroPriority: [] }
   }
 
   for (const entry of entries) {
