@@ -55,6 +55,7 @@ export default {
         'phos-product': ['72px', { lineHeight: '1', letterSpacing: '-1.44px' }],
         'phos-section': ['60px', { lineHeight: '1', letterSpacing: '-1.2px' }],
         'phos-heading': ['48px', { lineHeight: '1.2', letterSpacing: '-0.48px' }],
+        'phos-heading2': ['36px', { lineHeight: '1.2', letterSpacing: '-0.36px' }],
         'phos-card': ['32px', { lineHeight: '1.2', letterSpacing: '-0.32px' }],
         'phos-feature': ['24px', { lineHeight: '1.3' }],
         'phos-body-lg': ['18px', { lineHeight: '1.4' }],
