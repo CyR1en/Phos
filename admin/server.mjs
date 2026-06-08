@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, rmSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { join, dirname, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -234,6 +234,110 @@ createServer(async (req, res) => {
     const merged = deepMerge(baseline, body)
     writeFullConfig(merged)
     return json(res, { ok: true })
+  }
+
+  if (path === '/api/logo-status' && req.method === 'GET') {
+    if (!requireAuth(req, res)) return
+    const ROOT = dirname(fileURLToPath(import.meta.url))
+    const pubDir = join(ROOT, '..', 'public')
+    const files = existsSync(pubDir) ? readdirSync(pubDir) : []
+    const logoFile = files.find(f => f === 'logo.svg')
+    const lightFile = files.find(f => f.startsWith('logo_light.'))
+    const darkFile = files.find(f => f.startsWith('logo_dark.'))
+    return json(res, {
+      detected: !!(logoFile || lightFile),
+      type: logoFile ? 'svg' : lightFile ? 'image' : null,
+      light: logoFile ? '/logo.svg' : lightFile ? '/' + lightFile : null,
+      dark: logoFile ? '/logo.svg' : lightFile ? (darkFile ? '/' + darkFile : '/' + lightFile) : null,
+    })
+  }
+
+  if (path === '/api/upload-logo' && req.method === 'POST') {
+    if (!requireAuth(req, res)) return
+    const body = await parseBody(req)
+    if (!body) return json(res, { error: 'Invalid JSON' }, 400)
+
+    if (typeof body.file !== 'string') {
+      return json(res, { error: 'file (base64 data URL) is required' }, 400)
+    }
+
+    const ROOT = dirname(fileURLToPath(import.meta.url))
+
+    // Remove old logo files
+    const removeAllLogos = () => {
+      for (const dir of ['public', 'dist']) {
+        const base = join(ROOT, '..', dir)
+        if (!existsSync(base)) continue
+        for (const f of readdirSync(base)) {
+          if (f === 'logo.svg' || f.startsWith('logo_light.') || f.startsWith('logo_dark.')) {
+            try { rmSync(join(base, f)) } catch {}
+          }
+        }
+      }
+    }
+
+    if (!body.file) {
+      removeAllLogos()
+      return json(res, { ok: true, detected: false, type: null, light: null, dark: null })
+    }
+
+    const decodeDataUrl = (dataUrl) => {
+      const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+      if (!m) return null
+      return { mime: m[1], buffer: Buffer.from(m[2], 'base64') }
+    }
+
+    const extForMime = (mime) => {
+      const map = { 'image/svg+xml': 'svg', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg' }
+      return map[mime] || null
+    }
+
+    const validateBuffer = (buffer, ext) => {
+      const sigMap = { png: [0x89, 0x50, 0x4e, 0x47], jpg: [0xff, 0xd8, 0xff], svg: null }
+      const sig = sigMap[ext]
+      if (sig) { for (let i = 0; i < sig.length; i++) { if (buffer[i] !== sig[i]) return false } }
+      else if (ext === 'svg') { const s = buffer.toString('utf-8').trim(); if (!s.startsWith('<svg') && !s.startsWith('<?xml')) return false }
+      return true
+    }
+
+    const writeLogo = (fileName, buffer) => {
+      for (const dir of ['public', 'dist']) {
+        const p = join(ROOT, '..', dir, fileName)
+        try { writeFileSync(p, buffer) } catch {}
+      }
+    }
+
+    const light = decodeDataUrl(body.file)
+    if (!light) return json(res, { error: 'Invalid data URL' }, 400)
+
+    const ext = extForMime(light.mime)
+    if (!ext) return json(res, { error: 'Unsupported file type (SVG, PNG, JPEG only)' }, 400)
+    if (!validateBuffer(light.buffer, ext)) return json(res, { error: 'File validation failed' }, 400)
+
+    removeAllLogos()
+
+    let files = {}
+
+    if (ext === 'svg') {
+      writeLogo('logo.svg', light.buffer)
+      files = { type: 'svg', light: '/logo.svg', dark: '/logo.svg' }
+    } else {
+      writeLogo(`logo_light.${ext}`, light.buffer)
+      files = { type: 'image', light: `/logo_light.${ext}`, dark: `/logo_light.${ext}` }
+
+      if (body.darkFile) {
+        const dark = decodeDataUrl(body.darkFile)
+        if (dark) {
+          const dExt = extForMime(dark.mime)
+          if (dExt && validateBuffer(dark.buffer, dExt)) {
+            writeLogo(`logo_dark.${dExt}`, dark.buffer)
+            files.dark = `/logo_dark.${dExt}`
+          }
+        }
+      }
+    }
+
+    return json(res, { ok: true, ...files })
   }
 
   if (path === '/api/categories' && req.method === 'GET') {

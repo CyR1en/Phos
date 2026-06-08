@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { AuthGate } from './AuthGate'
 import { Sidebar } from './Sidebar'
 import { SaveIndicator } from './SaveIndicator'
@@ -50,6 +50,11 @@ const BUILD_LOG_ENABLED = import.meta.env.PUBLIC_ADMIN_BUILD_LOG !== 'false'
 function DashboardBody() {
   const { token, flushSave, republish, regenerate, currentPage, buildStatus, buildLog, clearBuildStatus } = useConfig()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const autoCloseRef = useRef<ReturnType<typeof setTimeout>>()
+  const intervalRef = useRef<ReturnType<typeof setInterval>>()
+  const hasInteracted = useRef(false)
+  const logRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -80,6 +85,43 @@ function DashboardBody() {
       }
     }
   }, [mobileNavOpen])
+
+  useEffect(() => {
+    if (buildStatus !== 'done' && buildStatus !== 'error') {
+      setCountdown(null)
+      return
+    }
+    hasInteracted.current = false
+    setCountdown(3)
+
+    intervalRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(intervalRef.current)
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    autoCloseRef.current = setTimeout(() => {
+      if (!hasInteracted.current) clearBuildStatus()
+      setCountdown(null)
+      clearInterval(intervalRef.current)
+    }, 3000)
+
+    return () => {
+      clearTimeout(autoCloseRef.current)
+      clearInterval(intervalRef.current)
+      setCountdown(null)
+    }
+  }, [buildStatus])
+
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight
+    }
+  }, [buildLog])
 
   if (!token) return <AuthGate />
 
@@ -155,25 +197,62 @@ function DashboardBody() {
       </main>
       <ToastViewport />
       {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
-        <div class="fixed bottom-0 inset-x-0 z-50 bg-gray-950 text-green-400 font-mono text-xs shadow-2xl border-t border-gray-700">
-          <div class="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-700">
-            <span class="font-bold uppercase tracking-wider text-phos-micro">
-              {buildStatus === 'running' && 'Building\u2026'}
-              {buildStatus === 'done' && 'Build complete'}
-              {buildStatus === 'error' && 'Build failed'}
-            </span>
-            <button
-              type="button"
-              onClick={clearBuildStatus}
-              class="text-gray-400 hover:text-gray-200 transition-colors"
-              aria-label="Close build log"
-            >
-              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
+        <div
+          class="fixed bottom-0 inset-x-0 z-50 bg-phos-canvas border-t border-phos-hairline shadow-2xl transition-all duration-300"
+          onMouseEnter={() => {
+            if (countdown !== null) {
+              hasInteracted.current = true
+              clearTimeout(autoCloseRef.current)
+              clearInterval(intervalRef.current)
+              setCountdown(null)
+            }
+          }}
+        >
+          <div class={[
+            'flex items-center justify-between px-4 py-3 border-b border-phos-hairline',
+            buildStatus === 'running' && 'bg-phos-stone',
+            buildStatus === 'done' && 'bg-phos-pale-green',
+            buildStatus === 'error' && 'bg-phos-error/10',
+          ].filter(Boolean).join(' ')}>
+            <div class="flex items-center gap-2.5">
+              {buildStatus === 'running' && (
+                <span class="size-2 rounded-full bg-phos-ink animate-pulse" />
+              )}
+              {buildStatus === 'done' && (
+                <svg class="size-4 text-phos-deep-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              )}
+              {buildStatus === 'error' && (
+                <svg class="size-4 text-phos-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              )}
+              <span class="font-display text-phos-body text-phos-ink">
+                {buildStatus === 'running' && 'Building'}
+                {buildStatus === 'done' && 'Build complete'}
+                {buildStatus === 'error' && 'Build failed'}
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              {countdown !== null && (
+                <span class="text-phos-micro text-phos-muted transition-opacity duration-300">
+                  Closing in {countdown}s
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={clearBuildStatus}
+                class="text-phos-muted hover:text-phos-ink transition-colors p-1 rounded-phos-xs hover:bg-phos-stone"
+                aria-label="Close build log"
+              >
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <div class="p-4 max-h-48 overflow-y-auto whitespace-pre-wrap">
+          <div ref={logRef} class="p-4 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-phos-body-muted">
             {buildLog.map((line, i) => (
               <div key={i} class="leading-relaxed">{line}</div>
             ))}
