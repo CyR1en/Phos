@@ -165,12 +165,18 @@ const first = heroPriority[0]
   }
 
   if (heroBg) {
-    const onLenisScroll = (lenis) => {
-      const y = lenis.animatedScroll * 0.4
-      heroBg.style.transform = `translate3d(0, ${y}px, 0)`
-    }
-    if (window.__lenis) {
-      window.__lenis.on('scroll', onLenisScroll)
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!prefersReduced) {
+      let lastY = 0
+      const onLenisScroll = (lenis) => {
+        const y = lenis.animatedScroll * 0.4
+        if (Math.abs(y - lastY) < 0.5) return
+        lastY = y
+        heroBg.style.setProperty('--parallax-y', `${y}px`)
+      }
+      if (window.__lenis) {
+        window.__lenis.on('scroll', onLenisScroll)
+      }
     }
   }
 </script>

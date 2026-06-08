@@ -11,7 +11,7 @@ const ogDescription = config.contact?.og_description
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription}>
-  <section class="bg-phos-pale-blue dark:bg-phos-pale-blue">
+  <section class="contact-bleed flex flex-1 flex-col bg-phos-pale-blue dark:bg-phos-pale-blue">
     <div class="mx-auto max-w-3xl px-6 py-24 sm:px-6 lg:px-8">
       <div class="rounded-phos-lg bg-phos-canvas dark:bg-phos-canvas p-8 sm:p-12 border border-phos-card-border dark:border-phos-card-border">
         <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Contact</p>
@@ -118,3 +118,9 @@ const ogDescription = config.contact?.og_description
     </div>
   </section>
 </BaseLayout>
+
+<style is:global>
+  main:has(.contact-bleed) + footer {
+    margin-top: 0;
+  }
+</style>
