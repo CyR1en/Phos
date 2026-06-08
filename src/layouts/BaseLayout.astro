@@ -14,7 +14,7 @@ export interface Props {
 
 const { title, description, image, page, type = 'website' } = Astro.props
 
-const pageTitle = title ? `${title} — ${config.site.title}` : config.site.title
+const pageTitle = title && title !== config.site.title ? `${title} — ${config.site.title}` : config.site.title
 
 const siteUrl = import.meta.env.PUBLIC_SITE_URL
 const canonical = siteUrl ? `${siteUrl}/${page || ''}` : undefined
