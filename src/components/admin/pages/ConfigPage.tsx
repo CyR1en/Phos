@@ -17,11 +17,8 @@ export function ConfigPage({ path, pageTitle, pageDescription }: Props) {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-        <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
           {path}
-        </p>
-        <h2 class="font-display text-phos-heading text-phos-ink">
-          {pageTitle}
         </h2>
         {desc && (
           <p class="text-phos-body text-phos-muted mt-2">{desc}</p>

@@ -26,16 +26,18 @@ if (logoFile) {
 
 <header class="sticky top-0 z-40 border-b border-phos-hairline dark:border-phos-hairline bg-white/85 dark:bg-neutral-950/85 backdrop-blur-md">
   <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
-    <a href="/" class="flex items-center gap-3 shrink-0">
-      {logoSvg ? (
-        <span class="block h-8 w-auto text-phos-primary dark:text-phos-primary" set:html={logoSvg} />
-      ) : logoLight ? (
-        <>
-          <img src={logoLight} alt={config.site.title} class="block h-8 w-auto dark:hidden" />
-          <img src={logoDark} alt={config.site.title} class="hidden h-8 w-auto dark:block" />
-        </>
-      ) : null}
-      <span class="font-display text-xl text-phos-primary dark:text-phos-primary">{config.site.title}</span>
+    <a href="/" class="flex items-center gap-1.5 shrink-0">
+      <div>
+        {logoSvg ? (
+          <span class="size-6 text-phos-primary dark:text-phos-primary" set:html={logoSvg} />
+        ) : logoLight ? (
+          <>
+            <img src={logoLight} alt={config.site.title} class="h-6 w-auto dark:hidden" />
+            <img src={logoDark} alt={config.site.title} class="hidden h-6 w-auto dark:block" />
+          </>
+        ) : null}
+      </div>
+      <div class="font-display text-lg text-phos-primary dark:text-phos-primary">{config.site.title}</div>
     </a>
 
     <div class="hidden items-center gap-8 sm:flex">
@@ -62,16 +64,18 @@ if (logoFile) {
   <div id="nav-backdrop" class="absolute inset-0 bg-black/60 dark:bg-neutral-950/80 backdrop-blur-sm"></div>
   <div id="nav-drawer" class="absolute right-0 top-0 h-full w-full max-w-sm bg-phos-canvas dark:bg-phos-canvas">
     <div class="flex items-center justify-between border-b border-phos-hairline dark:border-phos-hairline px-6 py-5">
-      <div class="flex items-center gap-3">
-        {logoSvg ? (
-          <span class="block h-8 w-auto text-phos-primary dark:text-phos-primary" set:html={logoSvg} />
-        ) : logoLight ? (
-          <>
-            <img src={logoLight} alt={config.site.title} class="block h-8 w-auto dark:hidden" />
-            <img src={logoDark} alt={config.site.title} class="hidden h-8 w-auto dark:block" />
-          </>
-        ) : null}
-        <span class="font-display text-xl text-phos-primary dark:text-phos-primary">{config.site.title}</span>
+      <div class="flex items-center gap-1.5">
+        <div>
+          {logoSvg ? (
+            <span class="size-6 text-phos-primary dark:text-phos-primary" set:html={logoSvg} />
+          ) : logoLight ? (
+            <>
+              <img src={logoLight} alt={config.site.title} class="h-6 w-auto dark:hidden" />
+              <img src={logoDark} alt={config.site.title} class="hidden h-6 w-auto dark:block" />
+            </>
+          ) : null}
+        </div>
+        <div class="font-display text-lg text-phos-primary dark:text-phos-primary">{config.site.title}</div>
       </div>
       <button id="menu-close" class="flex h-9 w-9 items-center justify-center rounded-phos-sm text-phos-ink dark:text-phos-ink hover:bg-phos-stone dark:hover:bg-phos-stone transition-colors" aria-label="Close menu">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

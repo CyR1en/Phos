@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
+import { getToken } from '../../../lib/admin/api'
 import { useConfig } from '../../../lib/admin/store'
 import { Button } from '../ui/Button'
 import { Section } from '../ui/Section'
@@ -33,11 +34,10 @@ export function SitePage() {
   const [logoError, setLogoError] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
   const lightInputRef = useRef<HTMLInputElement>(null)
-  const darkInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/logo-status', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.json())
       .then(d => setLogoStatus(d))
@@ -58,19 +58,15 @@ export function SitePage() {
     setLogoError('')
     setLogoUploading(true)
     try {
-      const body: Record<string, any> = { file: await dataUrlFromFile(file) }
-      const darkFile = darkInputRef.current?.files?.[0]
-      if (darkFile) body.darkFile = await dataUrlFromFile(darkFile)
       const res = await fetch('/api/upload-logo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ file: await dataUrlFromFile(file) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Upload failed')
       setLogoStatus({ detected: true, type: data.type, light: data.light, dark: data.dark })
       if (lightInputRef.current) lightInputRef.current.value = ''
-      if (darkInputRef.current) darkInputRef.current.value = ''
     } catch (e: any) {
       setLogoError(e.message)
     } finally {
@@ -81,7 +77,7 @@ export function SitePage() {
   const removeLogo = async () => {
     await fetch('/api/upload-logo', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({ file: '' }),
     })
     setLogoStatus({ detected: false, type: null, light: null, dark: null })
@@ -104,10 +100,9 @@ export function SitePage() {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-        <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
           site
-        </p>
-        <h2 class="font-display text-phos-heading text-phos-ink">Site</h2>
+        </h2>
         <p class="text-phos-body text-phos-muted mt-2">
           {config?.site?.page_description}
         </p>
@@ -122,48 +117,16 @@ export function SitePage() {
           />
           <div class="border-t border-phos-hairline pt-4 mt-4">
             <h3 class="font-display text-phos-feature text-phos-ink mb-1">Logo</h3>
-            <p class="text-phos-body text-phos-muted text-sm mb-3">
-              Upload an SVG for an inline logo, or a raster image (light + optional dark variant) for an &lt;img&gt; logo.
-            </p>
-            {logoStatus?.detected && (
-              <div class="mb-3 p-3 bg-phos-stone rounded-phos-sm border border-phos-card-border">
-                {logoStatus.type === 'svg' ? (
-                  <div class="flex items-center justify-center py-2 [&_svg]:max-h-12 [&_svg]:w-auto [&_svg]:fill-current text-phos-ink">
-                    <img src={logoStatus.light!} alt="Current logo" class="max-h-12" />
-                  </div>
-                ) : (
-                  <div class="flex items-center gap-4">
-                    <div class="flex-1">
-                      <p class="text-phos-caption text-phos-muted mb-1">Light</p>
-                      <img src={logoStatus.light!} alt="Light logo" class="max-h-12 rounded-phos-xs bg-white p-1 border border-phos-card-border" />
-                    </div>
-                    <div class="flex-1">
-                      <p class="text-phos-caption text-phos-muted mb-1">Dark</p>
-                      <img src={logoStatus.dark!} alt="Dark logo" class="max-h-12 rounded-phos-xs bg-phos-ink p-1 border border-phos-card-border" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-phos-caption text-phos-muted mb-1">Logo file</label>
-                <input
-                  ref={lightInputRef}
-                  type="file"
-                  accept=".svg,.png,.jpg,.jpeg,.webp,.avif"
-                  class="block w-full text-sm text-phos-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-phos-xs file:border-0 file:text-sm file:font-mono file:bg-phos-stone file:text-phos-ink hover:file:bg-phos-hairline"
-                />
-              </div>
-              <div>
-                <label class="block text-phos-caption text-phos-muted mb-1">Dark variant (optional)</label>
-                <input
-                  ref={darkInputRef}
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.webp,.avif"
-                  class="block w-full text-sm text-phos-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-phos-xs file:border-0 file:text-sm file:font-mono file:bg-phos-stone file:text-phos-ink hover:file:bg-phos-hairline"
-                />
-              </div>
+            <div class="mb-3 p-3 bg-phos-stone rounded-phos-sm border border-phos-card-border text-phos-body text-phos-ink">
+              Current logo: <code class="font-mono text-phos-coral">{logoStatus?.light ?? 'none'}</code>
+            </div>
+            <div>
+              <input
+                ref={lightInputRef}
+                type="file"
+                accept=".svg,.png,.jpg,.jpeg,.webp,.avif"
+                class="block w-full text-sm text-phos-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-phos-xs file:border-0 file:text-sm file:font-mono file:bg-phos-stone file:text-phos-ink hover:file:bg-phos-hairline"
+              />
             </div>
             <div class="flex items-center gap-3 mt-3">
               <button

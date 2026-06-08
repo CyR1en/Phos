@@ -166,10 +166,9 @@ export function PluginsPage() {
     return (
       <div class="max-w-3xl">
         <div class="mb-8">
-          <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+          <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
             plugins
-          </p>
-          <h2 class="font-display text-phos-heading text-phos-ink">Plugins</h2>
+          </h2>
           <p class="text-phos-body text-phos-muted mt-2">
             Edit deployment-specific plugin configs from the admin.
           </p>
@@ -186,13 +185,12 @@ export function PluginsPage() {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-        <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
-          plugins
-        </p>
-        <h2 class="font-display text-phos-heading text-phos-ink">Plugins</h2>
-        <p class="text-phos-body text-phos-muted mt-2">
-          Edit deployment-specific plugin configs. Changes persist to SQLite and apply on the next republish.
-        </p>
+          <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+            plugins
+          </h2>
+          <p class="text-phos-body text-phos-muted mt-2">
+            Edit deployment-specific plugin configs. Changes persist to SQLite and apply on the next republish.
+          </p>
       </div>
       <div class="space-y-6">
         {pluginConfigs.map((plugin) => (

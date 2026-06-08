@@ -8,10 +8,9 @@ export function ContactPage() {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-        <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
           contact
-        </p>
-        <h2 class="font-display text-phos-heading text-phos-ink">Contact</h2>
+        </h2>
         <p class="text-phos-body text-phos-muted mt-2">
           {config?.contact?.page_description}
         </p>

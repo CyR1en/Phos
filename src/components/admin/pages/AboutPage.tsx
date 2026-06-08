@@ -8,9 +8,8 @@ export function AboutPage() {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-        <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">about</p>
-        <h2 class="font-display text-phos-heading text-phos-ink">About</h2>
-        <p class="text-phos-body text-phos-muted mt-2">{config?.about?.page_description}</p>
+          <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">about</h2>
+          <p class="text-phos-body text-phos-muted mt-2">{config?.about?.page_description}</p>
       </div>
       <div class="space-y-6">
         <Section title="Open Graph">

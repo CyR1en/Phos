@@ -106,11 +106,8 @@ export function CategoriesPage() {
   return (
     <div class="max-w-4xl">
       <div class="mb-6">
-        <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
           photos
-        </p>
-        <h2 class="font-display text-phos-heading text-phos-ink">
-          Categories
         </h2>
         <p class="text-phos-body text-phos-muted mt-2">
           Manage photo categories and their _meta.yaml settings.
