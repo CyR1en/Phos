@@ -15,63 +15,83 @@ const ogDescription = config.about?.og_description
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription}>
-  <section class="mx-auto max-w-7xl px-6 pt-24 pb-phos-section sm:px-6 lg:px-8">
-    <div class="grid gap-8 lg:grid-cols-12 lg:gap-12">
-      <div class="lg:col-span-8 flex flex-col justify-center">
-        <p class="phos-mono-label text-phos-coral">About</p>
-        <h1 class="mt-4 font-display text-phos-display-product text-phos-ink dark:text-phos-ink" data-config="about.photographer.name">
+  <section data-animate class="animate-reveal flex min-h-screen flex-col lg:flex-row">
+    <div class="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen overflow-hidden bg-phos-stone">
+      {aboutPhoto ? (
+        <img
+          src={aboutPhoto}
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover"
+          loading="eager"
+        />
+      ) : (
+        <div class="absolute inset-0 bg-gradient-to-br from-phos-stone to-phos-hairline" />
+      )}
+      <div class="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-phos-canvas via-phos-canvas/80 to-transparent hidden lg:block" />
+    </div>
+    <div class="relative flex w-full items-center px-6 py-16 lg:w-1/2 lg:px-12 lg:py-0 xl:px-16">
+      <div class="max-w-xl">
+        <h2 class="phos-mono-label text-phos-coral">About</h2>
+        <h1 class="mt-6 font-display text-phos-display-product text-phos-ink leading-none" data-config="about.photographer.name">
           {config.about.photographer.name}
         </h1>
-        <p class="mt-8 phos-body-lg text-phos-body-muted dark:text-phos-body-muted leading-relaxed" data-config="about.photographer.intro">
+        <p class="mt-8 border-l-2 border-phos-coral pl-6 phos-body-lg text-phos-body-muted leading-relaxed" data-config="about.photographer.intro">
           {config.about.photographer.intro}
         </p>
-      </div>
-      <div class="lg:col-span-4">
-        {aboutPhoto && (
-          <div class="overflow-hidden rounded-phos-lg bg-phos-stone dark:bg-phos-stone aspect-[4/5]">
-            <img
-              src={aboutPhoto}
-              alt=""
-              class="h-full w-full object-cover"
-              loading="eager"
-            />
-          </div>
-        )}
+        <div class="mt-10 h-px w-24 bg-phos-hairline" />
       </div>
     </div>
   </section>
 
   {bio.trim() && (
-    <section class="mx-auto max-w-3xl px-6 py-12 sm:py-16 sm:px-6 lg:px-8">
-      <div class="space-y-6 phos-body-lg text-phos-ink dark:text-phos-ink leading-relaxed">
-        {bio.split('\n\n').map((para) => (
-          <p>{para}</p>
-        ))}
+    <section data-animate class="animate-reveal bg-phos-stone py-phos-section">
+      <div class="mx-auto max-w-3xl px-6 sm:px-6 lg:px-8">
+        {(() => {
+          const paras = bio.split('\n\n').filter(Boolean)
+          return paras.map((para, i) =>
+            i === 0 ? (
+              <div class="max-w-2xl">
+                <svg class="mb-4 size-10 text-phos-coral" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3.691 6.292C5.094 4.771 7.217 4 10 4v1.81c-1.273.3-2.318.863-3.135 1.691-.817.828-1.383 1.922-1.699 3.282H9v8.809H2.001V12.22c0-1.564.313-2.913.939-4.047.626-1.134 1.361-1.882 2.205-2.244l.546-1.637zm11 0C16.094 4.771 18.217 4 21 4v1.81c-1.273.3-2.318.863-3.135 1.691-.817.828-1.383 1.922-1.699 3.282H20v8.809h-6.999V12.22c0-1.564.313-2.913.939-4.047.626-1.134 1.361-1.882 2.205-2.244l.546-1.637z" />
+                </svg>
+                <p class="font-display text-phos-display-card italic leading-snug text-phos-ink/80" data-config="about.photographer.bio">
+                  {para}
+                </p>
+              </div>
+            ) : (
+              <p class="mt-8 border-l-2 border-phos-coral/30 pl-6 phos-body-lg text-phos-ink/80 leading-relaxed">
+                {para}
+              </p>
+            )
+          )
+        })()}
       </div>
     </section>
   )}
 
   {hasGear && (
-    <section class="mx-auto max-w-7xl px-6 pb-12 sm:px-6 lg:px-8">
-      <div class="rounded-phos-lg bg-phos-dark-navy dark:bg-phos-dark-navy px-8 py-16 sm:px-16 sm:py-20">
-        <div class="flex flex-wrap items-end justify-between gap-6">
-          <div>
+    <section data-animate class="animate-reveal py-phos-section">
+      <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8">
+        <div class="grid gap-8 lg:grid-cols-12 lg:gap-12">
+          <div class="lg:col-span-4">
             <p class="phos-mono-label text-phos-coral">Equipment</p>
-            <h2 class="mt-4 font-display text-phos-display-heading text-phos-canvas dark:text-phos-canvas" data-config="about.gear.heading">
+            <h2 class="mt-4 font-display text-phos-display-card text-phos-ink" data-config="about.gear.heading">
               {gearLabel}
             </h2>
           </div>
+          <div class="lg:col-span-8">
+            <ul class="grid gap-4 sm:grid-cols-2">
+              {gearList.map((item) => (
+                <li class="flex items-start gap-3 border-l-2 border-phos-coral pl-4 phos-body-lg text-phos-ink/80">
+                  <svg class="mt-0.5 size-4 shrink-0 text-phos-coral" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                  </svg>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <ul class="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {gearList.map((item) => (
-            <li class="flex items-center gap-3 phos-caption text-white/80">
-              <svg class="h-4 w-4 shrink-0 text-phos-coral" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-              </svg>
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   )}
@@ -80,15 +100,15 @@ const ogDescription = config.about?.og_description
 
   {cta && (
     <section data-animate class="animate-reveal mx-auto max-w-7xl px-6 py-phos-section sm:px-6 lg:px-8">
-      <div class="rounded-phos-lg bg-phos-deep-green dark:bg-phos-deep-green px-8 py-16 sm:px-16 sm:py-20 lg:py-phos-section">
-        <div class="max-w-3xl">
+      <div class="rounded-phos-lg bg-phos-deep-green px-8 py-16 text-center sm:px-16 sm:py-20 lg:py-phos-section">
+        <div class="mx-auto max-w-3xl">
           <p class="phos-mono-label text-phos-coral">Contact</p>
-          <h2 class="mt-4 font-display text-phos-display-heading text-phos-canvas dark:text-phos-canvas" data-config="about.call_to_action.heading">
+          <h2 class="mt-4 font-display text-phos-display-heading text-phos-canvas" data-config="about.call_to_action.heading">
             {cta.heading}
           </h2>
           <a
             href="/contact"
-            class="mt-10 inline-flex items-center rounded-phos-pill bg-phos-canvas dark:bg-phos-canvas px-6 py-3 phos-button text-phos-primary dark:text-phos-primary hover:opacity-90 transition-opacity"
+            class="mt-10 inline-flex items-center rounded-phos-pill bg-phos-canvas px-6 py-3 phos-button text-phos-primary hover:opacity-90 transition-opacity"
           >
             <span data-config="about.call_to_action.link">{cta.link}</span>
             <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
