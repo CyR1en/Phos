@@ -42,6 +42,9 @@ interface ConfigCtx {
   dismissToast: (id: number) => void
   republish: () => Promise<void>
   regenerate: () => Promise<void>
+  buildStatus: 'idle' | 'running' | 'done' | 'error'
+  buildLog: string[]
+  clearBuildStatus: () => void
 }
 
 const Ctx = createContext<ConfigCtx | null>(null)
@@ -84,6 +87,8 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [saveStatus, setSaveStatusState] = useState<ConfigCtx['saveStatus']>('idle')
   const [pluginConfigs, setPluginConfigs] = useState<PluginManifest[] | null>(null)
+  const [buildStatus, setBuildStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [buildLog, setBuildLog] = useState<string[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
   const toastIdRef = useRef(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -257,11 +262,35 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
     }
   }
 
+  const pollTask = async (taskId: string) => {
+    while (true) {
+      await new Promise((r) => setTimeout(r, 500))
+      try {
+        const { status, lines, error } = await api.getTaskStatus(taskId)
+        setBuildLog(lines)
+        if (status === 'done') {
+          setBuildStatus('done')
+          return
+        }
+        if (status === 'error') {
+          setBuildStatus('error')
+          throw new Error(error || 'Task failed')
+        }
+      } catch (e) {
+        setBuildStatus('error')
+        throw e
+      }
+    }
+  }
+
   const republish = async () => {
     await flushSave()
     await flushPluginSaves()
+    setBuildStatus('running')
+    setBuildLog(['Starting republish...'])
     try {
-      await api.republish()
+      const { taskId } = await api.startRepublish()
+      await pollTask(taskId)
       pushToast('success', 'Site republished')
     } catch (e) {
       pushToast('error', e instanceof Error ? e.message : 'Republish failed')
@@ -269,13 +298,18 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   }
 
   const regenerate = async () => {
+    setBuildStatus('running')
+    setBuildLog(['Regenerating photos...'])
     try {
-      await api.regenerate()
+      const { taskId } = await api.startRegenerate()
+      await pollTask(taskId)
       pushToast('success', 'Photos regenerated')
     } catch (e) {
       pushToast('error', e instanceof Error ? e.message : 'Regenerate failed')
     }
   }
+
+  const clearBuildStatus = () => setBuildStatus('idle')
 
   const value = useMemo<ConfigCtx>(
     () => ({
@@ -301,9 +335,12 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
       dismissToast,
       republish,
       regenerate,
+      buildStatus,
+      buildLog,
+      clearBuildStatus,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [token, config, categories, pluginConfigs, selectedCategory, currentPage, saveStatus, toasts],
+    [token, config, categories, pluginConfigs, selectedCategory, currentPage, saveStatus, toasts, buildStatus, buildLog],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

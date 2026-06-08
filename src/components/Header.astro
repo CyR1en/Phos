@@ -60,6 +60,7 @@ import config from '@content/site-config.json'
     mobileNav.classList.remove('hidden')
     mobileNav.classList.add('flex')
     document.body.classList.add('mobile-nav-open')
+    window.__lenis?.stop()
     navBackdrop.classList.add('nav-backdrop-enter')
     navDrawer.classList.add('nav-enter')
     menuClose?.focus()
@@ -77,6 +78,7 @@ import config from '@content/site-config.json'
       navBackdrop.classList.remove('nav-backdrop-exit')
       navDrawer.classList.remove('nav-exit')
       document.body.classList.remove('mobile-nav-open')
+      window.__lenis?.start()
     }, 250)
   }
 

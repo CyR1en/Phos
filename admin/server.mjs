@@ -1,6 +1,6 @@
 import { createServer } from 'node:http'
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { join, dirname, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
@@ -133,6 +133,60 @@ function scanCategories() {
     })
 }
 
+// ── Async task store for build/regenerate progress ──
+const tasks = new Map()
+let taskIdCounter = 0
+
+function pushOutput(task, data) {
+  const lines = data.toString('utf-8').split(/\r?\n/)
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
+  if (lines.length > 0) {
+    task.lines.push(...lines)
+    if (task.lines.length > 500) task.lines = task.lines.slice(-500)
+  }
+}
+
+function createTask(command, args, options, timeoutMs) {
+  const id = String(++taskIdCounter)
+  const task = { id, status: 'running', lines: [], error: null, doneAt: null }
+  tasks.set(id, task)
+
+  const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'], shell: true })
+  child.stdout.on('data', (d) => pushOutput(task, d))
+  child.stderr.on('data', (d) => pushOutput(task, d))
+
+  let timedOut = false
+  const timer = timeoutMs ? setTimeout(() => { timedOut = true; child.kill() }, timeoutMs) : null
+
+  child.on('close', (code) => {
+    if (timer) clearTimeout(timer)
+    task.doneAt = Date.now()
+    if (timedOut) {
+      task.status = 'error'
+      task.error = 'Timed out'
+    } else if (code === 0) {
+      task.status = 'done'
+    } else {
+      task.status = 'error'
+      task.error = `Process exited with code ${code}`
+    }
+  })
+  child.on('error', (err) => {
+    if (timer) clearTimeout(timer)
+    task.doneAt = Date.now()
+    task.status = 'error'
+    task.error = err.message
+  })
+  return id
+}
+
+setInterval(() => {
+  const now = Date.now()
+  for (const [id, t] of tasks) {
+    if (t.doneAt && now - t.doneAt > 60000) tasks.delete(id)
+  }
+}, 60000)
+
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
   const path = url.pathname
@@ -240,22 +294,22 @@ createServer(async (req, res) => {
 
   if (path === '/api/regenerate' && req.method === 'POST') {
     if (!requireAuth(req, res)) return
-    try {
-      execSync('node scripts/generate-content.mjs', { cwd: ROOT, stdio: 'pipe', timeout: 120000 })
-      return json(res, { ok: true })
-    } catch (err) {
-      return json(res, { error: err.stderr?.toString() || 'Generation failed' }, 500)
-    }
+    const taskId = createTask('node', ['scripts/generate-content.mjs'], { cwd: ROOT }, 120000)
+    return json(res, { taskId })
   }
 
   if (path === '/api/republish' && req.method === 'POST') {
     if (!requireAuth(req, res)) return
-    try {
-      execSync('npm run build', { cwd: ROOT, stdio: 'pipe', timeout: 300000 })
-      return json(res, { ok: true })
-    } catch (err) {
-      return json(res, { error: err.stderr?.toString() || 'Build failed' }, 500)
-    }
+    const taskId = createTask('npm', ['run', 'build'], { cwd: ROOT }, 300000)
+    return json(res, { taskId })
+  }
+
+  const taskMatch = path.match(/^\/api\/tasks\/(\d+)$/)
+  if (taskMatch && req.method === 'GET') {
+    if (!requireAuth(req, res)) return
+    const task = tasks.get(taskMatch[1])
+    if (!task) return json(res, { error: 'Task not found' }, 404)
+    return json(res, { status: task.status, lines: task.lines, error: task.error })
   }
 
   if (path === '/site-config.json' && req.method === 'GET') {

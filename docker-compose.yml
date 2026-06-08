@@ -18,6 +18,7 @@ services:
       - ADMIN_PORT=3001
       - LISTEN_PORT=${LISTEN_PORT:-8080}
       - DB_PATH=/config/site.db
+      - PHOTOS_CACHE_PATH=/config/photos-cache.json
       - PUBLIC_FORMSPREE_ID=${PUBLIC_FORMSPREE_ID:-}
     networks:
       - internal

@@ -2,6 +2,7 @@
 import '../styles/global.css'
 import Header from '@components/Header.astro'
 import Footer from '@components/Footer.astro'
+import SmoothScroll from '@components/SmoothScroll.astro'
 import config from '@content/site-config.json'
 
 export interface Props {
@@ -137,23 +138,12 @@ const imageMimeType = (url) => {
     </script>
   </head>
   <body class="flex min-h-screen flex-col bg-phos-canvas dark:bg-phos-canvas text-phos-ink dark:text-phos-ink antialiased">
+    <SmoothScroll />
     <Header />
     <main class="flex-1">
       <slot />
     </main>
     <Footer />
 
-    <script>
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.setAttribute('data-visible', '')
-            observer.unobserve(entry.target)
-          }
-        })
-      }, { threshold: 0.1 })
-
-      document.querySelectorAll('[data-animate]').forEach((el) => observer.observe(el))
-    </script>
   </body>
 </html>

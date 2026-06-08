@@ -45,9 +45,10 @@ function PageRouter() {
   }
 }
 
+const BUILD_LOG_ENABLED = import.meta.env.PUBLIC_ADMIN_BUILD_LOG !== 'false'
+
 function DashboardBody() {
-  const { token, flushSave, republish, regenerate, currentPage } = useConfig()
-  const [rebuilding, setRebuilding] = useState(false)
+  const { token, flushSave, republish, regenerate, currentPage, buildStatus, buildLog, clearBuildStatus } = useConfig()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
@@ -82,24 +83,10 @@ function DashboardBody() {
 
   if (!token) return <AuthGate />
 
-  const onRepublish = async () => {
-    setRebuilding(true)
-    try {
-      await republish()
-    } finally {
-      setRebuilding(false)
-    }
-  }
+  const onRepublish = async () => { await republish() }
+  const onRegenerate = async () => { await regenerate() }
 
-  const onRegenerate = async () => {
-    setRebuilding(true)
-    try {
-      await regenerate()
-    } finally {
-      setRebuilding(false)
-    }
-  }
-
+  const running = buildStatus === 'running'
   const showConfigButtons = currentPage !== 'categories'
   const closeMobileNav = () => setMobileNavOpen(false)
 
@@ -145,19 +132,19 @@ function DashboardBody() {
                 variant="secondary"
                 size="sm"
                 onClick={onRegenerate}
-                disabled={rebuilding}
+                disabled={running}
                 class="btn-topbar px-3 py-1.5 sm:px-4 sm:py-2"
               >
-                {rebuilding ? 'Working…' : 'Republish photos'}
+                {running ? 'Working…' : 'Republish photos'}
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={onRepublish}
-                disabled={rebuilding}
+                disabled={running}
                 class="btn-topbar px-3 py-1.5 sm:px-4 sm:py-2"
               >
-                {rebuilding ? 'Working…' : 'Republish site'}
+                {running ? 'Working…' : 'Republish site'}
               </Button>
             </div>
           </div>
@@ -167,6 +154,33 @@ function DashboardBody() {
         </div>
       </main>
       <ToastViewport />
+      {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
+        <div class="fixed bottom-0 inset-x-0 z-50 bg-gray-950 text-green-400 font-mono text-xs shadow-2xl border-t border-gray-700">
+          <div class="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-700">
+            <span class="font-bold uppercase tracking-wider text-phos-micro">
+              {buildStatus === 'running' && 'Building\u2026'}
+              {buildStatus === 'done' && 'Build complete'}
+              {buildStatus === 'error' && 'Build failed'}
+            </span>
+            <button
+              type="button"
+              onClick={clearBuildStatus}
+              class="text-gray-400 hover:text-gray-200 transition-colors"
+              aria-label="Close build log"
+            >
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="p-4 max-h-48 overflow-y-auto whitespace-pre-wrap">
+            {buildLog.map((line, i) => (
+              <div key={i} class="leading-relaxed">{line}</div>
+            ))}
+            {buildStatus === 'running' && <span class="animate-pulse">▌</span>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -55,6 +55,10 @@ export const api = {
     request<PluginManifest>('GET', `/api/plugins/${name}`),
   putPlugin: (name: string, config: Record<string, unknown>) =>
     request<{ ok: true }>('PUT', `/api/plugins/${name}`, { config }),
-  regenerate: () => request<{ ok: true }>('POST', '/api/regenerate'),
-  republish: () => request<{ ok: true }>('POST', '/api/republish'),
+  startRegenerate: () => request<{ taskId: string }>('POST', '/api/regenerate'),
+  startRepublish: () => request<{ taskId: string }>('POST', '/api/republish'),
+  getTaskStatus: (taskId: string) =>
+    request<{ status: 'running' | 'done' | 'error'; lines: string[]; error?: string }>(
+      'GET', `/api/tasks/${taskId}`,
+    ),
 }

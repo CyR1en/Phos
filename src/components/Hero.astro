@@ -165,16 +165,12 @@ const first = heroPriority[0]
   }
 
   if (heroBg) {
-    let ticking = false
-    window.addEventListener('scroll', () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          const y = window.scrollY * 0.4
-          heroBg.style.transform = `translate3d(0, ${y}px, 0)`
-          ticking = false
-        })
-        ticking = true
-      }
-    }, { passive: true })
+    const onLenisScroll = (lenis) => {
+      const y = lenis.animatedScroll * 0.4
+      heroBg.style.transform = `translate3d(0, ${y}px, 0)`
+    }
+    if (window.__lenis) {
+      window.__lenis.on('scroll', onLenisScroll)
+    }
   }
 </script>

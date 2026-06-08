@@ -109,6 +109,7 @@ const serialized = JSON.stringify(photos)
       setTimeout(() => { swipeHint.style.opacity = '0' }, 2000)
     }
     })
+    window.__lenis?.stop()
     document.body.style.overflow = 'hidden'
   }
 
@@ -122,6 +123,7 @@ const serialized = JSON.stringify(photos)
         lightbox.classList.add('hidden')
         lightbox.classList.remove('flex', 'lightbox-exit')
         document.body.style.removeProperty('overflow')
+        window.__lenis?.start()
       }
     }, 200)
   }

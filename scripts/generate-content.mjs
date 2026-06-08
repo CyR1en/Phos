@@ -9,6 +9,7 @@ import yaml from 'yaml'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || '/photos'
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'photos')
+const CACHE_PATH = process.env.PHOTOS_CACHE_PATH || join(OUTPUT_DIR, '.cache.json')
 const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
 const ROOT = join(__dirname, '..')
 
@@ -17,6 +18,7 @@ const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.t
 const THUMB_WIDTH = 800
 const THUMB_HEIGHT = 600
 const MOBILE_THUMB_WIDTH = 400
+const CONCURRENCY = 2
 
 async function ensureDir(dir) {
   if (!existsSync(dir)) {
@@ -37,46 +39,172 @@ function titleize(name) {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-async function getImageMetadata(filePath) {
+async function pMap(items, fn, concurrency) {
+  const results = []
+  const executing = new Set()
+  for (const item of items) {
+    const p = Promise.resolve().then(() => fn(item)).then(r => results.push(r))
+    executing.add(p)
+    const clean = () => executing.delete(p)
+    p.then(clean, clean)
+    if (executing.size >= concurrency) {
+      await Promise.race(executing)
+    }
+  }
+  await Promise.all(executing)
+  return results
+}
+
+async function loadCache() {
   try {
-    const meta = await sharp(filePath).metadata()
-    return { width: meta.width, height: meta.height, format: meta.format }
+    return JSON.parse(await readFile(CACHE_PATH, 'utf-8'))
   } catch {
-    return { width: null, height: null, format: null }
+    return { version: 1, files: {} }
   }
 }
 
-async function generateBlurPlaceholder(filePath) {
-  try {
-    const buf = await sharp(filePath)
-      .resize(20, null, { fit: 'inside' })
-      .webp({ quality: 30 })
-      .toBuffer()
-    return `data:image/webp;base64,${buf.toString('base64')}`
-  } catch {
-    return ''
-  }
+async function saveCache(cache) {
+  await ensureDir(OUTPUT_DIR)
+  await writeFile(CACHE_PATH, JSON.stringify(cache, null, 2))
 }
 
-async function stripExif(inputPath, outputPath) {
-  try {
-    await sharp(inputPath).withMetadata({ icc: false, exif: false, xmp: false, iptc: false }).toFile(outputPath)
-  } catch {
-    await copyFile(inputPath, outputPath)
-  }
-}
+async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
+  const relPath = `${catSlug}/${file}`
+  const srcStat = await stat(srcPath)
 
-async function generateThumbnail(inputPath, outputPath) {
-  await ensureDir(parse(outputPath).dir)
-  await sharp(inputPath)
+  const thumbName = `${parse(file).name}.webp`
+  const fullPath = join(OUTPUT_DIR, 'full', catSlug, file)
+  const thumbPath = join(OUTPUT_DIR, 'thumbs', catSlug, thumbName)
+  const mobileThumbPath = join(OUTPUT_DIR, 'thumbs-mobile', catSlug, thumbName)
+  const metaInfo = photoMeta[file] || {}
+
+  const cached = cache.files[relPath]
+  if (
+    cached &&
+    cached.mtimeMs === srcStat.mtimeMs &&
+    cached.size === srcStat.size &&
+    existsSync(fullPath) &&
+    existsSync(thumbPath) &&
+    existsSync(mobileThumbPath)
+  ) {
+    return {
+      filename: file,
+      title: metaInfo.title || titleize(parse(file).name),
+      description: metaInfo.description || '',
+      full: `/photos/full/${catSlug}/${file}`,
+      thumb: `/photos/thumbs/${catSlug}/${thumbName}`,
+      thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
+      width: cached.width,
+      height: cached.height,
+      blur: cached.blur,
+      hero_priority: metaInfo.hero_priority || 0,
+    }
+  }
+
+  const srcBuf = await readFile(srcPath)
+  const imgMeta = await sharp(srcBuf).metadata().then(m => ({ width: m.width, height: m.height, format: m.format }))
+
+  const blur = await sharp(srcBuf)
+    .resize(20, null, { fit: 'inside' })
+    .webp({ quality: 30 })
+    .toBuffer()
+    .then(b => `data:image/webp;base64,${b.toString('base64')}`)
+    .catch(() => '')
+
+  await sharp(srcBuf).toFile(fullPath).catch(() => copyFile(srcPath, fullPath))
+
+  await sharp(srcBuf)
     .resize(THUMB_WIDTH, THUMB_HEIGHT, { fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 82 })
-    .toFile(outputPath)
+    .toFile(thumbPath)
+
+  await sharp(srcBuf)
+    .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 75 })
+    .toFile(mobileThumbPath)
+
+  cache.files[relPath] = {
+    mtimeMs: srcStat.mtimeMs,
+    size: srcStat.size,
+    width: imgMeta.width,
+    height: imgMeta.height,
+    blur,
+    format: imgMeta.format,
+  }
+
+  return {
+    filename: file,
+    title: metaInfo.title || titleize(parse(file).name),
+    description: metaInfo.description || '',
+    full: `/photos/full/${catSlug}/${file}`,
+    thumb: `/photos/thumbs/${catSlug}/${thumbName}`,
+    thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
+    width: imgMeta.width,
+    height: imgMeta.height,
+    blur,
+    hero_priority: metaInfo.hero_priority || 0,
+  }
+}
+
+async function processCategory(entry, cache) {
+  const entryPath = join(PHOTOS_SOURCE, entry)
+  const entryStat = await stat(entryPath)
+
+  if (!entryStat.isDirectory() || entry.startsWith('.')) return null
+
+  const catSlug = slugify(entry)
+
+  let meta = {}
+  const metaPath = join(entryPath, '_meta.yaml')
+  if (existsSync(metaPath)) {
+    try {
+      meta = yaml.parse(await readFile(metaPath, 'utf-8')) || {}
+    } catch (e) {
+      console.warn(`Warning: failed to parse ${metaPath}: ${e.message}`)
+    }
+  }
+
+  const files = (await readdir(entryPath)).filter(
+    (f) => IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')
+  ).sort()
+
+  if (files.length === 0) return null
+
+  const fullDir = join(OUTPUT_DIR, 'full', catSlug)
+  const thumbDir = join(OUTPUT_DIR, 'thumbs', catSlug)
+  const mobileThumbDir = join(OUTPUT_DIR, 'thumbs-mobile', catSlug)
+  await ensureDir(fullDir)
+  await ensureDir(thumbDir)
+  await ensureDir(mobileThumbDir)
+
+  const photoMeta = meta.photos || {}
+  const coverFile = meta.cover || files[0]
+
+  const photos = await pMap(
+    files,
+    (file) => processPhoto(join(entryPath, file), catSlug, file, photoMeta, cache),
+    CONCURRENCY
+  )
+
+  const coverPhoto = photos.find((p) => p.filename === coverFile) || photos[0]
+
+  return {
+    slug: catSlug,
+    name: meta.name || titleize(entry),
+    description: meta.description || '',
+    cover: `/photos/thumbs/${catSlug}/${parse(coverFile).name}.webp`,
+    coverFull: `/photos/full/${catSlug}/${coverFile}`,
+    coverWidth: coverPhoto?.width || null,
+    coverHeight: coverPhoto?.height || null,
+    coverBlur: coverPhoto?.blur || '',
+    order: meta.order ?? 99,
+    offer_service: meta.offer_service !== false,
+    photoCount: photos.length,
+    photos,
+  }
 }
 
 async function scanPhotos(sourceDir) {
-  const categories = []
-
   let entries
   try {
     entries = await readdir(sourceDir)
@@ -85,93 +213,41 @@ async function scanPhotos(sourceDir) {
     return { categories: [], heroPriority: [] }
   }
 
+  const cache = await loadCache()
+
+  const slugToDir = {}
   for (const entry of entries) {
     const entryPath = join(sourceDir, entry)
-    const entryStat = await stat(entryPath)
-
-    if (!entryStat.isDirectory() || entry.startsWith('.')) continue
-
-    const catSlug = slugify(entry)
-    const catDir = entryPath
-
-    let meta = {}
-    const metaPath = join(catDir, '_meta.yaml')
-    if (existsSync(metaPath)) {
-      try {
-        const raw = await readFile(metaPath, 'utf-8')
-        meta = yaml.parse(raw) || {}
-      } catch (e) {
-        console.warn(`Warning: failed to parse ${metaPath}: ${e.message}`)
-      }
+    let s
+    try { s = await stat(entryPath) } catch { continue }
+    if (s.isDirectory() && !entry.startsWith('.')) {
+      slugToDir[slugify(entry)] = entry
     }
-
-    const files = (await readdir(catDir)).filter(
-      (f) => IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')
-    ).sort()
-
-    if (files.length === 0) continue
-
-    const fullDir = join(OUTPUT_DIR, 'full', catSlug)
-    const thumbDir = join(OUTPUT_DIR, 'thumbs', catSlug)
-    const mobileThumbDir = join(OUTPUT_DIR, 'thumbs-mobile', catSlug)
-    await ensureDir(fullDir)
-    await ensureDir(thumbDir)
-    await ensureDir(mobileThumbDir)
-
-    const photoMeta = meta.photos || {}
-    const coverFile = meta.cover || files[0]
-
-    const photos = []
-
-    for (const file of files) {
-      const srcPath = join(catDir, file)
-      const fullPath = join(fullDir, file)
-      const thumbName = `${parse(file).name}.webp`
-      const thumbPath = join(thumbDir, thumbName)
-
-      await stripExif(srcPath, fullPath)
-      await generateThumbnail(srcPath, thumbPath)
-      await sharp(srcPath)
-        .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 75 })
-        .toFile(join(mobileThumbDir, thumbName))
-
-      const metaInfo = photoMeta[file] || {}
-      const imgMeta = await getImageMetadata(srcPath)
-      const blur = await generateBlurPlaceholder(srcPath)
-
-      photos.push({
-        filename: file,
-        title: metaInfo.title || titleize(parse(file).name),
-        description: metaInfo.description || '',
-        full: `/photos/full/${catSlug}/${file}`,
-        thumb: `/photos/thumbs/${catSlug}/${thumbName}`,
-        thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
-        width: imgMeta.width,
-        height: imgMeta.height,
-        blur,
-        hero_priority: metaInfo.hero_priority || 0,
-      })
-    }
-
-    const coverPhoto = photos.find((p) => p.filename === coverFile) || photos[0]
-
-    categories.push({
-      slug: catSlug,
-      name: meta.name || titleize(entry),
-      description: meta.description || '',
-      cover: `/photos/thumbs/${catSlug}/${parse(coverFile).name}.webp`,
-      coverFull: `/photos/full/${catSlug}/${coverFile}`,
-      coverWidth: coverPhoto?.width || null,
-      coverHeight: coverPhoto?.height || null,
-      coverBlur: coverPhoto?.blur || '',
-      order: meta.order ?? 99,
-      offer_service: meta.offer_service !== false,
-      photoCount: photos.length,
-      photos,
-    })
   }
 
+  const activeRelPaths = new Set()
+  for (const [slug, dirName] of Object.entries(slugToDir)) {
+    const catFiles = await readdir(join(sourceDir, dirName))
+    for (const f of catFiles) {
+      if (IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')) {
+        activeRelPaths.add(`${slug}/${f}`)
+      }
+    }
+  }
+
+  for (const relPath of Object.keys(cache.files)) {
+    if (!activeRelPaths.has(relPath)) {
+      delete cache.files[relPath]
+    }
+  }
+
+  const results = await pMap(
+    Object.keys(slugToDir),
+    (entry) => processCategory(entry, cache),
+    CONCURRENCY
+  )
+
+  const categories = results.filter(Boolean)
   categories.sort((a, b) => a.order - b.order)
 
   const heroPriority = categories
@@ -193,6 +269,8 @@ async function scanPhotos(sourceDir) {
         }))
     )
     .sort((a, b) => b.hero_priority - a.hero_priority)
+
+  await saveCache(cache)
 
   return { categories, heroPriority }
 }
@@ -219,18 +297,18 @@ async function main() {
   if (existsSync(OUTPUT_DIR)) {
     const existing = await readdir(join(OUTPUT_DIR, 'full'))
     for (const cat of existing) {
-      const catPath = join(OUTPUT_DIR, 'full', cat)
       const existingCat = categories.find((c) => c.slug === cat)
       if (!existingCat) {
-        await rm(catPath, { recursive: true, force: true }).catch(() => {})
+        await rm(join(OUTPUT_DIR, 'full', cat), { recursive: true, force: true }).catch(() => {})
         await rm(join(OUTPUT_DIR, 'thumbs', cat), { recursive: true, force: true }).catch(() => {})
+        await rm(join(OUTPUT_DIR, 'thumbs-mobile', cat), { recursive: true, force: true }).catch(() => {})
       }
     }
   }
 
   const manifest = { categories, heroPriority }
 
-  await ensureDir(parse(MANIFEST_PATH).dir)
+  await ensureDir(dirname(MANIFEST_PATH))
   await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2))
 
   console.log(`Manifest written to ${MANIFEST_PATH}`)

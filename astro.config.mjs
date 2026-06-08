@@ -25,6 +25,7 @@ export default defineConfig({
     },
   },
   vite: {
+    cacheDir: './node_modules/.vite-cache',
     css: {
       postcss: {
         plugins: [tailwindcss(), autoprefixer()],
