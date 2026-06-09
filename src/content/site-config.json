@@ -20,17 +20,18 @@
     "hero": {
       "heading": "Light through the lens",
       "subheading": "Portfolio",
-      "cta1": "View Portfolio",
-      "cta2": "Get in Touch"
+      "cta1": "View portfolio",
+      "cta2": "Get in touch"
     },
     "services": {
       "enabled": true,
       "heading": "Services",
       "subheading": ""
     },
-    "portfolio": {
+    "showcase": {
       "enabled": true,
-      "heading": "Featured Work"
+      "heading": "Showcase",
+      "items": []
     },
     "testimonials": {
       "enabled": true,
@@ -57,7 +58,7 @@
       "enabled": true,
       "heading": "Let's work together",
       "body": "",
-      "button": "Get in Touch"
+      "button": "Get in touch"
     }
   },
   "about": {
@@ -72,7 +73,7 @@
       "photo": ""
     },
     "gear": {
-      "heading": "My Gear",
+      "heading": "My gear",
       "equipment": [
         "Sony A7 IV",
         "Sigma 24-70mm f/2.8",
@@ -90,9 +91,9 @@
     "og_title": "",
     "og_description": "",
     "format": {
-      "heading": "Get in Touch",
+      "heading": "Get in touch",
       "subheading": "",
-      "submitBtn": "Send Message"
+      "submitBtn": "Send message"
     },
     "smtp": {
       "host": "",

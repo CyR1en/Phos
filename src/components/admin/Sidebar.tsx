@@ -104,6 +104,17 @@ export function Sidebar({ mobileOpen, onClose }: Props) {
           >
             Categories
           </button>
+          <button
+            type="button"
+            onClick={() => navigate('galleries')}
+            class={`w-full text-left px-5 py-2.5 text-phos-caption font-body transition-colors border-l-2 ${
+              currentPage === 'galleries'
+                ? 'bg-phos-stone text-phos-ink font-medium border-phos-primary'
+                : 'text-phos-body-muted hover:bg-phos-stone hover:text-phos-ink border-transparent'
+            }`}
+          >
+            Galleries
+          </button>
         </div>
       </nav>
       <div class="px-5 py-4 border-t border-phos-hairline">

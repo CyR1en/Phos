@@ -50,6 +50,16 @@ export const api = {
   getCategories: () => request<CategoriesResponse>('GET', '/api/categories'),
   putCategory: (slug: string, meta: unknown) =>
     request<{ ok: true }>('PUT', `/api/categories/${slug}`, meta),
+  getGalleries: () => request<{ galleries: Gallery[] }>('GET', '/api/galleries'),
+  createGallery: (name: string, description: string) =>
+    request<Gallery>('POST', '/api/galleries', { name, description }),
+  getGallery: (slug: string) => request<Gallery>('GET', `/api/galleries/${slug}`),
+  updateGallery: (slug: string, updates: Partial<Gallery>) =>
+    request<Gallery>('PUT', `/api/galleries/${slug}`, updates),
+  deleteGallery: (slug: string) =>
+    request<{ ok: true }>('DELETE', `/api/galleries/${slug}`),
+  setGalleryPhotos: (slug: string, photos: { category: string; filename: string }[]) =>
+    request<{ ok: true }>('PUT', `/api/galleries/${slug}/photos`, { photos }),
   getPlugins: () => request<PluginsResponse>('GET', '/api/plugins'),
   getPlugin: (name: string) =>
     request<PluginManifest>('GET', `/api/plugins/${name}`),

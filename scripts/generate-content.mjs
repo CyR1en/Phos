@@ -5,12 +5,14 @@ import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import sharp from 'sharp'
 import yaml from 'yaml'
+import Database from 'better-sqlite3'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || '/photos'
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'photos')
 const CACHE_PATH = process.env.PHOTOS_CACHE_PATH || join(OUTPUT_DIR, '.cache.json')
 const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
+const GALLERIES_MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'galleries.json')
 const ROOT = join(__dirname, '..')
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff', '.bmp'])
@@ -312,6 +314,70 @@ async function main() {
   await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2))
 
   console.log(`Manifest written to ${MANIFEST_PATH}`)
+
+  // Generate galleries manifest from SQLite
+  try {
+    const DB_PATH = process.env.DB_PATH || join(ROOT, 'config', 'site.db')
+    if (existsSync(DB_PATH)) {
+      const db = new Database(DB_PATH, { readonly: true })
+      db.pragma('foreign_keys = ON')
+
+      const dbGalleries = db.prepare(`
+        SELECT g.*, COUNT(gp.gallery_id) AS photo_count
+        FROM galleries g
+        LEFT JOIN gallery_photos gp ON gp.gallery_id = g.id
+        GROUP BY g.id
+        ORDER BY g.order_num, g.created_at
+      `).all()
+
+      const categoryMap = new Map(categories.map(c => [c.slug, c]))
+
+      const galleries = dbGalleries.map(g => {
+        const dbPhotos = db.prepare(
+          'SELECT category, filename, position FROM gallery_photos WHERE gallery_id = ? ORDER BY position'
+        ).all(g.id)
+
+        const photos = dbPhotos
+          .map(p => {
+            const cat = categoryMap.get(p.category)
+            if (!cat) return null
+            const photo = cat.photos.find(ph => ph.filename === p.filename)
+            return photo ? { ...photo, category: p.category } : null
+          })
+          .filter(Boolean)
+
+        const coverRef = g.cover
+        let coverPhoto = null
+        if (coverRef) {
+          const [catSlug, ...fileParts] = coverRef.split('/')
+          const coverFile = fileParts.join('/')
+          const cat = categoryMap.get(catSlug)
+          if (cat) coverPhoto = cat.photos.find(ph => ph.filename === coverFile) || null
+        }
+        if (!coverPhoto && photos.length > 0) coverPhoto = photos[0]
+
+        return {
+          slug: g.slug,
+          name: g.name,
+          description: g.description || '',
+          cover: coverPhoto?.thumb || null,
+          coverFull: coverPhoto?.full || null,
+          coverBlur: coverPhoto?.blur || '',
+          order: g.order_num,
+          photoCount: photos.length,
+          photos,
+        }
+      })
+
+      db.close()
+
+      await ensureDir(dirname(GALLERIES_MANIFEST_PATH))
+      await writeFile(GALLERIES_MANIFEST_PATH, JSON.stringify({ galleries }, null, 2))
+      console.log(`Galleries manifest written to ${GALLERIES_MANIFEST_PATH} (${galleries.length} galleries)`)
+    }
+  } catch (err) {
+    console.warn(`Gallery manifest generation skipped: ${err.message}`)
+  }
 }
 
 main().catch((err) => {

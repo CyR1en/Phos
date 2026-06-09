@@ -12,6 +12,7 @@ import { AboutPage } from './pages/AboutPage'
 import { ContactPage } from './pages/ContactPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { CategoriesPage } from './pages/CategoriesPage'
+import { GalleriesPage } from './pages/GalleriesPage'
 import { PluginsPage } from './pages/PluginsPage'
 
 const queryClient = new QueryClient({
@@ -38,6 +39,8 @@ function PageRouter() {
       return <NotFoundPage />
     case 'categories':
       return <CategoriesPage />
+    case 'galleries':
+      return <GalleriesPage />
     case 'plugins':
       return <PluginsPage />
     default:

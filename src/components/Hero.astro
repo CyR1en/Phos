@@ -166,13 +166,36 @@ const first = heroPriority[0]
 
   if (heroBg) {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!prefersReduced) {
+    const isLowEnd = (() => {
+      const cores = navigator.hardwareConcurrency || 4
+      const mem = (navigator as any).deviceMemory || 4
+      return cores <= 2 || mem <= 2
+    })()
+
+    if (!prefersReduced && !isLowEnd) {
       let lastY = 0
+      let lowFpsCount = 0
+      let lastFrameTime = performance.now()
+
       const onLenisScroll = (lenis) => {
+        const now = performance.now()
+        const dt = now - lastFrameTime
+        lastFrameTime = now
+        if (dt > 50) {
+          lowFpsCount++
+          if (lowFpsCount > 10) {
+            window.__lenis.off('scroll', onLenisScroll)
+            heroBg.style.transform = ''
+            return
+          }
+        } else {
+          lowFpsCount = Math.max(0, lowFpsCount - 1)
+        }
+
         const y = lenis.animatedScroll * 0.4
-        if (Math.abs(y - lastY) < 0.5) return
+        if (Math.abs(y - lastY) < 1) return
         lastY = y
-        heroBg.style.setProperty('--parallax-y', `${y}px`)
+        heroBg.style.transform = `translate3d(0, ${y}px, 0)`
       }
       if (window.__lenis) {
         window.__lenis.on('scroll', onLenisScroll)

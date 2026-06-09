@@ -5,7 +5,7 @@ import { join, dirname, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import nodemailer from 'nodemailer'
-import { assembleConfig, writeFullConfig, getMeta, getPluginConfig, setPluginConfig } from '../lib/db.mjs'
+import { assembleConfig, writeFullConfig, getMeta, getPluginConfig, setPluginConfig, getGalleries, getGallery, createGallery, updateGallery, deleteGallery, setGalleryPhotos } from '../lib/db.mjs'
 import { deepMerge } from '../lib/merge.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -366,6 +366,55 @@ createServer(async (req, res) => {
         : err.message
       return json(res, { error: hint }, 500)
     }
+  }
+
+  // ── Gallery endpoints ──
+
+  if (path === '/api/galleries' && req.method === 'GET') {
+    if (!requireAuth(req, res)) return
+    return json(res, { galleries: getGalleries() })
+  }
+
+  if (path === '/api/galleries' && req.method === 'POST') {
+    if (!requireAuth(req, res)) return
+    const body = await parseBody(req)
+    if (!body || !body.name) return json(res, { error: 'Name is required' }, 400)
+    const gallery = createGallery({ name: body.name, description: body.description || '' })
+    return json(res, gallery, 201)
+  }
+
+  const galleryMatch = path.match(/^\/api\/galleries\/([^/]+)$/)
+  if (galleryMatch && req.method === 'GET') {
+    if (!requireAuth(req, res)) return
+    const gallery = getGallery(galleryMatch[1])
+    if (!gallery) return json(res, { error: 'Gallery not found' }, 404)
+    return json(res, gallery)
+  }
+
+  if (galleryMatch && req.method === 'PUT') {
+    if (!requireAuth(req, res)) return
+    const body = await parseBody(req)
+    if (!body) return json(res, { error: 'Invalid JSON' }, 400)
+    const gallery = updateGallery(galleryMatch[1], body)
+    if (!gallery) return json(res, { error: 'Gallery not found' }, 404)
+    return json(res, gallery)
+  }
+
+  if (galleryMatch && req.method === 'DELETE') {
+    if (!requireAuth(req, res)) return
+    const deleted = deleteGallery(galleryMatch[1])
+    if (!deleted) return json(res, { error: 'Gallery not found' }, 404)
+    return json(res, { ok: true })
+  }
+
+  const galleryPhotosMatch = path.match(/^\/api\/galleries\/([^/]+)\/photos$/)
+  if (galleryPhotosMatch && req.method === 'PUT') {
+    if (!requireAuth(req, res)) return
+    const body = await parseBody(req)
+    if (!body || !Array.isArray(body.photos)) return json(res, { error: 'photos array required' }, 400)
+    const ok = setGalleryPhotos(galleryPhotosMatch[1], body.photos)
+    if (!ok) return json(res, { error: 'Gallery not found' }, 404)
+    return json(res, { ok: true })
   }
 
   if (path === '/api/plugins' && req.method === 'GET') {
