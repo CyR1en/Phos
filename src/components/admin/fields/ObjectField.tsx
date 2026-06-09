@@ -50,12 +50,14 @@ export function ObjectField({ path }: Props) {
         }
         if (typeof value === 'string') {
           const useTextarea = value.length > 80 || value.includes('\n')
+          const isBio = fieldPath === 'about.photographer.bio'
           return useTextarea ? (
             <TextAreaField
               key={fieldPath}
               path={fieldPath}
               label={label}
               rows={Math.min(value.split('\n').length + 1, 8)}
+              maxWords={isBio ? 250 : undefined}
             />
           ) : (
             <TextField key={fieldPath} path={fieldPath} label={label} />

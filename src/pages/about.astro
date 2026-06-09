@@ -9,6 +9,11 @@ const gearLabel = gear.heading || 'My Gear'
 const gearList = gear.equipment || []
 const hasGear = gearList.length > 0
 const bio = config.about.photographer?.bio || ''
+const BIO_WORD_LIMIT = 250
+const bioWords = bio.split(/\s+/).filter(Boolean)
+const bioExceedsLimit = bioWords.length > BIO_WORD_LIMIT
+const truncatedBio = bioExceedsLimit ? bioWords.slice(0, BIO_WORD_LIMIT).join(' ') : ''
+const remainingBio = bioExceedsLimit ? bioWords.slice(BIO_WORD_LIMIT).join(' ') : ''
 const cta = config.about.call_to_action
 const ogTitle = config.about?.og_title || 'About'
 const ogDescription = config.about?.og_description
@@ -39,10 +44,33 @@ const ogDescription = config.about?.og_description
         </p>
         <div class="mt-10 h-px w-24 bg-phos-hairline" />
         {bio.trim() && (
-          <div class="mt-6 line-clamp-3 sm:line-clamp-4 space-y-3">
-            {bio.split('\n\n').filter(Boolean).map((para) => (
-              <p class="phos-body-lg text-phos-body-muted">{para}</p>
-            ))}
+          <div class="mt-6 space-y-3" id="bio-container">
+            {bioExceedsLimit ? (
+              <>
+                <div id="bio-truncated" class="space-y-3">
+                  {truncatedBio.split('\n\n').filter(Boolean).map((para) => (
+                    <p class="phos-body-lg text-phos-body-muted">{para}</p>
+                  ))}
+                </div>
+                <div id="bio-rest" class="hidden space-y-3">
+                  {remainingBio.split('\n\n').filter(Boolean).map((para) => (
+                    <p class="phos-body-lg text-phos-body-muted">{para}</p>
+                  ))}
+                </div>
+                <button
+                  id="bio-toggle"
+                  class="phos-button text-phos-coral hover:opacity-80 transition-opacity mt-2"
+                >
+                  Read more
+                </button>
+              </>
+            ) : (
+              <>
+                {bio.split('\n\n').filter(Boolean).map((para) => (
+                  <p class="phos-body-lg text-phos-body-muted">{para}</p>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -93,4 +121,14 @@ const ogDescription = config.about?.og_description
       </div>
     </section>
   )}
+<script is:inline>
+  const bioToggle = document.getElementById('bio-toggle')
+  if (bioToggle) {
+    bioToggle.addEventListener('click', () => {
+      const rest = document.getElementById('bio-rest')
+      rest.classList.toggle('hidden')
+      bioToggle.textContent = rest.classList.contains('hidden') ? 'Read more' : 'Show less'
+    })
+  }
+</script>
 </BaseLayout>
