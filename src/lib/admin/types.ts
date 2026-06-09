@@ -27,8 +27,15 @@ export interface SiteConfig {
       heading: string
       subheading: string
     }
-    portfolio: {
+    showcase: {
+      enabled: boolean
       heading: string
+      items: Array<{
+        type: 'category' | 'gallery'
+        slug: string
+        title: string
+        description: string
+      }>
     }
     testimonials: {
       heading: string
@@ -123,6 +130,24 @@ export interface PluginManifest {
 
 export interface PluginsResponse {
   plugins: PluginManifest[]
+}
+
+export interface Gallery {
+  id: number
+  slug: string
+  name: string
+  description: string
+  cover: string | null
+  order_num: number
+  created_at: number
+  photo_count: number
+  photos: GalleryPhoto[]
+}
+
+export interface GalleryPhoto {
+  category: string
+  filename: string
+  position: number
 }
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'

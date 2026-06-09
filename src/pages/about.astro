@@ -20,8 +20,8 @@ const ogDescription = config.about?.og_description
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription}>
-  <section data-animate class="animate-reveal flex h-dvh flex-col lg:flex-row overflow-hidden">
-    <div class="relative h-[40vh] lg:h-full w-full lg:w-1/2 shrink-0 overflow-hidden bg-phos-stone">
+  <section data-animate class="animate-reveal flex min-h-[70vh] lg:h-dvh flex-col lg:flex-row overflow-hidden">
+    <div class="relative h-[50vh] sm:h-[40vh] lg:h-full w-full lg:w-1/2 shrink-0 overflow-hidden bg-phos-stone">
       {aboutPhoto ? (
         <img
           src={aboutPhoto}
@@ -33,10 +33,10 @@ const ogDescription = config.about?.og_description
         <div class="absolute inset-0 bg-gradient-to-br from-phos-stone to-phos-hairline" />
       )}
     </div>
-    <div class="relative flex-1 overflow-y-auto flex items-center px-6 py-8 lg:px-12 lg:py-0 xl:px-16">
+    <div class="relative flex-1 overflow-y-auto flex items-center px-6 py-12 sm:py-16 lg:px-12 lg:py-0 xl:px-16">
       <div class="max-w-xl">
         <p class="phos-mono-label text-phos-coral">About</p>
-        <h1 class="mt-6 font-display text-phos-display-product text-phos-ink leading-none" data-config="about.photographer.name">
+        <h1 class="mt-6 font-display text-phos-display-heading sm:text-phos-display-product text-phos-ink leading-none" data-config="about.photographer.name">
           {config.about.photographer.name}
         </h1>
         <p class="mt-8 border-l-2 border-phos-coral pl-6 phos-body-lg text-phos-body-muted leading-relaxed" data-config="about.photographer.intro">

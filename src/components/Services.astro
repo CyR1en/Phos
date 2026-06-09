@@ -4,8 +4,8 @@ import config from '@content/site-config.json'
 const { categories } = manifest
 ---
 
-<section data-animate class="animate-reveal mx-auto max-w-7xl px-6 py-phos-section sm:px-6 lg:px-8">
-  <div class="border-t border-phos-hairline dark:border-phos-hairline pt-16">
+<section data-animate class="animate-reveal mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:py-phos-section sm:px-6 lg:px-8">
+  <div class="border-t border-phos-hairline dark:border-phos-hairline pt-12 sm:pt-16">
     <div class="grid gap-8 lg:grid-cols-3 lg:gap-12">
       <div>
         <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Services</p>
@@ -17,8 +17,8 @@ const { categories } = manifest
           {
             categories.filter((cat) => cat.offer_service).map((cat) => (
               <a
-                href={`/photos/${cat.slug}/`}
-                class="group flex flex-col gap-4 bg-phos-canvas dark:bg-phos-canvas p-6 transition-colors hover:bg-phos-stone dark:hover:bg-phos-stone"
+                href={`/photo/all/?cat=${cat.slug}`}
+                class="group flex flex-col gap-4 bg-phos-canvas dark:bg-phos-canvas p-6 sm:p-8 transition-colors hover:bg-phos-stone dark:hover:bg-phos-stone"
               >
                 <div class="flex h-10 w-10 items-center justify-center">
                   <svg class="h-6 w-6 text-phos-ink dark:text-phos-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25">

@@ -8,6 +8,14 @@ import CategoryCard from '@components/CategoryCard.astro'
 import manifest from '@content/categories.json'
 import config from '@content/site-config.json'
 
+let galleries: any[] = []
+try {
+  const gals = await import('@content/galleries.json').then(m => m.default || m)
+  galleries = gals.galleries || []
+} catch {
+  galleries = []
+}
+
 const { categories, heroPriority } = manifest
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321'
 const jsonLd = {
@@ -33,40 +41,81 @@ const ogDescription = config.home?.og_description || config.site.description
     </div>
   )}
 
-  {config.home.portfolio.enabled !== false && (
-    <section id="portfolio" data-animate class="animate-reveal py-phos-section">
+  {config.home.showcase?.enabled !== false && (() => {
+    const showcase = config.home.showcase || { heading: 'Showcase', items: [] }
+    const items = (showcase.items || []).map((item: any) => {
+      if (item.type === 'gallery') {
+        const gal = galleries.find((g: any) => g.slug === item.slug)
+        if (!gal) return null
+        return {
+          name: gal.name,
+          slug: gal.slug,
+          description: gal.description,
+          cover: gal.cover,
+          coverWidth: null,
+          coverHeight: null,
+          photoCount: gal.photoCount,
+          blur: gal.coverBlur,
+          link: `/portfolio/${gal.slug}/`,
+          displayTitle: item.title || undefined,
+          displayDescription: item.description !== undefined ? item.description : undefined,
+        }
+      }
+      const cat = categories.find((c: any) => c.slug === item.slug)
+      if (!cat) return null
+      return {
+        name: cat.name,
+        slug: cat.slug,
+        description: cat.description,
+        cover: cat.cover,
+        coverWidth: cat.coverWidth,
+        coverHeight: cat.coverHeight,
+        photoCount: cat.photoCount,
+        blur: cat.coverBlur,
+        link: `/photo/all/?cat=${cat.slug}`,
+        displayTitle: item.title || undefined,
+        displayDescription: item.description !== undefined ? item.description : undefined,
+      }
+    }).filter(Boolean)
+
+    return (
+    <section id="showcase" data-animate class="animate-reveal py-phos-section">
       <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Portfolio</p>
-            <h2 class="mt-4 font-display text-phos-display-heading text-phos-ink dark:text-phos-ink" data-config="home.portfolio.heading">{config.home.portfolio.heading}</h2>
+            <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Showcase</p>
+            <h2 class="mt-4 font-display text-phos-display-heading text-phos-ink dark:text-phos-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
           </div>
-          <a href="/portfolio" class="phos-button text-phos-ink dark:text-phos-ink underline underline-offset-4 hover:opacity-80 transition-opacity">View all work</a>
+          <a href="/photo/all/" class="phos-button text-phos-ink dark:text-phos-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
         </div>
 
-        {categories.length > 0 ? (
+        {items.length > 0 ? (
           <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.slice(0, 6).map((cat) => (
+            {items.map((item: any) => (
               <CategoryCard
-                name={cat.name}
-                slug={cat.slug}
-                description={cat.description}
-                cover={cat.cover}
-                coverWidth={cat.coverWidth}
-                coverHeight={cat.coverHeight}
-                photoCount={cat.photoCount}
-                blur={cat.coverBlur}
+                name={item.name}
+                slug={item.slug}
+                description={item.description}
+                cover={item.cover}
+                coverWidth={item.coverWidth}
+                coverHeight={item.coverHeight}
+                photoCount={item.photoCount}
+                blur={item.blur}
+                link={item.link}
+                displayTitle={item.displayTitle}
+                displayDescription={item.displayDescription}
               />
             ))}
           </div>
         ) : (
           <div class="mt-10 py-24 text-center">
-            <p class="phos-body-lg text-phos-muted dark:text-phos-muted">No galleries yet. Add photo folders to <code class="rounded-phos-xs bg-phos-stone dark:bg-phos-stone px-2 py-0.5 phos-caption">photos/</code> and republish.</p>
+            <p class="phos-body-lg text-phos-muted dark:text-phos-muted">No showcase items configured. Add categories or galleries in the admin.</p>
           </div>
         )}
       </div>
     </section>
-  )}
+    )
+  })()}
 
   {config.home.testimonials.enabled !== false && (
     <div data-animate class="animate-reveal">

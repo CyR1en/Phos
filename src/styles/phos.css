@@ -74,23 +74,62 @@
   --phos-coral: #ff8b73;
 }
 
-/* Base typography — display headings use Cormorant Garamond; body uses DM Sans. */
-body {
-  font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: 0;
-  color: var(--phos-ink);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+/* Display headings — Cormorant Garamond, weight varies by size */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-weight: 400;
   letter-spacing: -0.02em;
+}
+
+h1 {
+  font-weight: 400;
   line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+
+h2 {
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+h4, h5, h6 {
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* Dark mode: light type on dark needs compensation */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  letter-spacing: -0.015em;
+}
+
+.dark .phos-display-hero {
+  letter-spacing: -1.6px;
+}
+
+.dark .phos-display-product {
+  letter-spacing: -1.2px;
+}
+
+/* Focus rings — visible, consistent, 2px offset */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--phos-focus-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--phos-form-focus);
+  outline-offset: 1px;
 }
 
 /* Uppercase mono labels — 14px JetBrains Mono, slight letter-spacing */
@@ -129,40 +168,40 @@ h1, h2, h3, h4, h5, h6 {
 
 .phos-display-hero {
   font-family: var(--font-display);
-  font-size: 96px;
   font-weight: 400;
   line-height: 1;
-  letter-spacing: -1.92px;
+  font-size: clamp(48px, 8vw, 96px);
+  letter-spacing: -0.02em;
 }
 
 .phos-display-product {
   font-family: var(--font-display);
-  font-size: 72px;
   font-weight: 400;
   line-height: 1;
-  letter-spacing: -1.44px;
+  font-size: clamp(40px, 6vw, 72px);
+  letter-spacing: -0.02em;
 }
 
 .phos-display-section {
   font-family: var(--font-display);
-  font-size: 60px;
   font-weight: 400;
-  line-height: 1;
-  letter-spacing: -1.2px;
+  line-height: 1.05;
+  font-size: clamp(36px, 5vw, 60px);
+  letter-spacing: -0.02em;
 }
 
 .phos-display-heading {
   font-family: var(--font-display);
-  font-size: 48px;
   font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: -0.48px;
+  line-height: 1.1;
+  font-size: clamp(32px, 4vw, 48px);
+  letter-spacing: -0.01em;
 }
 
 .phos-display-card {
   font-family: var(--font-display);
   font-size: 32px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.2;
   letter-spacing: -0.32px;
 }
@@ -170,7 +209,36 @@ h1, h2, h3, h4, h5, h6 {
 .phos-display-feature {
   font-family: var(--font-display);
   font-size: 24px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.3;
   letter-spacing: 0;
+}
+
+/* Body text — DM Sans */
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: var(--phos-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.phos-body-lg {
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+/* Paragraph measure — comfortable reading width */
+.phos-body-lg, .phos-caption {
+  max-width: 70ch;
+}
+
+.dark .phos-body-lg {
+  line-height: 1.65;
 }

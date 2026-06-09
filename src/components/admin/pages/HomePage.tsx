@@ -2,6 +2,7 @@ import { ObjectField } from '../fields/ObjectField'
 import { TextField } from '../fields/TextField'
 import { Section } from '../ui/Section'
 import { useConfig } from '../../../lib/admin/store'
+import { ShowcaseSection } from './ShowcaseSection'
 
 export function HomePage() {
   const { config } = useConfig()
@@ -16,6 +17,7 @@ export function HomePage() {
           <TextField path="home.og_title" label="Title" />
           <TextField path="home.og_description" label="Description" />
         </Section>
+        <ShowcaseSection />
         <ObjectField path="home" />
       </div>
     </div>

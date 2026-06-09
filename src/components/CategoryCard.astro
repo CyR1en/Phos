@@ -8,15 +8,21 @@ export interface Props {
   coverHeight: number | null
   photoCount: number
   blur: string
+  link?: string
+  displayTitle?: string
+  displayDescription?: string
 }
 
-const { name, slug, description, cover, coverWidth, coverHeight, photoCount, blur } = Astro.props
+const { name, slug, description, cover, coverWidth, coverHeight, photoCount, blur, link, displayTitle, displayDescription } = Astro.props
+const cardTitle = displayTitle || name
+const cardDescription = displayDescription !== undefined ? displayDescription : description
+const cardLink = link || `/photo/all/?cat=${slug}`
 ---
 
 <a
-  href={`/photos/${slug}/`}
+  href={cardLink}
   class="group block overflow-hidden rounded-phos-sm bg-phos-stone dark:bg-phos-stone fade-in"
-  aria-label={`${name} — ${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
+  aria-label={`${cardTitle} — ${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
 >
   <div
     class="relative aspect-[4/3] overflow-hidden bg-cover bg-center"
@@ -36,10 +42,10 @@ const { name, slug, description, cover, coverWidth, coverHeight, photoCount, blu
 
   <div class="p-6">
     <div class="flex items-start justify-between gap-4">
-      <h2 class="font-display text-phos-display-feature text-phos-ink dark:text-phos-ink">{name}</h2>
+      <h2 class="font-display text-phos-display-feature text-phos-ink dark:text-phos-ink">{cardTitle}</h2>
       <span class="phos-micro text-phos-muted dark:text-phos-muted mt-2 shrink-0">{photoCount} photo{photoCount !== 1 ? 's' : ''}</span>
     </div>
-    {description && <p class="mt-2 phos-caption text-phos-body-muted dark:text-phos-body-muted leading-relaxed">{description}</p>}
+    {cardDescription && <p class="mt-2 phos-caption text-phos-body-muted dark:text-phos-body-muted leading-relaxed">{cardDescription}</p>}
     <div class="mt-4 flex items-center gap-2 phos-button text-phos-ink dark:text-phos-ink group-hover:gap-3 transition-all">
       View gallery
       <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
