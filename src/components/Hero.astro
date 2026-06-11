@@ -24,7 +24,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 ---
 
 {first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
-<section class="relative flex min-h-[88vh] items-center justify-center overflow-hidden" data-hero-interval={slideshowInterval}>
+<section class="relative flex min-h-[88vh] items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval}>
   {heroPriority.length > 0 ? (
     <div class="absolute inset-0 z-0 hero-parallax pointer-events-none" id="hero-bg">
       {heroPriority.map((photo, i) => (
@@ -51,7 +51,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
     <div class="absolute inset-0 bg-canvas" />
   )}
 
-  <div class="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-6 lg:px-8">
+  <div class="relative z-10 mx-auto w-full max-w-7xl px-6 pb-16 sm:px-6 lg:px-8 lg:pb-20">
     <div class="max-w-4xl">
       <p class="font-mono text-[11px] uppercase tracking-wider text-[var(--color-rose-pine-moon-text)]/60" data-config="about.photographer.name">{config.about.photographer.name}</p>
       <h1 class="mt-4 font-display text-[var(--color-rose-pine-moon-text)] drop-shadow-sm" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1;" data-config="home.hero.heading">
