@@ -49,7 +49,7 @@ interface ConfigCtx {
 
 const Ctx = createContext<ConfigCtx | null>(null)
 
-function getPath(obj: unknown, path: string): unknown {
+export function getPath(obj: unknown, path: string): unknown {
   if (obj == null) return undefined
   const parts = path.split('.')
   let cur: unknown = obj

@@ -4,7 +4,8 @@ import { AuthGate } from './AuthGate'
 import { Sidebar } from './Sidebar'
 import { SaveIndicator } from './SaveIndicator'
 import { ToastViewport } from './ui/Toast'
-import { Button } from './ui/Button'
+import { Tooltip } from './ui/Tooltip'
+import { SaveIcon, RepublishPhotosIcon, RepublishSiteIcon, SignOutIcon, SpinnerIcon } from './ui/Icons'
 import { ConfigProvider, useConfig } from '../../lib/admin/store'
 import { SitePage } from './pages/SitePage'
 import { HomePage } from './pages/HomePage'
@@ -63,7 +64,7 @@ function DashboardBody() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
-        flushSave()
+        flushSave()?.catch(() => {})
       }
     }
     window.addEventListener('keydown', onKey)
@@ -138,47 +139,53 @@ function DashboardBody() {
                 <path d="M3 12h18M3 6h18M3 18h18" />
               </svg>
             </button>
-            <p class="text-xs font-mono uppercase tracking-wider text-accent md:hidden">
-              Site Admin
-            </p>
-            <div class="flex items-center gap-2 sm:gap-3">
+<div class="flex items-center gap-1 sm:gap-1.5">
               <SaveIndicator />
               {showConfigButtons ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => flushSave()}
-                  class="btn-topbar hidden sm:inline-flex"
-                >
-                  Save
-                </Button>
+                <Tooltip text="Save" shortcut="⌘S">
+                  <button
+                    type="button"
+                    onClick={() => flushSave()}
+                    class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors"
+                    aria-label="Save"
+                  >
+                    <SaveIcon />
+                  </button>
+                </Tooltip>
               ) : null}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onRegenerate}
-                disabled={running}
-                class="btn-topbar px-3 py-1.5 sm:px-4 sm:py-2"
-              >
-                {running ? 'Working…' : 'Republish photos'}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onRepublish}
-                disabled={running}
-                class="btn-topbar px-3 py-1.5 sm:px-4 sm:py-2"
-              >
-                {running ? 'Working…' : 'Republish site'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                class="btn-topbar"
-              >
-                Sign out
-              </Button>
+              <Tooltip text="Republish photos">
+                <button
+                  type="button"
+                  onClick={onRegenerate}
+                  disabled={running}
+                  class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Republish photos"
+                >
+                  {running ? <SpinnerIcon /> : <RepublishPhotosIcon />}
+                </button>
+              </Tooltip>
+              <Tooltip text="Republish site">
+                <button
+                  type="button"
+                  onClick={onRepublish}
+                  disabled={running}
+                  class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Republish site"
+                >
+                  {running ? <SpinnerIcon /> : <RepublishSiteIcon />}
+                </button>
+              </Tooltip>
+              <div class="w-px h-5 bg-primary-text/20 mx-1" />
+              <Tooltip text="Sign out">
+                <button
+                  type="button"
+                  onClick={signOut}
+                  class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors"
+                  aria-label="Sign out"
+                >
+                  <SignOutIcon />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </header>

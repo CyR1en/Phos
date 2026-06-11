@@ -30,7 +30,9 @@ function deepMerge(target, source) {
     ) {
       result[key] = deepMerge(result[key], source[key])
     } else {
-      result[key] = source[key]
+      if (source[key] !== undefined) {
+        result[key] = source[key]
+      }
     }
   }
   return result

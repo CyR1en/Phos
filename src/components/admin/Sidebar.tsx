@@ -1,3 +1,4 @@
+import { useEffect } from 'preact/hooks'
 import { useConfig } from '../../lib/admin/store'
 
 const NAV: Array<{ id: string; label: string }> = [
@@ -14,7 +15,7 @@ export function Sidebar() {
 
   const closeOverlay = () => {
     const win = window as any
-    if (win.HSOverlay) {
+    if (win.HSOverlay?.close) {
       win.HSOverlay.close('#admin-sidebar')
     }
   }
@@ -26,6 +27,18 @@ export function Sidebar() {
     await flushPluginSaves()
     setCurrentPage(id)
   }
+
+  useEffect(() => {
+    const sidebar = document.getElementById('admin-sidebar')
+    if (!sidebar) return
+
+    const onOpen = () => sidebar.classList.remove('hidden')
+
+    sidebar.addEventListener('open.hs.overlay', onOpen)
+    return () => {
+      sidebar.removeEventListener('open.hs.overlay', onOpen)
+    }
+  }, [])
 
   return (
     <aside
@@ -46,7 +59,7 @@ export function Sidebar() {
         </div>
         <button
           type="button"
-          onClick={closeOverlay}
+          data-hs-overlay="#admin-sidebar"
           class="md:hidden flex h-8 w-8 items-center justify-center rounded-sm text-ink hover:bg-surface transition-colors"
           aria-label="Close menu"
         >
