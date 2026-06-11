@@ -1,4 +1,5 @@
-import { useConfig } from '../../../lib/admin/store'
+import defaultConfig from '@content/site-config.json'
+import { useConfig, getPath } from '../../../lib/admin/store'
 import { TextField } from './TextField'
 import { TextAreaField } from './TextAreaField'
 import { ToggleField } from './ToggleField'
@@ -34,6 +35,19 @@ export function ObjectField({ path }: Props) {
 
         if (Array.isArray(value)) {
           return <ArrayField key={fieldPath} path={fieldPath} label={label} />
+        }
+        if (value === null) {
+          const def = getPath(defaultConfig, fieldPath)
+          if (key.startsWith('toggle_') || typeof def === 'boolean') {
+            return <ToggleField key={fieldPath} path={fieldPath} label={label} />
+          }
+          if (typeof def === 'number') {
+            return <NumberField key={fieldPath} path={fieldPath} label={label} />
+          }
+          if (typeof def === 'string') {
+            return <TextField key={fieldPath} path={fieldPath} label={label} />
+          }
+          return <TextField key={fieldPath} path={fieldPath} label={label} />
         }
         if (value && typeof value === 'object') {
           return (
