@@ -100,10 +100,10 @@ export function SitePage() {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
           site
         </h2>
-        <p class="text-phos-body text-phos-muted mt-2">
+        <p class="text-base text-muted mt-2">
           {config?.site?.page_description}
         </p>
       </div>
@@ -115,17 +115,17 @@ export function SitePage() {
             label="Description"
             rows={2}
           />
-          <div class="border-t border-phos-hairline pt-4 mt-4">
-            <h3 class="font-display text-phos-feature text-phos-ink mb-1">Logo</h3>
-            <div class="mb-3 p-3 bg-phos-stone rounded-phos-sm border border-phos-card-border text-phos-body text-phos-ink">
-              Current logo: <code class="font-mono text-phos-coral">{logoStatus?.light ?? 'none'}</code>
+          <div class="border-t border-border pt-4 mt-4">
+            <h3 class="font-display font-display text-xl text-ink mb-1">Logo</h3>
+            <div class="mb-3 p-3 bg-surface rounded-sm border border-border-light text-base text-ink">
+              Current logo: <code class="font-mono text-accent">{logoStatus?.light ?? 'none'}</code>
             </div>
             <div>
               <input
                 ref={lightInputRef}
                 type="file"
                 accept=".svg,.png,.jpg,.jpeg,.webp,.avif"
-                class="block w-full text-sm text-phos-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-phos-xs file:border-0 file:text-sm file:font-mono file:bg-phos-stone file:text-phos-ink hover:file:bg-phos-hairline"
+                class="block w-full text-sm text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-xs file:border-0 file:text-sm file:font-mono file:bg-surface file:text-ink hover:file:bg-border"
               />
             </div>
             <div class="flex items-center gap-3 mt-3">
@@ -133,7 +133,7 @@ export function SitePage() {
                 type="button"
                 onClick={uploadLogo}
                 disabled={logoUploading}
-                class="inline-flex items-center rounded-phos-xs bg-phos-primary px-4 py-1.5 text-sm font-medium text-phos-canvas hover:opacity-90 transition-opacity disabled:opacity-50"
+                class="inline-flex items-center rounded-xs bg-primary px-4 py-1.5 text-sm font-medium text-primary-text hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {logoUploading ? 'Uploading...' : 'Upload logo'}
               </button>
@@ -141,13 +141,13 @@ export function SitePage() {
                 <button
                   type="button"
                   onClick={removeLogo}
-                  class="text-phos-error hover:text-phos-error/80 transition-colors text-sm"
+                  class="text-error hover:text-error/80 transition-colors text-sm"
                 >
                   Remove
                 </button>
               )}
             </div>
-            {logoError && <p class="text-phos-body text-phos-error mt-2">{logoError}</p>}
+            {logoError && <p class="text-base text-error mt-2">{logoError}</p>}
           </div>
           <ToggleField path="site.toggle_demo" label="Toggle Demo" />
         </Section>
@@ -165,7 +165,7 @@ export function SitePage() {
           {social.map((s, i) => (
             <div
               key={i}
-              class="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2 sm:items-end border border-phos-card-border rounded-phos-sm p-3 bg-phos-canvas"
+              class="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2 sm:items-end border border-border-light rounded-sm p-3 bg-canvas"
             >
               <SelectField
                 path={`site.social.${i}.platform`}

@@ -20,40 +20,40 @@ const serialized = JSON.stringify(photos)
 
 <div
   id="lightbox"
-  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/95 backdrop-blur-sm"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-canvas/95 backdrop-blur-sm"
   role="dialog"
   aria-modal="true"
   aria-label="Image lightbox"
 >
-  <button id="lightbox-close" class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-phos-pill bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Close lightbox">
+  <button id="lightbox-close" class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-pill bg-canvas-inverse/10 text-ink hover:bg-canvas-inverse/20 transition-colors" aria-label="Close lightbox">
     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
   </button>
 
-  <button id="lightbox-prev" class="absolute left-2 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-phos-pill bg-white/10 p-3 text-white hover:bg-white/20 transition-colors sm:flex" aria-label="Previous image">
+  <button id="lightbox-prev" class="absolute left-2 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-canvas-inverse/10 p-3 text-ink hover:bg-canvas-inverse/20 transition-colors sm:flex" aria-label="Previous image">
     <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
-  <button id="lightbox-next" class="absolute right-2 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-phos-pill bg-white/10 p-3 text-white hover:bg-white/20 transition-colors sm:flex" aria-label="Next image">
+  <button id="lightbox-next" class="absolute right-2 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-canvas-inverse/10 p-3 text-ink hover:bg-canvas-inverse/20 transition-colors sm:flex" aria-label="Next image">
     <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
   </button>
 
   <div class="flex h-full w-full items-center justify-center p-2 sm:p-12">
     <div class="relative max-h-[90vh] max-w-full">
-      <div id="lightbox-blur" class="absolute inset-0 rounded-phos-xs bg-cover bg-center blur-xl" style="display:none"></div>
-      <img id="lightbox-img" class="relative max-h-[90vh] max-w-full w-auto h-auto object-contain select-none rounded-phos-xs" src="" alt="" style="transition: opacity 0.3s ease" />
-      <div id="lightbox-error" class="absolute inset-0 hidden flex-col items-center justify-center rounded-phos-xs bg-black/60 text-white/60 phos-caption">
+      <div id="lightbox-blur" class="absolute inset-0 rounded-xs bg-cover bg-center blur-xl" style="display:none"></div>
+      <img id="lightbox-img" class="relative max-h-[90vh] max-w-full w-auto h-auto object-contain select-none rounded-xs" src="" alt="" style="transition: opacity 0.3s ease" />
+      <div id="lightbox-error" class="absolute inset-0 hidden flex-col items-center justify-center rounded-xs bg-canvas/60 text-ink/60 text-sm">
         <span>Failed to load image</span>
       </div>
       <!-- Swipe hint for mobile -->
       <div id="swipe-hint" class="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none opacity-0 transition-opacity duration-1000 sm:hidden">
-        <svg class="size-8 text-white/30 -translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
-        <svg class="size-8 text-white/30 translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18l6-6-6-6"/></svg>
+        <svg class="size-8 text-ink/30 -translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
+        <svg class="size-8 text-ink/30 translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18l6-6-6-6"/></svg>
       </div>
     </div>
   </div>
 
-  <div id="lightbox-title" class="absolute bottom-4 left-1/2 -translate-x-1/2 phos-caption text-white/70 text-center px-4 max-w-md pointer-events-none"></div>
-  <div id="lightbox-counter" class="absolute bottom-12 left-1/2 -translate-x-1/2 phos-micro text-white/40 pointer-events-none"></div>
+  <div id="lightbox-title" class="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-ink/70 text-center px-4 max-w-md pointer-events-none"></div>
+  <div id="lightbox-counter" class="absolute bottom-12 left-1/2 -translate-x-1/2 text-xs text-ink/40 pointer-events-none"></div>
   <div id="lightbox-data" style="display:none" set:text={serialized} />
 </div>
 

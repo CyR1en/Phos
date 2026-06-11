@@ -26,7 +26,7 @@ COPY --from=builder /app/plugins ./plugins
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/astro.config.mjs ./
 COPY --from=builder /app/tsconfig.json ./
-COPY --from=builder /app/tailwind.config.mjs ./
+
 COPY --from=builder /app/admin ./admin
 
 COPY docker/nginx.conf.template /app/docker/nginx.conf.template

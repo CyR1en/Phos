@@ -51,8 +51,8 @@ function PageRouter() {
 const BUILD_LOG_ENABLED = import.meta.env.PUBLIC_ADMIN_BUILD_LOG !== 'false'
 
 function DashboardBody() {
-  const { token, flushSave, republish, regenerate, currentPage, buildStatus, buildLog, clearBuildStatus } = useConfig()
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const { token, flushSave, setToken, republish, regenerate, currentPage, buildStatus, buildLog, clearBuildStatus } = useConfig()
+  const signOut = async () => { await flushSave(); setToken(null) }
   const [countdown, setCountdown] = useState<number | null>(null)
   const autoCloseRef = useRef<ReturnType<typeof setTimeout>>()
   const intervalRef = useRef<ReturnType<typeof setInterval>>()
@@ -69,25 +69,6 @@ function DashboardBody() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [flushSave])
-
-  useEffect(() => {
-    if (!mobileNavOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileNavOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [mobileNavOpen])
-
-  useEffect(() => {
-    if (mobileNavOpen) {
-      const prev = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = prev
-      }
-    }
-  }, [mobileNavOpen])
 
   useEffect(() => {
     if (buildStatus !== 'done' && buildStatus !== 'error') {
@@ -126,6 +107,13 @@ function DashboardBody() {
     }
   }, [buildLog])
 
+  useEffect(() => {
+    const win = window as any
+    if (win.HSStaticMethods?.autoInit) {
+      requestAnimationFrame(() => win.HSStaticMethods.autoInit())
+    }
+  }, [currentPage])
+
   if (!token) return <AuthGate />
 
   const onRepublish = async () => { await republish() }
@@ -133,32 +121,24 @@ function DashboardBody() {
 
   const running = buildStatus === 'running'
   const showConfigButtons = currentPage !== 'categories'
-  const closeMobileNav = () => setMobileNavOpen(false)
 
   return (
-    <div class="min-h-screen bg-phos-canvas flex">
-      {mobileNavOpen && (
-        <div
-          class="fixed inset-0 z-40 bg-black/60 md:hidden"
-          onClick={closeMobileNav}
-          aria-hidden="true"
-        />
-      )}
-      <Sidebar mobileOpen={mobileNavOpen} onClose={closeMobileNav} />
+    <div class="min-h-screen bg-canvas flex">
+      <Sidebar />
       <main class="flex-1 flex flex-col min-w-0">
-        <header class="bg-phos-primary text-phos-canvas">
+        <header class="bg-primary text-primary-text">
           <div class="px-4 md:px-8 py-3 flex items-center justify-between md:justify-end gap-2">
             <button
               type="button"
-              onClick={() => setMobileNavOpen(true)}
-              class="md:hidden flex h-9 w-9 items-center justify-center rounded-phos-sm text-phos-canvas hover:bg-phos-primary-hover transition-colors"
+              data-hs-overlay="#admin-sidebar"
+              class="md:hidden flex h-9 w-9 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover transition-colors"
               aria-label="Open menu"
             >
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12h18M3 6h18M3 18h18" />
               </svg>
             </button>
-            <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral md:hidden">
+            <p class="text-xs font-mono uppercase tracking-wider text-accent md:hidden">
               Site Admin
             </p>
             <div class="flex items-center gap-2 sm:gap-3">
@@ -191,17 +171,25 @@ function DashboardBody() {
               >
                 {running ? 'Working…' : 'Republish site'}
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                class="btn-topbar"
+              >
+                Sign out
+              </Button>
             </div>
           </div>
         </header>
-        <div class="flex-1 overflow-auto p-4 md:p-8 bg-phos-canvas">
+        <div class="flex-1 overflow-auto p-4 md:p-8 bg-canvas">
           <PageRouter />
         </div>
       </main>
       <ToastViewport />
       {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
         <div
-          class="fixed bottom-0 inset-x-0 z-50 bg-phos-canvas border-t border-phos-hairline shadow-2xl transition-all duration-300"
+          class="fixed bottom-0 inset-x-0 z-50 bg-canvas border-t border-border shadow-2xl transition-all duration-300"
           onMouseEnter={() => {
             if (countdown !== null) {
               hasInteracted.current = true
@@ -212,26 +200,26 @@ function DashboardBody() {
           }}
         >
           <div class={[
-            'flex items-center justify-between px-4 py-3 border-b border-phos-hairline',
-            buildStatus === 'running' && 'bg-phos-stone',
-            buildStatus === 'done' && 'bg-phos-pale-green',
-            buildStatus === 'error' && 'bg-phos-error/10',
+            'flex items-center justify-between px-4 py-3 border-b border-border',
+            buildStatus === 'running' && 'bg-surface',
+            buildStatus === 'done' && 'bg-success-bg',
+            buildStatus === 'error' && 'bg-error-bg',
           ].filter(Boolean).join(' ')}>
             <div class="flex items-center gap-2.5">
               {buildStatus === 'running' && (
-                <span class="size-2 rounded-full bg-phos-ink animate-pulse" />
+                <span class="size-2 rounded-full bg-ink animate-pulse" />
               )}
               {buildStatus === 'done' && (
-                <svg class="size-4 text-phos-deep-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <svg class="size-4 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
               )}
               {buildStatus === 'error' && (
-                <svg class="size-4 text-phos-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="size-4 text-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               )}
-              <span class="font-display text-phos-body text-phos-ink">
+              <span class="font-display text-base text-ink">
                 {buildStatus === 'running' && 'Building'}
                 {buildStatus === 'done' && 'Build complete'}
                 {buildStatus === 'error' && 'Build failed'}
@@ -239,14 +227,14 @@ function DashboardBody() {
             </div>
             <div class="flex items-center gap-3">
               {countdown !== null && (
-                <span class="text-phos-micro text-phos-muted transition-opacity duration-300">
+                <span class="text-xs text-muted transition-opacity duration-300">
                   Closing in {countdown}s
                 </span>
               )}
               <button
                 type="button"
                 onClick={clearBuildStatus}
-                class="text-phos-muted hover:text-phos-ink transition-colors p-1 rounded-phos-xs hover:bg-phos-stone"
+                class="text-muted hover:text-ink transition-colors p-1 rounded-xs hover:bg-surface"
                 aria-label="Close build log"
               >
                 <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -255,7 +243,7 @@ function DashboardBody() {
               </button>
             </div>
           </div>
-          <div ref={logRef} class="p-4 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-phos-body-muted">
+          <div ref={logRef} class="p-4 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-body-muted">
             {buildLog.map((line, i) => (
               <div key={i} class="leading-relaxed">{line}</div>
             ))}

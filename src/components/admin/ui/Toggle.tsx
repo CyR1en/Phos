@@ -16,10 +16,10 @@ export function Toggle({ checked, onChange, label, id }: Props) {
           onChange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
           class="sr-only peer"
         />
-        <span class="absolute inset-0 bg-phos-hairline rounded-phos-pill peer-checked:bg-phos-primary transition-colors" />
-        <span class="absolute left-[3px] bottom-[3px] h-4 w-4 bg-phos-canvas rounded-full transition-transform peer-checked:translate-x-[18px]" />
+        <span class="absolute inset-0 bg-border rounded-pill peer-checked:bg-primary transition-colors" />
+        <span class="absolute left-[3px] bottom-[3px] h-4 w-4 bg-canvas rounded-full transition-transform peer-checked:translate-x-[18px]" />
       </span>
-      {label && <span class="text-phos-caption text-phos-body-muted">{label}</span>}
+      {label && <span class="text-sm text-body-muted">{label}</span>}
     </label>
   )
 }

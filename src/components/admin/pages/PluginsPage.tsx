@@ -13,14 +13,14 @@ const SKIP_KEYS = new Set(['page_description'])
 
 function FieldLabel({ children }: { children: string }) {
   return (
-    <label class="block text-phos-caption font-medium text-phos-body-muted mb-1.5">
+    <label class="block text-sm font-medium text-body-muted mb-1.5">
       {children}
     </label>
   )
 }
 
 function inputCls() {
-  return 'w-full px-3 py-2 bg-phos-canvas border border-phos-hairline rounded-phos-xs text-phos-body font-body focus:outline-none focus:border-phos-form-focus focus:ring-2 focus:ring-phos-form-focus/20'
+  return 'w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20'
 }
 
 interface PluginConfigFieldProps {
@@ -44,7 +44,7 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
           return (
             <div key={fieldPath}>
               <FieldLabel>{label}</FieldLabel>
-              <p class="text-phos-caption text-phos-muted">
+              <p class="text-sm text-muted">
                 Array editing not supported in admin (edit the JSON file directly).
               </p>
             </div>
@@ -54,7 +54,7 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
           return (
             <div key={fieldPath}>
               <FieldLabel>{label}</FieldLabel>
-              <p class="text-phos-caption text-phos-muted">
+              <p class="text-sm text-muted">
                 Nested object editing not supported in admin.
               </p>
             </div>
@@ -64,7 +64,7 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
           const checked = !!getPluginValue(name, fieldPath)
           return (
             <div key={fieldPath} class="flex items-center justify-between">
-              <span class="text-phos-caption text-phos-ink">{label}</span>
+              <span class="text-sm text-ink">{label}</span>
               <label class="inline-flex items-center gap-3 cursor-pointer select-none">
                 <span class="relative inline-block w-10 h-[22px] flex-shrink-0">
                   <input
@@ -75,8 +75,8 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
                     }}
                     class="sr-only peer"
                   />
-                  <span class="absolute inset-0 bg-phos-hairline rounded-phos-pill peer-checked:bg-phos-primary transition-colors" />
-                  <span class="absolute left-[3px] bottom-[3px] h-4 w-4 bg-phos-canvas rounded-full transition-transform peer-checked:translate-x-[18px]" />
+                  <span class="absolute inset-0 bg-border rounded-pill peer-checked:bg-primary transition-colors" />
+                  <span class="absolute left-[3px] bottom-[3px] h-4 w-4 bg-canvas rounded-full transition-transform peer-checked:translate-x-[18px]" />
                 </span>
               </label>
             </div>
@@ -156,8 +156,8 @@ export function PluginsPage() {
   if (!pluginConfigs) {
     return (
       <div class="max-w-3xl">
-        <h2 class="font-display text-phos-heading text-phos-ink mb-2">Plugins</h2>
-        <p class="text-phos-body text-phos-muted">Loading…</p>
+        <h2 class="font-display font-display text-3xl sm:text-4xl text-ink mb-2">Plugins</h2>
+        <p class="text-base text-muted">Loading…</p>
       </div>
     )
   }
@@ -166,16 +166,16 @@ export function PluginsPage() {
     return (
       <div class="max-w-3xl">
         <div class="mb-8">
-          <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+          <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
             plugins
           </h2>
-          <p class="text-phos-body text-phos-muted mt-2">
+          <p class="text-base text-muted mt-2">
             Edit deployment-specific plugin configs from the admin.
           </p>
         </div>
-        <div class="border border-phos-card-border rounded-phos-md p-12 text-center">
-          <p class="text-phos-muted">
-            No admin-enabled plugins found. Add <code class="font-mono text-phos-ink">"admin": true</code> to a plugin's <code class="font-mono text-phos-ink">plugin.json</code> to make it editable here.
+        <div class="border border-border-light rounded-md p-12 text-center">
+          <p class="text-muted">
+            No admin-enabled plugins found. Add <code class="font-mono text-ink">"admin": true</code> to a plugin's <code class="font-mono text-ink">plugin.json</code> to make it editable here.
           </p>
         </div>
       </div>
@@ -185,10 +185,10 @@ export function PluginsPage() {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-          <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+          <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
             plugins
           </h2>
-          <p class="text-phos-body text-phos-muted mt-2">
+          <p class="text-base text-muted mt-2">
             Edit deployment-specific plugin configs. Changes persist to SQLite and apply on the next republish.
           </p>
       </div>
@@ -207,7 +207,7 @@ export function PluginsPage() {
         <button
           type="button"
           onClick={() => flushSave()}
-          class="text-phos-caption text-phos-muted hover:text-phos-ink underline-offset-2 hover:underline"
+          class="text-sm text-muted hover:text-ink underline-offset-2 hover:underline"
         >
           Force save
         </button>

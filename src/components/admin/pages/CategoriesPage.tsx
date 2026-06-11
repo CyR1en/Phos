@@ -20,14 +20,14 @@ function cleanMeta(meta: Record<string, unknown>): Record<string, unknown> {
 
 function FieldLabel({ children }: { children: string }) {
   return (
-    <label class="block text-phos-caption font-medium text-phos-body-muted mb-1.5">
+    <label class="block text-sm font-medium text-body-muted mb-1.5">
       {children}
     </label>
   )
 }
 
 function inputCls() {
-  return 'w-full px-3 py-2 bg-phos-canvas border border-phos-hairline rounded-phos-xs text-phos-body font-body focus:outline-none focus:border-phos-form-focus focus:ring-2 focus:ring-phos-form-focus/20'
+  return 'w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20'
 }
 
 export function CategoriesPage() {
@@ -64,15 +64,15 @@ export function CategoriesPage() {
   if (!categories || categories.length === 0) {
     return (
       <div class="max-w-3xl">
-        <h2 class="font-display text-phos-heading text-phos-ink mb-2">
+        <h2 class="font-display font-display text-3xl sm:text-4xl text-ink mb-2">
           Categories
         </h2>
-        <p class="text-phos-body text-phos-muted mb-6">
+        <p class="text-base text-muted mb-6">
           Manage photo categories and their _meta.yaml settings.
         </p>
-        <div class="border border-phos-card-border rounded-phos-md p-12 text-center">
-          <p class="text-phos-muted">
-            No categories found. Add photo folders to <code class="font-mono text-phos-ink">photos/</code> and republish.
+        <div class="border border-border-light rounded-md p-12 text-center">
+          <p class="text-muted">
+            No categories found. Add photo folders to <code class="font-mono text-ink">photos/</code> and republish.
           </p>
         </div>
       </div>
@@ -106,10 +106,10 @@ export function CategoriesPage() {
   return (
     <div class="max-w-4xl">
       <div class="mb-6">
-        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
           photos
         </h2>
-        <p class="text-phos-body text-phos-muted mt-2">
+        <p class="text-base text-muted mt-2">
           Manage photo categories and their _meta.yaml settings.
         </p>
       </div>
@@ -136,7 +136,7 @@ export function CategoriesPage() {
                     onError={(e) => {
                       ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                     }}
-                    class="inline-block w-7 h-5 object-cover rounded-phos-xs mr-2 align-middle bg-phos-stone"
+                    class="inline-block w-7 h-5 object-cover rounded-xs mr-2 align-middle bg-surface"
                   />
                 )}
                 {c.slug}
@@ -207,7 +207,7 @@ export function CategoriesPage() {
               />
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-phos-caption text-phos-ink">
+              <span class="text-sm text-ink">
                 Offer Service
               </span>
               <label class="inline-flex items-center gap-3 cursor-pointer select-none">
@@ -223,8 +223,8 @@ export function CategoriesPage() {
                     }
                     class="sr-only peer"
                   />
-                  <span class="absolute inset-0 bg-phos-hairline rounded-phos-pill peer-checked:bg-phos-primary transition-colors" />
-                  <span class="absolute left-[3px] bottom-[3px] h-4 w-4 bg-phos-canvas rounded-full transition-transform peer-checked:translate-x-[18px]" />
+                  <span class="absolute inset-0 bg-border rounded-pill peer-checked:bg-primary transition-colors" />
+                  <span class="absolute left-[3px] bottom-[3px] h-4 w-4 bg-canvas rounded-full transition-transform peer-checked:translate-x-[18px]" />
                 </span>
               </label>
             </div>
@@ -240,7 +240,7 @@ export function CategoriesPage() {
                 return (
                   <div
                     key={filename}
-                    class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-phos-card-border rounded-phos-md p-4 bg-phos-canvas"
+                    class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-border-light rounded-md p-4 bg-canvas"
                   >
                     <div class="flex items-center">
                       <img
@@ -250,16 +250,16 @@ export function CategoriesPage() {
                         onError={(e) => {
                           ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                         }}
-                        class="w-full max-h-64 object-contain rounded-phos-sm bg-phos-card-border"
+                        class="w-full max-h-64 object-contain rounded-sm bg-border-light"
                       />
                     </div>
                     <div class="space-y-3">
                       <div class="flex items-center justify-between">
-                        <span class="text-phos-caption font-mono text-phos-ink">
+                        <span class="text-sm font-mono text-ink">
                           {filename}
                         </span>
                         {isCover ? (
-                          <span class="text-phos-micro font-mono uppercase tracking-wider px-2 py-1 rounded-phos-xs bg-phos-button text-phos-on-button">
+                          <span class="text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-xs bg-primary text-primary-text">
                             ★ Cover
                           </span>
                         ) : (
@@ -317,9 +317,9 @@ export function CategoriesPage() {
                                 Number((e.currentTarget as HTMLInputElement).value),
                               )
                             }
-                            class="flex-1 accent-phos-primary"
+                            class="flex-1 accent-primary"
                           />
-                          <span class="text-phos-caption text-phos-body-muted w-8 text-center font-mono">
+                          <span class="text-sm text-body-muted w-8 text-center font-mono">
                             {heroPriority}
                           </span>
                           <Button
@@ -346,7 +346,7 @@ export function CategoriesPage() {
             >
               {saveMutation.isPending ? 'Saving…' : 'Save category'}
             </Button>
-            <span class="text-phos-micro font-mono uppercase tracking-wider text-phos-muted">
+            <span class="text-xs font-mono uppercase tracking-wider text-muted">
               Writes to {cat.slug}/_meta.yaml
             </span>
           </div>

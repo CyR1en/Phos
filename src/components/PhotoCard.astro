@@ -19,7 +19,7 @@ const isFirstScreen = index < 6
 ---
 
 <button
-  class="masonry-item group relative w-full cursor-pointer overflow-hidden rounded-phos-lg bg-phos-stone dark:bg-phos-stone fade-in bg-cover bg-center"
+  class="break-inside-avoid mb-5 group relative w-full cursor-pointer overflow-hidden rounded-lg bg-surface fade-in bg-cover bg-center"
   style={`animation-delay: ${index * 50}ms; aspect-ratio: ${aspectRatio}; background-image: url('${blur}')`}
   data-index={index}
   data-photo={filename}
@@ -41,5 +41,5 @@ const isFirstScreen = index < 6
     height={height ?? undefined}
   />
 
-  <div class="absolute inset-0 bg-transparent group-hover:bg-black/10 transition-colors duration-300" />
+  <div class="absolute inset-0 bg-transparent group-hover:bg-canvas-inverse/10 transition-colors duration-300" />
 </button>

@@ -14,15 +14,15 @@ export function SaveIndicator() {
   if (!label) return null
   const color =
     saveStatus === 'saving'
-      ? 'text-phos-action-blue'
+      ? 'text-info'
       : saveStatus === 'saved'
-        ? 'text-phos-primary'
+        ? 'text-primary'
         : saveStatus === 'error'
-          ? 'text-phos-error'
-          : 'text-phos-muted'
+          ? 'text-error'
+          : 'text-muted'
   return (
     <span
-      class={`text-phos-micro font-mono uppercase tracking-wider ${color} transition-colors`}
+      class={`text-xs font-mono uppercase tracking-wider ${color} transition-colors`}
     >
       {label}
     </span>

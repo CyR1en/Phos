@@ -17,19 +17,19 @@ const ogDescription = config.portfolio?.og_description
 <BaseLayout title={ogTitle} description={ogDescription} page="portfolio">
   <section class="pt-24 pb-12">
     <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8">
-      <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Portfolio</p>
-      <h1 class="mt-4 font-display text-phos-display-heading text-phos-ink dark:text-phos-ink">Galleries</h1>
-      <p class="mt-4 phos-body-lg text-phos-body-muted dark:text-phos-body-muted">Curated collections that tell stories</p>
+      <p class="font-mono text-xs uppercase tracking-wider text-muted">Portfolio</p>
+      <h1 class="mt-4 font-display text-3xl sm:text-4xl text-ink">Galleries</h1>
+      <p class="mt-4 text-lg text-body-muted leading-relaxed">Curated collections that tell stories</p>
     </div>
   </section>
 
   <section class="mx-auto max-w-7xl px-6 pb-16 sm:pb-24 lg:px-8">
     {galleries.length === 0 ? (
       <div class="py-24 text-center">
-        <p class="phos-body-lg text-phos-muted dark:text-phos-muted mb-6">No galleries yet.</p>
+        <p class="text-lg text-muted mb-6">No galleries yet.</p>
         <a
           href="/photo/all/"
-          class="inline-flex items-center rounded-phos-pill bg-phos-primary dark:bg-phos-primary px-6 py-3 phos-button text-phos-canvas dark:text-phos-canvas hover:opacity-90 transition-opacity"
+          class="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors"
         >
           Browse all photos
           <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -40,10 +40,10 @@ const ogDescription = config.portfolio?.og_description
         {galleries.map((gallery) => (
           <a
             href={`/portfolio/${gallery.slug}/`}
-            class="group block rounded-phos-lg overflow-hidden border border-phos-card-border dark:border-phos-card-border hover:border-phos-hairline dark:hover:border-phos-hairline transition-colors bg-phos-canvas dark:bg-phos-canvas"
+            class="group block rounded-lg overflow-hidden border border-border-light hover:border-border-hover transition-colors bg-canvas"
           >
             {gallery.cover && (
-              <div class="aspect-[16/10] overflow-hidden bg-phos-stone dark:bg-phos-stone">
+              <div class="aspect-[16/10] overflow-hidden bg-surface">
                 <img
                   src={gallery.cover}
                   alt={gallery.name}
@@ -53,11 +53,11 @@ const ogDescription = config.portfolio?.og_description
               </div>
             )}
             <div class="p-5">
-              <h2 class="font-display text-phos-feature text-phos-ink dark:text-phos-ink">{gallery.name}</h2>
+              <h2 class="font-display text-xl text-ink">{gallery.name}</h2>
               {gallery.description && (
-                <p class="mt-2 phos-caption text-phos-body-muted dark:text-phos-body-muted line-clamp-2">{gallery.description}</p>
+                <p class="mt-2 text-sm text-body-muted line-clamp-2">{gallery.description}</p>
               )}
-              <p class="mt-3 phos-micro text-phos-muted dark:text-phos-muted">
+              <p class="mt-3 text-xs text-muted">
                 {gallery.photoCount} photo{gallery.photoCount !== 1 ? 's' : ''}
               </p>
             </div>

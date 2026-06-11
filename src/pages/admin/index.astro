@@ -4,7 +4,7 @@ import '../../styles/global.css'
 ---
 
 <!DOCTYPE html>
-<html lang="en" class="bg-phos-canvas text-phos-ink">
+<html lang="en" class="bg-canvas text-ink" data-theme="theme-modern-elegant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,5 +20,9 @@ import '../../styles/global.css'
     <div id="admin-root">
       <Dashboard client:only="preact" />
     </div>
+
+    <script>
+      import 'preline';
+    </script>
   </body>
 </html>

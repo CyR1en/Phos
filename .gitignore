@@ -7,6 +7,8 @@
 # Ignore content collection generated files
 .astro
 
+.commandcode
+
 ### OpenCode ###
 # OpenCode generated files
 .opencode

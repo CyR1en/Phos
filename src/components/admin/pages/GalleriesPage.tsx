@@ -8,14 +8,14 @@ import { Section } from '../ui/Section'
 
 function FieldLabel({ children }: { children: string }) {
   return (
-    <label class="block text-phos-caption font-medium text-phos-body-muted mb-1.5">
+    <label class="block text-sm font-medium text-body-muted mb-1.5">
       {children}
     </label>
   )
 }
 
 function inputCls() {
-  return 'w-full px-3 py-2 bg-phos-canvas border border-phos-hairline rounded-phos-xs text-phos-body font-body focus:outline-none focus:border-phos-form-focus focus:ring-2 focus:ring-phos-form-focus/20'
+  return 'w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20'
 }
 
 function GalleryEditor({
@@ -33,7 +33,13 @@ function GalleryEditor({
   const [description, setDescription] = useState(gallery.description)
   const [orderNum, setOrderNum] = useState(gallery.order_num)
   const [selectedPhotos, setSelectedPhotos] = useState<GalleryPhoto[]>(gallery.photos)
-  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const win = window as any
+    if (win.HSStaticMethods?.autoInit) {
+      requestAnimationFrame(() => win.HSStaticMethods.autoInit())
+    }
+  }, [])
 
   const updateMutation = useMutation({
     mutationFn: (updates: Partial<Gallery>) => api.updateGallery(gallery.slug, updates),
@@ -70,15 +76,6 @@ function GalleryEditor({
     })
   }
 
-  const toggleCat = (slug: string) => {
-    setExpandedCats((prev) => {
-      const next = new Set(prev)
-      if (next.has(slug)) next.delete(slug)
-      else next.add(slug)
-      return next
-    })
-  }
-
   const saveMeta = () => {
     updateMutation.mutate({ name, description, order_num: orderNum })
   }
@@ -97,17 +94,17 @@ function GalleryEditor({
         <button
           type="button"
           onClick={onBack}
-          class="text-phos-caption text-phos-muted hover:text-phos-ink flex items-center gap-1 mb-3"
+          class="text-sm text-muted hover:text-ink flex items-center gap-1 mb-3"
         >
           <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           Back to galleries
         </button>
-        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
           gallery
         </h2>
-        <p class="font-display text-phos-heading text-phos-ink">
+        <p class="font-display font-display text-3xl sm:text-4xl text-ink">
           {gallery.name}
         </p>
       </div>
@@ -150,12 +147,12 @@ function GalleryEditor({
 
         <Section title="Cover Photo" description="Select a cover from the photos in this gallery.">
           {gallery.cover && (
-            <p class="text-phos-caption text-phos-muted mb-2">
-              Current: <code class="font-mono text-phos-ink">{gallery.cover}</code>
+            <p class="text-sm text-muted mb-2">
+              Current: <code class="font-mono text-ink">{gallery.cover}</code>
             </p>
           )}
           {selectedPhotos.length === 0 ? (
-            <p class="text-phos-muted">Add photos to the gallery first to set a cover.</p>
+            <p class="text-muted">Add photos to the gallery first to set a cover.</p>
           ) : (
             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
               {selectedPhotos.map((p) => {
@@ -167,8 +164,8 @@ function GalleryEditor({
                     key={coverRef}
                     type="button"
                     onClick={() => setCoverPhoto(p)}
-                    class={`relative rounded-phos-xs overflow-hidden border-2 transition-colors ${
-                      isCover ? 'border-phos-primary' : 'border-transparent hover:border-phos-hairline'
+                    class={`relative rounded-xs overflow-hidden border-2 transition-colors ${
+                      isCover ? 'border-primary' : 'border-transparent hover:border-border'
                     }`}
                   >
                     <img
@@ -178,7 +175,7 @@ function GalleryEditor({
                       class="w-full aspect-[4/3] object-cover"
                     />
                     {isCover && (
-                      <span class="absolute top-1 right-1 text-phos-micro bg-phos-button text-phos-on-button px-1.5 py-0.5 rounded-phos-xs">
+                      <span class="absolute top-1 right-1 text-xs bg-primary text-primary-text px-1.5 py-0.5 rounded-xs">
                         Cover
                       </span>
                     )}
@@ -190,27 +187,27 @@ function GalleryEditor({
         </Section>
 
         <Section title="Photos" description="Select photos from your categories to include in this gallery.">
-          <div class="space-y-3">
+          <div class="hs-accordion-group space-y-3">
             {categories.map((cat) => {
-              const isExpanded = expandedCats.has(cat.slug)
               const selectedInCat = selectedPhotos.filter((p) => p.category === cat.slug).length
               return (
-                <div key={cat.slug} class="border border-phos-card-border rounded-phos-md overflow-hidden">
+                <div key={cat.slug} class="hs-accordion border border-border-light rounded-md overflow-hidden" id={`hs-cat-${cat.slug}`}>
                   <button
                     type="button"
-                    onClick={() => toggleCat(cat.slug)}
-                    class="w-full flex items-center justify-between px-4 py-3 bg-phos-stone hover:bg-phos-hairline transition-colors"
+                    class="hs-accordion-toggle w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-border transition-colors disabled:opacity-50"
+                    aria-expanded="false"
+                    aria-controls={`hs-cat-${cat.slug}-content`}
                   >
-                    <span class="text-phos-caption font-medium text-phos-ink">
+                    <span class="text-sm font-medium text-ink">
                       {cat.slug}
                       {selectedInCat > 0 && (
-                        <span class="ml-2 text-phos-micro bg-phos-button text-phos-on-button px-2 py-0.5 rounded-phos-pill">
+                        <span class="ml-2 text-xs bg-primary text-primary-text px-2 py-0.5 rounded-pill">
                           {selectedInCat}
                         </span>
                       )}
                     </span>
                     <svg
-                      class={`size-4 text-phos-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      class="hs-accordion-active:rotate-180 size-4 text-muted transition-transform duration-300"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -219,7 +216,12 @@ function GalleryEditor({
                       <path d="M6 9l6 6 6-6" />
                     </svg>
                   </button>
-                  {isExpanded && (
+                  <div
+                    id={`hs-cat-${cat.slug}-content`}
+                    class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300"
+                    role="region"
+                    aria-labelledby={`hs-cat-${cat.slug}`}
+                  >
                     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 p-3">
                       {cat.photos.map((filename) => {
                         const selected = isPhotoSelected(cat.slug, filename)
@@ -229,8 +231,8 @@ function GalleryEditor({
                             key={filename}
                             type="button"
                             onClick={() => togglePhoto(cat.slug, filename)}
-                            class={`relative rounded-phos-xs overflow-hidden border-2 transition-colors ${
-                              selected ? 'border-phos-primary' : 'border-transparent hover:border-phos-hairline'
+                            class={`relative rounded-xs overflow-hidden border-2 transition-colors ${
+                              selected ? 'border-primary' : 'border-transparent hover:border-border'
                             }`}
                           >
                             <img
@@ -240,7 +242,7 @@ function GalleryEditor({
                               class="w-full aspect-[4/3] object-cover"
                             />
                             {selected && (
-                              <span class="absolute top-1 right-1 size-5 bg-phos-button text-phos-on-button rounded-full flex items-center justify-center text-xs">
+                              <span class="absolute top-1 right-1 size-5 bg-primary text-primary-text rounded-full flex items-center justify-center text-xs">
                                 ✓
                               </span>
                             )}
@@ -248,7 +250,7 @@ function GalleryEditor({
                         )
                       })}
                     </div>
-                  )}
+                  </div>
                 </div>
               )
             })}
@@ -320,10 +322,10 @@ export function GalleriesPage() {
   return (
     <div class="max-w-4xl">
       <div class="mb-6">
-        <h2 class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-2">
+        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
           galleries
         </h2>
-        <p class="text-phos-body text-phos-muted mt-2">
+        <p class="text-base text-muted mt-2">
           Curate photo collections that tell stories. Galleries pull photos from your categories without duplicating them.
         </p>
       </div>
@@ -372,10 +374,10 @@ export function GalleriesPage() {
       </div>
 
       {galleriesQuery.isLoading ? (
-        <p class="text-phos-muted">Loading galleries...</p>
+        <p class="text-muted">Loading galleries...</p>
       ) : galleries.length === 0 ? (
-        <div class="border border-phos-card-border rounded-phos-md p-12 text-center">
-          <p class="text-phos-muted">
+        <div class="border border-border-light rounded-md p-12 text-center">
+          <p class="text-muted">
             No galleries yet. Create one to start curating photo collections.
           </p>
         </div>
@@ -384,13 +386,13 @@ export function GalleriesPage() {
           {galleries.map((g) => (
             <div
               key={g.slug}
-              class="group border border-phos-card-border rounded-phos-md overflow-hidden bg-phos-canvas hover:border-phos-hairline transition-colors"
+              class="group border border-border-light rounded-md overflow-hidden bg-canvas hover:border-border transition-colors"
             >
               {g.cover && (() => {
                 const [cat, file] = g.cover.split('/')
                 const thumbName = file?.replace(/\.[^.]+$/, '.webp')
                 return (
-                  <div class="aspect-[16/10] bg-phos-stone overflow-hidden">
+                  <div class="aspect-[16/10] bg-surface overflow-hidden">
                     <img
                       src={`/photos/thumbs/${cat}/${thumbName}`}
                       alt={g.name}
@@ -401,11 +403,11 @@ export function GalleriesPage() {
                 )
               })()}
               <div class="p-4">
-                <h3 class="font-display text-phos-feature text-phos-ink">{g.name}</h3>
+                <h3 class="font-display font-display text-xl text-ink">{g.name}</h3>
                 {g.description && (
-                  <p class="text-phos-caption text-phos-muted mt-1 line-clamp-2">{g.description}</p>
+                  <p class="text-sm text-muted mt-1 line-clamp-2">{g.description}</p>
                 )}
-                <p class="text-phos-micro text-phos-muted mt-2">
+                <p class="text-xs text-muted mt-2">
                   {g.photo_count} photo{g.photo_count !== 1 ? 's' : ''}
                 </p>
                 <div class="flex gap-2 mt-3">

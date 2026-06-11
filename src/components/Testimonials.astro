@@ -2,23 +2,23 @@
 import config from '@content/site-config.json'
 ---
 
-<section data-animate class="animate-reveal bg-phos-stone dark:bg-phos-stone">
-  <div class="mx-auto max-w-7xl px-6 py-phos-section sm:px-6 lg:px-8">
+<section data-animate class="animate-reveal bg-surface">
+  <div class="mx-auto max-w-7xl px-6 py-20 sm:px-6 lg:px-8">
     <div class="max-w-3xl">
-      <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Testimonials</p>
-      <h2 class="mt-4 font-display text-phos-display-heading text-phos-ink dark:text-phos-ink" data-config="home.testimonials.heading">{config.home.testimonials.heading}</h2>
+      <p class="font-mono text-xs uppercase tracking-wider text-muted">Testimonials</p>
+      <h2 class="mt-4 font-display text-3xl sm:text-4xl text-ink" data-config="home.testimonials.heading">{config.home.testimonials.heading}</h2>
     </div>
 
     <div class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {config.home.testimonials.testimonials.map((t) => (
-        <figure class="rounded-phos-sm bg-phos-canvas dark:bg-phos-canvas p-8 border border-phos-card-border dark:border-phos-card-border">
-          <svg class="mb-6 h-6 w-6 text-phos-coral" viewBox="0 0 24 24" fill="currentColor">
+        <figure class="rounded-sm bg-canvas p-8 border border-border">
+          <svg class="mb-6 h-6 w-6 text-accent" viewBox="0 0 24 24" fill="currentColor">
             <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/>
           </svg>
-          <blockquote class="phos-body-lg text-phos-ink dark:text-phos-ink leading-relaxed">&ldquo;{t.quote}&rdquo;</blockquote>
-          <figcaption class="mt-6 border-t border-phos-card-border dark:border-phos-card-border pt-4">
-            <span class="phos-button text-phos-ink dark:text-phos-ink">{t.author}</span>
-            {t.role && <span class="block phos-micro text-phos-muted dark:text-phos-muted mt-0.5">{t.role}</span>}
+          <blockquote class="text-lg text-ink leading-relaxed">&ldquo;{t.quote}&rdquo;</blockquote>
+          <figcaption class="mt-6 border-t border-border pt-4">
+            <span class="text-sm font-medium text-ink">{t.author}</span>
+            {t.role && <span class="block text-xs text-muted mt-0.5">{t.role}</span>}
           </figcaption>
         </figure>
       ))}

@@ -11,7 +11,7 @@ export function ToggleField({ path, label }: Props) {
   const value = !!getValue(path)
   return (
     <div class="flex items-center justify-between">
-      <span class="text-phos-caption text-phos-ink">{label}</span>
+      <span class="text-sm text-ink">{label}</span>
       <Toggle
         checked={value}
         onChange={(v) => {

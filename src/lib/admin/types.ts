@@ -22,6 +22,8 @@ export interface SiteConfig {
       subheading: string
       cta1: string
       cta2: string
+      slideshow_interval: number
+      overlay_opacity: number
     }
     services: {
       heading: string

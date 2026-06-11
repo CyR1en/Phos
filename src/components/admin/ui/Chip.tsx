@@ -6,10 +6,10 @@ interface Props {
 
 export function Chip({ children, active, onClick }: Props) {
   const base =
-    'inline-flex items-center px-3.5 py-2 text-phos-feature font-display rounded-phos-pill border transition-colors'
+    'inline-flex items-center px-3.5 py-2 font-display text-xl font-display rounded-pill border transition-colors'
   const cls = active
-    ? `${base} bg-phos-button text-phos-on-button border-phos-button`
-    : `${base} bg-phos-canvas text-phos-primary border-phos-primary hover:bg-phos-stone`
+    ? `${base} bg-primary text-primary-text border-primary`
+    : `${base} bg-canvas text-primary border-primary hover:bg-surface`
   if (onClick) {
     return (
       <button type="button" class={cls} onClick={onClick}>

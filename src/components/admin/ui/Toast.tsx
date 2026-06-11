@@ -8,12 +8,12 @@ export function ToastViewport() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          class={`px-4 py-3 rounded-phos-sm border text-phos-caption font-body transition-all ${
+          class={`px-4 py-3 rounded-sm border text-sm font-body transition-all ${
             t.kind === 'error'
-              ? 'bg-phos-canvas border-phos-error text-phos-error'
+              ? 'bg-canvas border-error text-error'
               : t.kind === 'success'
-                ? 'bg-phos-canvas border-phos-primary text-phos-primary'
-                : 'bg-phos-canvas border-phos-hairline text-phos-ink'
+                ? 'bg-canvas border-primary text-primary'
+                : 'bg-canvas border-border text-ink'
           }`}
         >
           <div class="flex items-start justify-between gap-3">
@@ -21,7 +21,7 @@ export function ToastViewport() {
             <button
               type="button"
               onClick={() => dismissToast(t.id)}
-              class="text-phos-muted hover:text-phos-ink"
+              class="text-muted hover:text-ink"
               aria-label="Dismiss"
             >
               ×

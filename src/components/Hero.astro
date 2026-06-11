@@ -19,12 +19,14 @@ import config from '@content/site-config.json'
 const { heroPriority } = Astro.props
 const hasSlideshow = heroPriority.length > 1
 const first = heroPriority[0]
+const slideshowInterval = config.home.hero.slideshow_interval ?? 6000
+const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 ---
 
 {first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
-<section class="relative flex min-h-[88vh] items-center justify-center overflow-hidden">
+<section class="relative flex min-h-[88vh] items-center justify-center overflow-hidden" data-hero-interval={slideshowInterval}>
   {heroPriority.length > 0 ? (
-    <div class="absolute inset-0 hero-parallax" id="hero-bg">
+    <div class="absolute inset-0 z-0 hero-parallax pointer-events-none" id="hero-bg">
       {heroPriority.map((photo, i) => (
         <div
           class="absolute inset-0 bg-cover bg-center"
@@ -43,32 +45,32 @@ const first = heroPriority[0]
           />
         </div>
       ))}
-      <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.15) 70%, rgba(0,0,0,0) 100%);" />
+      <div class="absolute inset-0" style={`background: linear-gradient(to top, rgba(0,0,0,${overlayOpacity}) 0%, rgba(0,0,0,${overlayOpacity * 0.6}) 35%, rgba(0,0,0,${overlayOpacity * 0.2}) 70%, rgba(0,0,0,0) 100%);`} />
     </div>
   ) : (
-    <div class="absolute inset-0 bg-phos-canvas dark:bg-phos-canvas" />
+    <div class="absolute inset-0 bg-canvas" />
   )}
 
   <div class="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-6 lg:px-8">
     <div class="max-w-4xl">
-      <p class="phos-mono-label text-white/70" data-config="about.photographer.name">{config.about.photographer.name}</p>
-      <h1 class="mt-6 font-display text-white text-phos-heading sm:text-phos-product drop-shadow-sm" data-config="home.hero.heading">
+      <p class="font-mono text-xs uppercase tracking-wider text-[var(--color-rose-pine-moon-text)]/70" data-config="about.photographer.name">{config.about.photographer.name}</p>
+      <h1 class="mt-6 font-display text-[var(--color-rose-pine-moon-text)] drop-shadow-sm" style="font-size: clamp(48px, 8vw, 96px); line-height: 1.05;" data-config="home.hero.heading">
         {config.home.hero.heading}
       </h1>
-      <p class="mt-6 max-w-2xl phos-body-lg text-white/80" data-config="home.hero.subheading">
+      <p class="mt-6 max-w-2xl text-lg text-[var(--color-rose-pine-moon-text)]/80 leading-relaxed" data-config="home.hero.subheading">
         {config.home.hero.subheading}
       </p>
       <div class="mt-10 flex flex-col items-start gap-3 sm:flex-row">
         <a
           href="/portfolio"
-          class="inline-flex items-center rounded-phos-pill bg-white px-6 py-3 phos-button text-zinc-900 hover:bg-zinc-100 transition-colors"
+          class="inline-flex items-center rounded-pill bg-canvas px-6 py-3 text-sm font-medium text-ink hover:bg-canvas-alt transition-colors"
         >
           <span data-config="home.hero.cta1">{config.home.hero.cta1}</span>
           <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
         <a
           href="/contact"
-          class="inline-flex items-center rounded-phos-pill border border-white/30 px-6 py-3 phos-button text-white hover:bg-white/10 transition-colors"
+          class="inline-flex items-center rounded-pill border border-[var(--color-rose-pine-moon-text)]/30 px-6 py-3 text-sm font-medium text-[var(--color-rose-pine-moon-text)] hover:bg-[var(--color-rose-pine-moon-text)]/10 transition-colors"
         >
           <span data-config="home.hero.cta2">{config.home.hero.cta2}</span>
         </a>
@@ -77,12 +79,12 @@ const first = heroPriority[0]
   </div>
 
   {heroPriority.length > 0 && (
-    <div class="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 flex gap-2">
+    <div class="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 flex gap-2 pointer-events-auto">
       {heroPriority.map((_, i) => (
         <button
-          class="h-1.5 rounded-phos-pill transition-all duration-500"
+          class="h-1.5 rounded-pill transition-all duration-500"
           class:list={[
-            i === 0 ? 'w-8 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60',
+            i === 0 ? 'w-8 bg-[var(--color-rose-pine-moon-text)]' : 'w-1.5 bg-[var(--color-rose-pine-moon-text)]/40 hover:bg-[var(--color-rose-pine-moon-text)]/60',
           ]}
           data-hero-dot={i}
           aria-label={`Slide ${i + 1}`}
@@ -96,6 +98,7 @@ const first = heroPriority[0]
   const slides = document.querySelectorAll('[data-hero-slide]')
   const dots = document.querySelectorAll('[data-hero-dot]')
   const heroBg = document.getElementById('hero-bg')
+  const heroSection = document.querySelector('[data-hero-interval]')
   if (slides.length > 0) {
     window.addEventListener('load', () => {
       slides.forEach((slide) => {
@@ -119,11 +122,11 @@ const first = heroPriority[0]
       })
       dots.forEach((d, i) => {
         if (i === index) {
-          d.classList.add('w-8', 'bg-white')
-          d.classList.remove('w-1.5', 'bg-white/40', 'hover:bg-white/60')
+          d.classList.add('w-8', 'bg-[var(--color-rose-pine-moon-text)]')
+          d.classList.remove('w-1.5', 'bg-[var(--color-rose-pine-moon-text)]/40', 'hover:bg-[var(--color-rose-pine-moon-text)]/60')
         } else {
-          d.classList.remove('w-8', 'bg-white')
-          d.classList.add('w-1.5', 'bg-white/40', 'hover:bg-white/60')
+          d.classList.remove('w-8', 'bg-[var(--color-rose-pine-moon-text)]')
+          d.classList.add('w-1.5', 'bg-[var(--color-rose-pine-moon-text)]/40', 'hover:bg-[var(--color-rose-pine-moon-text)]/60')
         }
       })
       current = index
@@ -135,7 +138,7 @@ const first = heroPriority[0]
 
     function start() {
       if (interval) clearInterval(interval)
-      const heroInterval = parseInt(import.meta.env.PUBLIC_HERO_INTERVAL, 10) || 6000
+      const heroInterval = parseInt(heroSection.dataset.heroInterval, 10) || 6000
       interval = setInterval(next, heroInterval)
     }
 

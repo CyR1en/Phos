@@ -12,19 +12,19 @@ const base =
   'inline-flex items-center justify-center font-body font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 
 const sizes: Record<NonNullable<Props['size']>, string> = {
-  sm: 'text-phos-caption px-3 py-1.5',
-  md: 'text-phos-button px-5 py-2.5',
+  sm: 'text-sm px-3 py-1.5',
+  md: 'text-sm font-medium px-5 py-2.5',
 }
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-phos-button text-phos-on-button rounded-phos-pill hover:bg-phos-button-hover',
+    'bg-primary text-primary-text rounded-pill hover:bg-primary-hover',
   secondary:
-    'bg-phos-stone text-phos-ink rounded-phos-sm hover:bg-phos-hairline',
+    'bg-surface text-ink rounded-sm hover:bg-border',
   danger:
-    'bg-phos-coral text-phos-on-primary rounded-phos-sm hover:opacity-90',
+    'bg-accent text-primary-text rounded-sm hover:opacity-90',
   ghost:
-    'bg-transparent text-phos-ink rounded-phos-sm underline-offset-2 hover:underline',
+    'bg-transparent text-ink rounded-sm underline-offset-2 hover:underline',
 }
 
 export function Button({

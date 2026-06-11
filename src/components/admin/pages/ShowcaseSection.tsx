@@ -9,14 +9,14 @@ import { Button } from '../ui/Button'
 
 function FieldLabel({ children }: { children: string }) {
   return (
-    <label class="block text-phos-caption font-medium text-phos-body-muted mb-1.5">
+    <label class="block text-sm font-medium text-body-muted mb-1.5">
       {children}
     </label>
   )
 }
 
 function selectCls() {
-  return 'w-full px-3 py-2 bg-phos-canvas border border-phos-hairline rounded-phos-xs text-phos-body font-body focus:outline-none focus:border-phos-form-focus focus:ring-2 focus:ring-phos-form-focus/20'
+  return 'w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20'
 }
 
 interface ShowcaseItem {
@@ -45,9 +45,9 @@ function ShowcaseItemEditor({
   const selected = options.find((o) => o.slug === item.slug)
 
   return (
-    <div class="border border-phos-card-border rounded-phos-md p-4 bg-phos-canvas space-y-3">
+    <div class="border border-border-light rounded-md p-4 bg-canvas space-y-3">
       <div class="flex items-center justify-between">
-        <span class="text-phos-caption font-mono text-phos-muted">#{index + 1}</span>
+        <span class="text-sm font-mono text-muted">#{index + 1}</span>
         <Button variant="danger" size="sm" onClick={onRemove}>
           Remove
         </Button>
@@ -150,9 +150,9 @@ export function ShowcaseSection() {
       <ToggleField path="home.showcase.enabled" label="Enabled" />
       <TextField path="home.showcase.heading" label="Section heading" />
 
-      <div class="border-t border-phos-hairline pt-4 mt-4">
+      <div class="border-t border-border pt-4 mt-4">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-phos-caption font-medium text-phos-ink font-mono uppercase tracking-wider">
+          <span class="text-sm font-medium text-ink font-mono uppercase tracking-wider">
             Items
           </span>
           <Button variant="secondary" size="sm" onClick={addItem}>
@@ -174,7 +174,7 @@ export function ShowcaseSection() {
           ))}
 
           {items.length === 0 && (
-            <p class="text-phos-caption text-phos-muted italic py-4">
+            <p class="text-sm text-muted italic py-4">
               No items yet. Click + Add item to feature a category or gallery.
             </p>
           )}

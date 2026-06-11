@@ -7,12 +7,12 @@ const ogDescription = config.notFound?.og_description
 
 <BaseLayout title={ogTitle} description={ogDescription}>
   <section class="mx-auto flex min-h-[80vh] max-w-7xl flex-col items-start justify-center px-6 lg:px-8">
-    <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Error 404</p>
-    <h1 class="mt-6 font-display text-phos-hero text-phos-ink dark:text-phos-ink" data-config="notFound.heading">{config.notFound.heading}</h1>
-    <p class="mt-6 max-w-2xl phos-body-lg text-phos-body-muted dark:text-phos-body-muted" data-config="notFound.message">{config.notFound.message}</p>
+    <p class="font-mono text-xs uppercase tracking-wider text-muted">Error 404</p>
+    <h1 class="mt-6 font-display text-8xl text-ink" data-config="notFound.heading">{config.notFound.heading}</h1>
+    <p class="mt-6 max-w-2xl text-lg text-body-muted leading-relaxed" data-config="notFound.message">{config.notFound.message}</p>
     <a
       href="/"
-      class="mt-10 inline-flex items-center rounded-phos-pill bg-phos-primary dark:bg-phos-primary px-6 py-3 phos-button text-phos-canvas dark:text-phos-canvas hover:opacity-90 transition-opacity"
+      class="mt-10 inline-flex items-center rounded-pill bg-primary px-6 py-3 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors"
     >
       <span data-config="notFound.button">{config.notFound.button}</span>
       <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

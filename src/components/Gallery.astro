@@ -20,7 +20,7 @@ export interface Props {
 const { photos, category } = Astro.props
 ---
 
-<div class="masonry">
+<div class="columns-1 sm:columns-2 lg:columns-3 gap-5">
   {
     photos.map((photo, i) => (
       <PhotoCard

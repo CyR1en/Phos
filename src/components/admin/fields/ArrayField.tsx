@@ -41,9 +41,9 @@ export function ArrayField({ path, label }: Props) {
   }
 
   return (
-    <div class="border-t border-phos-hairline pt-4 mt-4">
+    <div class="border-t border-border pt-4 mt-4">
       <div class="flex items-center justify-between mb-3">
-        <span class="text-phos-caption font-medium text-phos-ink font-mono uppercase tracking-wider">
+        <span class="text-sm font-medium text-ink font-mono uppercase tracking-wider">
           {label}
         </span>
         <Button variant="secondary" size="sm" onClick={addItem}>
@@ -54,10 +54,10 @@ export function ArrayField({ path, label }: Props) {
         {arr.map((item, i) => (
           <div
             key={i}
-            class="border border-phos-card-border rounded-phos-sm p-4 bg-phos-canvas"
+            class="border border-border-light rounded-sm p-4 bg-canvas"
           >
             <div class="flex items-center justify-between mb-3">
-              <span class="text-phos-caption font-mono text-phos-muted">
+              <span class="text-sm font-mono text-muted">
                 #{i + 1}
               </span>
               <Button
@@ -123,7 +123,7 @@ export function ArrayField({ path, label }: Props) {
           </div>
         ))}
         {arr.length === 0 && (
-          <p class="text-phos-caption text-phos-muted italic">
+          <p class="text-sm text-muted italic">
             No items. Click + Add item to create one.
           </p>
         )}

@@ -47,7 +47,7 @@ const imageMimeType = (url) => {
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="theme-modern-elegant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -137,7 +137,7 @@ const imageMimeType = (url) => {
       })();
     </script>
   </head>
-  <body class="flex min-h-screen flex-col bg-phos-canvas dark:bg-phos-canvas text-phos-ink dark:text-phos-ink antialiased">
+  <body class="flex min-h-screen flex-col bg-canvas text-ink antialiased">
     <SmoothScroll />
     <Header />
     <main class="flex flex-1 flex-col">
@@ -145,5 +145,8 @@ const imageMimeType = (url) => {
     </main>
     <Footer />
 
+    <script>
+      import 'preline';
+    </script>
   </body>
 </html>

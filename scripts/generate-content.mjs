@@ -20,7 +20,7 @@ const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.t
 const THUMB_WIDTH = 800
 const THUMB_HEIGHT = 600
 const MOBILE_THUMB_WIDTH = 400
-const CONCURRENCY = 2
+const CONCURRENCY = 4
 
 async function ensureDir(dir) {
   if (!existsSync(dir)) {
@@ -106,24 +106,26 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
   const srcBuf = await readFile(srcPath)
   const imgMeta = await sharp(srcBuf).metadata().then(m => ({ width: m.width, height: m.height, format: m.format }))
 
-  const blur = await sharp(srcBuf)
-    .resize(20, null, { fit: 'inside' })
-    .webp({ quality: 30 })
-    .toBuffer()
-    .then(b => `data:image/webp;base64,${b.toString('base64')}`)
-    .catch(() => '')
+  const [blur] = await Promise.all([
+    sharp(srcBuf)
+      .resize(20, null, { fit: 'inside' })
+      .webp({ quality: 30 })
+      .toBuffer()
+      .then(b => `data:image/webp;base64,${b.toString('base64')}`)
+      .catch(() => ''),
 
-  await sharp(srcBuf).toFile(fullPath).catch(() => copyFile(srcPath, fullPath))
+    copyFile(srcPath, fullPath),
 
-  await sharp(srcBuf)
-    .resize(THUMB_WIDTH, THUMB_HEIGHT, { fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 82 })
-    .toFile(thumbPath)
+    sharp(srcBuf)
+      .resize(THUMB_WIDTH, THUMB_HEIGHT, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toFile(thumbPath),
 
-  await sharp(srcBuf)
-    .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 75 })
-    .toFile(mobileThumbPath)
+    sharp(srcBuf)
+      .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toFile(mobileThumbPath),
+  ])
 
   cache.files[relPath] = {
     mtimeMs: srcStat.mtimeMs,

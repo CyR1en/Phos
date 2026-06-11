@@ -1,114 +1,199 @@
-@import './phos.css';
+@import "tailwindcss";
+@import "./themes/rose-pine.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "../../node_modules/preline/variants.css";
+@source "../../node_modules/preline/dist/index.mjs";
 
-
-html.dark {
-  color-scheme: dark;
+@custom-variant hs-success {
+  &.success { @slot; }
+  .success & { @slot; }
+}
+@custom-variant hs-error {
+  &.error { @slot; }
+  .error & { @slot; }
+}
+@custom-variant hs-dragged {
+  &.dragged { @slot; }
+}
+@custom-variant hs-toastify-on {
+  &.toastify\\.on { @slot; }
+  .toastify\\.on & { @slot; }
+}
+@custom-variant hs-apexcharts-tooltip-dark {
+  &.dark { @slot; }
 }
 
-@layer components {
-  .btn-topbar {
-    @apply bg-white text-zinc-900 hover:bg-zinc-100;
-    @apply dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800;
-  }
+@custom-variant dark (&:where(.dark, .dark *));
 
-  .masonry {
-    column-count: 1;
-    column-gap: 1.25rem;
-  }
+@theme {
+  --font-display: 'Cormorant Garamond', Georgia, ui-serif, serif;
+  --font-body: 'DM Sans', Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  @media (min-width: 640px) {
-    .masonry { column-count: 2; }
-  }
+  --color-primary: var(--color-rose-pine-love);
+  --color-primary-hover: var(--color-rose-pine-love-600);
+  --color-primary-light: var(--color-rose-pine-love-300);
+  --color-secondary: var(--color-rose-pine-surface);
+  --color-secondary-hover: var(--color-rose-pine-overlay);
+  --color-accent: var(--color-rose-pine-iris);
+  --color-accent-soft: var(--color-rose-pine-foam);
+  --color-accent-hover: var(--color-rose-pine-pine);
+  --color-canvas: var(--color-rose-pine-base);
+  --color-canvas-alt: var(--color-rose-pine-surface);
+  --color-canvas-inverse: var(--color-rose-pine-moon-base);
+  --color-surface: var(--color-rose-pine-surface);
+  --color-surface-hover: var(--color-rose-pine-overlay);
+  --color-border: var(--color-rose-pine-highlight-med);
+  --color-border-light: var(--color-rose-pine-highlight-low);
+  --color-border-hover: var(--color-rose-pine-highlight-high);
+  --color-border-focus: var(--color-rose-pine-iris);
+  --color-ink: var(--color-rose-pine-text);
+  --color-ink-inverse: var(--color-rose-pine-surface);
+  --color-muted: var(--color-rose-pine-muted);
+  --color-muted-inverse: var(--color-rose-pine-moon-muted);
+  --color-body-muted: var(--color-rose-pine-subtle);
+  --color-success: var(--color-rose-pine-pine);
+  --color-success-bg: var(--color-rose-pine-foam);
+  --color-error: var(--color-rose-pine-love);
+  --color-error-bg: var(--color-rose-pine-love-100);
+  --color-info: var(--color-rose-pine-iris);
+  --color-info-bg: var(--color-rose-pine-highlight-low);
+  --color-focus-ring: var(--color-rose-pine-iris);
+  --color-primary-text: var(--color-rose-pine-surface);
 
-  @media (min-width: 1024px) {
-    .masonry { column-count: 3; }
-  }
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+  --radius-pill: 32px;
+}
 
-  @media (min-width: 1536px) {
-    .masonry { column-count: 4; }
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
+  h1 { font-weight: 400; line-height: 1.05; font-size: clamp(48px, 8vw, 96px); }
+  h2 { font-weight: 400; line-height: 1.1; font-size: clamp(36px, 5vw, 60px); }
+  h3 { font-weight: 500; line-height: 1.15; font-size: clamp(32px, 4vw, 48px); }
+  h4 { font-weight: 500; line-height: 1.2; font-size: 32px; }
+  h5 { font-weight: 500; line-height: 1.3; font-size: 24px; }
+  h6 { font-weight: 500; line-height: 1.3; font-size: 18px; }
 
-  .masonry-item {
-    break-inside: avoid;
-    margin-bottom: 1.25rem;
+  body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-@layer utilities {
-  .fade-in {
-    animation: fadeIn 0.5s ease-out both;
+@layer base {
+  .dark {
+    --color-primary: var(--color-rose-pine-moon-love);
+    --color-primary-hover: var(--color-rose-pine-moon-rose);
+    --color-primary-light: var(--color-rose-pine-love-600);
+    --color-secondary: var(--color-rose-pine-moon-surface);
+    --color-secondary-hover: var(--color-rose-pine-moon-overlay);
+    --color-accent: var(--color-rose-pine-moon-iris);
+    --color-accent-soft: var(--color-rose-pine-moon-foam);
+    --color-accent-hover: var(--color-rose-pine-moon-pine);
+    --color-canvas: var(--color-rose-pine-moon-base);
+    --color-canvas-alt: var(--color-rose-pine-moon-surface);
+    --color-canvas-inverse: var(--color-rose-pine-base);
+    --color-surface: var(--color-rose-pine-moon-surface);
+    --color-surface-hover: var(--color-rose-pine-moon-overlay);
+    --color-border: var(--color-rose-pine-moon-highlight-med);
+    --color-border-light: var(--color-rose-pine-moon-highlight-low);
+    --color-border-hover: var(--color-rose-pine-moon-highlight-high);
+    --color-ink: var(--color-rose-pine-moon-text);
+    --color-ink-inverse: var(--color-rose-pine-text);
+    --color-muted: var(--color-rose-pine-moon-muted);
+    --color-muted-inverse: var(--color-rose-pine-muted);
+    --color-body-muted: var(--color-rose-pine-moon-subtle);
+    --color-success: var(--color-rose-pine-moon-pine);
+    --color-success-bg: var(--color-rose-pine-moon-highlight-low);
+    --color-error: var(--color-rose-pine-moon-love);
+    --color-error-bg: var(--color-rose-pine-love-900);
+    --color-info: var(--color-rose-pine-moon-iris);
+    --color-info-bg: var(--color-rose-pine-moon-highlight-low);
+    --color-focus-ring: var(--color-rose-pine-moon-iris);
+    --color-primary-text: var(--color-rose-pine-moon-base);
+
+    color-scheme: dark;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .animate-reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-  }
-
-  .animate-reveal[data-visible] {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .lightbox-enter {
-    animation: lightboxIn 0.25s ease-out both;
-  }
-
-  .lightbox-exit {
-    animation: lightboxOut 0.2s ease-in both;
-  }
-
-  @keyframes lightboxIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes lightboxOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-
-  .hero-parallax {
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-  }
-
-  .mobile-nav-open {
-    overflow: hidden;
-  }
-
-  @keyframes slideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-  }
-
-  @keyframes slideOut {
-    from { transform: translateX(0); }
-    to { transform: translateX(100%); }
-  }
-
-  .nav-enter {
-    animation: slideIn 0.3s ease-out both;
-  }
-
-  .nav-exit {
-    animation: slideOut 0.25s ease-in both;
-  }
-
-  .nav-backdrop-enter {
-    animation: fadeIn 0.3s ease-out both;
-  }
-
-  .nav-backdrop-exit {
-    animation: fadeIn 0.25s ease-out both reverse;
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    letter-spacing: -0.015em;
   }
 }
+
+@layer base {
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+}
+
+@utility fade-in {
+  animation: fadeIn 0.5s ease-out both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@utility animate-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+[data-visible].animate-reveal,
+.animate-reveal[data-visible] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lightbox-enter {
+  animation: lightboxIn 0.25s ease-out both;
+}
+.lightbox-exit {
+  animation: lightboxOut 0.2s ease-in both;
+}
+
+@keyframes lightboxIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes lightboxOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.hero-parallax {
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slideOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+.nav-enter { animation: slideIn 0.3s ease-out both; }
+.nav-exit { animation: slideOut 0.25s ease-in both; }
+.nav-backdrop-enter { animation: fadeIn 0.3s ease-out both; }
+.nav-backdrop-exit { animation: fadeIn 0.25s ease-out both reverse; }
+
+.mobile-nav-open { overflow: hidden; }

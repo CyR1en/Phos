@@ -14,16 +14,16 @@ export function Section({ title, description, children, class: cls, bare }: Prop
       class={
         bare
           ? cls ?? ''
-          : `bg-phos-stone border border-phos-card-border rounded-phos-md p-6 ${cls ?? ''}`
+          : `bg-surface border border-border-light rounded-md p-6 ${cls ?? ''}`
       }
     >
       {title && (
-        <h3 class="font-display text-phos-feature text-phos-ink mb-1">
+        <h3 class="font-display font-display text-xl text-ink mb-1">
           {title}
         </h3>
       )}
       {description && (
-        <p class="text-phos-caption text-phos-muted mb-4">{description}</p>
+        <p class="text-sm text-muted mb-4">{description}</p>
       )}
       <div class="space-y-4">{children}</div>
     </section>

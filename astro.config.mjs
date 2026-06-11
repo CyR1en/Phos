@@ -1,8 +1,7 @@
 import { defineConfig } from 'astro/config'
 import sitemap from '@astrojs/sitemap'
 import preact from '@astrojs/preact'
-import tailwindcss from 'tailwindcss'
-import autoprefixer from 'autoprefixer'
+import tailwindcss from '@tailwindcss/postcss'
 
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -28,7 +27,7 @@ export default defineConfig({
     cacheDir: './node_modules/.vite-cache',
     css: {
       postcss: {
-        plugins: [tailwindcss(), autoprefixer()],
+        plugins: [tailwindcss()],
       },
     },
     resolve: {

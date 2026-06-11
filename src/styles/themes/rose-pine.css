@@ -1,0 +1,488 @@
+/* ------------------------------ */
+/* -------- Rosé Pine ----------- */
+/* Dawn (light) / Moon (dark)     */
+/* https://rosepinetheme.com       */
+/* ------------------------------ */
+
+@theme theme-rose-pine inline {
+  /* Dawn palette (exact hex from rosepinetheme.com) */
+  --color-rose-pine-base: #faf4ed;
+  --color-rose-pine-surface: #fffaf3;
+  --color-rose-pine-overlay: #f2e9e1;
+  --color-rose-pine-muted: #9893a5;
+  --color-rose-pine-subtle: #797593;
+  --color-rose-pine-text: #575279;
+  --color-rose-pine-love: #b4637a;
+  --color-rose-pine-gold: #ea9d34;
+  --color-rose-pine-rose: #d7827e;
+  --color-rose-pine-pine: #286983;
+  --color-rose-pine-foam: #56949f;
+  --color-rose-pine-iris: #907aa9;
+  --color-rose-pine-highlight-low: #f4ede8;
+  --color-rose-pine-highlight-med: #dfdad9;
+  --color-rose-pine-highlight-high: #cecacd;
+
+  /* Moon palette → Main Rosé Pine dark palette (exact hex from rosepinetheme.com) */
+  --color-rose-pine-moon-base: #191724;
+  --color-rose-pine-moon-surface: #1f1d2e;
+  --color-rose-pine-moon-overlay: #26233a;
+  --color-rose-pine-moon-muted: #6e6a86;
+  --color-rose-pine-moon-subtle: #908caa;
+  --color-rose-pine-moon-text: #e0def4;
+  --color-rose-pine-moon-love: #eb6f92;
+  --color-rose-pine-moon-gold: #f6c177;
+  --color-rose-pine-moon-rose: #ebbcba;
+  --color-rose-pine-moon-pine: #31748f;
+  --color-rose-pine-moon-foam: #9ccfd8;
+  --color-rose-pine-moon-iris: #c4a7e7;
+  --color-rose-pine-moon-highlight-low: #21202e;
+  --color-rose-pine-moon-highlight-med: #403d52;
+  --color-rose-pine-moon-highlight-high: #524f67;
+
+  /* Extra shades for love (primary) */
+  --color-rose-pine-love-50: #fdf2f5;
+  --color-rose-pine-love-100: #f9d9e2;
+  --color-rose-pine-love-200: #f0b7c8;
+  --color-rose-pine-love-300: #e494aa;
+  --color-rose-pine-love-400: #d17b92;
+  --color-rose-pine-love-500: #b4637a;
+  --color-rose-pine-love-600: #9b5368;
+  --color-rose-pine-love-700: #824356;
+  --color-rose-pine-love-800: #693344;
+  --color-rose-pine-love-900: #502332;
+  --color-rose-pine-love-950: #371320;
+}
+
+:root[data-theme="theme-rose-pine"],
+[data-theme="theme-rose-pine"] {
+  --background: var(--color-rose-pine-base);
+  --background-1: var(--color-rose-pine-surface);
+  --background-2: var(--color-rose-pine-overlay);
+  --background-plain: var(--color-rose-pine-base);
+  --foreground: var(--color-rose-pine-text);
+  --foreground-inverse: var(--color-rose-pine-surface);
+
+  --inverse: var(--color-rose-pine-moon-base);
+
+  --border: var(--color-rose-pine-highlight-med);
+  --border-line-inverse: var(--color-rose-pine-moon-text);
+  --border-line-1: var(--color-rose-pine-highlight-low);
+  --border-line-2: var(--color-rose-pine-highlight-med);
+  --border-line-3: var(--color-rose-pine-highlight-high);
+  --border-line-4: var(--color-rose-pine-muted);
+  --border-line-5: var(--color-rose-pine-subtle);
+  --border-line-6: var(--color-rose-pine-text);
+  --border-line-7: var(--color-rose-pine-moon-base);
+  --border-line-8: var(--color-rose-pine-moon-surface);
+
+  --primary-50: var(--color-rose-pine-love-50);
+  --primary-100: var(--color-rose-pine-love-100);
+  --primary-200: var(--color-rose-pine-love-200);
+  --primary-300: var(--color-rose-pine-love-300);
+  --primary-400: var(--color-rose-pine-love-400);
+  --primary-500: var(--color-rose-pine-love-500);
+  --primary-600: var(--color-rose-pine-love-600);
+  --primary-700: var(--color-rose-pine-love-700);
+  --primary-800: var(--color-rose-pine-love-800);
+  --primary-900: var(--color-rose-pine-love-900);
+  --primary-950: var(--color-rose-pine-love-950);
+
+  --primary: var(--color-rose-pine-love);
+  --primary-line: transparent;
+  --primary-foreground: var(--color-rose-pine-surface);
+  --primary-hover: var(--color-rose-pine-love-600);
+  --primary-focus: var(--color-rose-pine-love-600);
+  --primary-active: var(--color-rose-pine-love-600);
+  --primary-checked: var(--color-rose-pine-love);
+
+  --secondary: var(--color-rose-pine-text);
+  --secondary-line: transparent;
+  --secondary-foreground: var(--color-rose-pine-surface);
+  --secondary-hover: var(--color-rose-pine-moon-base);
+  --secondary-focus: var(--color-rose-pine-moon-base);
+  --secondary-active: var(--color-rose-pine-moon-base);
+
+  --layer: var(--color-rose-pine-base);
+  --layer-line: var(--border);
+  --layer-foreground: var(--color-rose-pine-text);
+  --layer-hover: var(--color-rose-pine-surface);
+  --layer-focus: var(--color-rose-pine-surface);
+  --layer-active: var(--color-rose-pine-surface);
+
+  --surface: var(--color-rose-pine-surface);
+  --surface-1: var(--color-rose-pine-overlay);
+  --surface-2: var(--color-rose-pine-highlight-low);
+  --surface-3: var(--color-rose-pine-highlight-med);
+  --surface-4: var(--color-rose-pine-muted);
+  --surface-5: var(--color-rose-pine-subtle);
+  --surface-line: transparent;
+  --surface-foreground: var(--color-rose-pine-text);
+  --surface-hover: var(--color-rose-pine-highlight-low);
+  --surface-focus: var(--color-rose-pine-highlight-low);
+  --surface-active: var(--color-rose-pine-highlight-low);
+
+  --muted: var(--color-rose-pine-surface);
+  --muted-foreground: var(--color-rose-pine-muted);
+  --muted-foreground-1: var(--color-rose-pine-subtle);
+  --muted-foreground-2: var(--color-rose-pine-text);
+  --muted-hover: var(--color-rose-pine-overlay);
+  --muted-focus: var(--color-rose-pine-overlay);
+  --muted-active: var(--color-rose-pine-overlay);
+
+  --destructive: var(--color-rose-pine-love);
+  --destructive-foreground: var(--color-rose-pine-surface);
+  --destructive-hover: var(--color-rose-pine-love-600);
+  --destructive-focus: var(--color-rose-pine-love-600);
+
+  --navbar: var(--color-rose-pine-base);
+  --navbar-line: var(--border);
+  --navbar-divider: var(--border);
+  --navbar-nav-foreground: var(--color-rose-pine-text);
+  --navbar-nav-hover: var(--color-rose-pine-surface);
+  --navbar-nav-focus: var(--color-rose-pine-surface);
+  --navbar-nav-active: var(--color-rose-pine-surface);
+  --navbar-nav-list-divider: var(--border);
+  --navbar-inverse: var(--inverse);
+  --navbar-1: var(--color-rose-pine-surface);
+  --navbar-1-line: var(--border);
+  --navbar-1-divider: var(--border);
+  --navbar-1-nav-foreground: var(--color-rose-pine-text);
+  --navbar-1-nav-hover: var(--color-rose-pine-overlay);
+  --navbar-1-nav-focus: var(--color-rose-pine-overlay);
+  --navbar-1-nav-active: var(--color-rose-pine-overlay);
+  --navbar-1-nav-list-divider: var(--border);
+  --navbar-2: var(--color-rose-pine-overlay);
+  --navbar-2-line: transparent;
+  --navbar-2-divider: var(--color-rose-pine-highlight-high);
+  --navbar-2-nav-foreground: var(--color-rose-pine-text);
+  --navbar-2-nav-hover: var(--color-rose-pine-highlight-low);
+  --navbar-2-nav-focus: var(--color-rose-pine-highlight-low);
+  --navbar-2-nav-active: var(--color-rose-pine-highlight-low);
+  --navbar-2-nav-list-divider: var(--border);
+
+  --sidebar: var(--color-rose-pine-base);
+  --sidebar-line: var(--border);
+  --sidebar-divider: var(--border);
+  --sidebar-nav-foreground: var(--color-rose-pine-text);
+  --sidebar-nav-hover: var(--color-rose-pine-surface);
+  --sidebar-nav-focus: var(--color-rose-pine-surface);
+  --sidebar-nav-active: var(--color-rose-pine-surface);
+  --sidebar-nav-list-divider: var(--border);
+  --sidebar-inverse: var(--inverse);
+  --sidebar-1: var(--color-rose-pine-surface);
+  --sidebar-1-line: var(--border);
+  --sidebar-1-divider: var(--border);
+  --sidebar-1-nav-foreground: var(--color-rose-pine-text);
+  --sidebar-1-nav-hover: var(--color-rose-pine-overlay);
+  --sidebar-1-nav-focus: var(--color-rose-pine-overlay);
+  --sidebar-1-nav-active: var(--color-rose-pine-overlay);
+  --sidebar-1-nav-list-divider: var(--border);
+  --sidebar-2: var(--color-rose-pine-overlay);
+  --sidebar-2-line: transparent;
+  --sidebar-2-divider: var(--border);
+  --sidebar-2-nav-foreground: var(--color-rose-pine-text);
+  --sidebar-2-nav-hover: var(--color-rose-pine-highlight-low);
+  --sidebar-2-nav-focus: var(--color-rose-pine-highlight-low);
+  --sidebar-2-nav-active: var(--color-rose-pine-highlight-low);
+  --sidebar-2-nav-list-divider: var(--border);
+
+  --card: var(--color-rose-pine-base);
+  --card-line: var(--border);
+  --card-divider: var(--border);
+  --card-header: var(--color-rose-pine-overlay);
+  --card-footer: var(--color-rose-pine-overlay);
+  --card-inverse: var(--inverse);
+
+  --dropdown: var(--color-rose-pine-base);
+  --dropdown-1: var(--color-rose-pine-base);
+  --dropdown-line: transparent;
+  --dropdown-divider: var(--border);
+  --dropdown-header: var(--color-rose-pine-overlay);
+  --dropdown-footer: var(--color-rose-pine-overlay);
+  --dropdown-item-foreground: var(--color-rose-pine-text);
+  --dropdown-item-hover: var(--color-rose-pine-surface);
+  --dropdown-item-focus: var(--color-rose-pine-surface);
+  --dropdown-item-active: var(--color-rose-pine-surface);
+  --dropdown-inverse: var(--inverse);
+
+  --select: var(--color-rose-pine-base);
+  --select-1: var(--color-rose-pine-base);
+  --select-line: transparent;
+  --select-item-foreground: var(--color-rose-pine-text);
+  --select-item-hover: var(--color-rose-pine-surface);
+  --select-item-focus: var(--color-rose-pine-surface);
+  --select-item-active: var(--color-rose-pine-surface);
+  --select-inverse: var(--inverse);
+
+  --overlay: var(--color-rose-pine-base);
+  --overlay-line: transparent;
+  --overlay-divider: var(--border);
+  --overlay-header: var(--color-rose-pine-overlay);
+  --overlay-footer: var(--color-rose-pine-overlay);
+  --overlay-inverse: var(--inverse);
+
+  --popover: var(--color-rose-pine-base);
+  --popover-line: var(--color-rose-pine-highlight-low);
+
+  --tooltip: var(--inverse);
+  --tooltip-foreground: var(--color-rose-pine-moon-text);
+  --tooltip-line: transparent;
+
+  --table-line: var(--border);
+
+  --switch: var(--color-rose-pine-base);
+
+  --footer: var(--color-rose-pine-base);
+  --footer-line: var(--border);
+  --footer-inverse: var(--inverse);
+
+  --scrollbar-track: var(--color-rose-pine-surface);
+  --scrollbar-thumb: var(--color-rose-pine-highlight-med);
+  --scrollbar-track-inverse: transparent;
+  --scrollbar-thumb-inverse: var(--color-rose-pine-moon-text);
+
+  --chart-colors-background: var(--color-rose-pine-base);
+  --chart-colors-background-inverse: var(--inverse);
+  --chart-colors-chart-inverse: var(--color-rose-pine-surface);
+  --chart-colors-foreground: var(--color-rose-pine-text);
+  --chart-colors-foreground-inverse: var(--color-rose-pine-surface);
+  --chart-primary: var(--color-rose-pine-love);
+  --chart-colors-primary: var(--color-rose-pine-love);
+  --chart-colors-primary-inverse: var(--color-rose-pine-love-300);
+  --chart-colors-primary-hex: var(--color-rose-pine-love);
+  --chart-colors-primary-hex-inverse: var(--color-rose-pine-love-300);
+  --chart-1: var(--color-rose-pine-love-100);
+  --chart-2: var(--color-rose-pine-love-300);
+  --chart-3: var(--color-rose-pine-love-500);
+  --chart-4: var(--color-rose-pine-love-700);
+  --chart-5: var(--color-rose-pine-love-900);
+  --chart-6: var(--color-rose-pine-iris);
+  --chart-7: var(--color-rose-pine-pine);
+  --chart-8: var(--color-rose-pine-foam);
+  --chart-9: var(--color-rose-pine-rose);
+  --chart-10: var(--color-rose-pine-gold);
+
+  --chart-colors-labels: var(--color-rose-pine-subtle);
+  --chart-colors-xaxis-labels: var(--color-rose-pine-muted);
+  --chart-colors-yaxis-labels: var(--color-rose-pine-muted);
+  --chart-colors-grid-border: var(--border);
+  --chart-colors-bar-ranges: var(--color-rose-pine-surface);
+
+  --map-colors-primary: var(--color-rose-pine-love);
+  --map-colors-primary-inverse: var(--color-rose-pine-love-300);
+  --map-colors-default: var(--color-rose-pine-surface);
+  --map-colors-default-inverse: var(--color-rose-pine-moon-overlay);
+  --map-colors-highlight: var(--color-rose-pine-love-300);
+  --map-colors-highlight-inverse: var(--color-rose-pine-love);
+  --map-colors-border: var(--color-rose-pine-highlight-high);
+  --map-colors-border-inverse: var(--color-rose-pine-moon-highlight-med);
+}
+
+[data-theme="theme-rose-pine"].dark {
+  --background: var(--color-rose-pine-moon-base);
+  --background-1: var(--color-rose-pine-moon-surface);
+  --background-2: var(--color-rose-pine-moon-overlay);
+  --background-plain: var(--color-rose-pine-moon-base);
+
+  --foreground: var(--color-rose-pine-moon-text);
+  --foreground-inverse: var(--color-rose-pine-text);
+
+  --inverse: var(--color-rose-pine-moon-highlight-med);
+
+  --border: var(--color-rose-pine-moon-highlight-med);
+  --border-line-inverse: var(--color-rose-pine-text);
+  --border-line-1: var(--color-rose-pine-moon-base);
+  --border-line-2: var(--color-rose-pine-moon-surface);
+  --border-line-3: var(--color-rose-pine-moon-highlight-low);
+  --border-line-4: var(--color-rose-pine-moon-highlight-med);
+  --border-line-5: var(--color-rose-pine-moon-highlight-high);
+  --border-line-6: var(--color-rose-pine-moon-muted);
+  --border-line-7: var(--color-rose-pine-moon-subtle);
+  --border-line-8: var(--color-rose-pine-moon-text);
+
+  --primary: var(--color-rose-pine-moon-love);
+  --primary-line: transparent;
+  --primary-foreground: var(--color-rose-pine-moon-base);
+  --primary-hover: var(--color-rose-pine-moon-rose);
+  --primary-focus: var(--color-rose-pine-moon-rose);
+  --primary-active: var(--color-rose-pine-moon-rose);
+  --primary-checked: var(--color-rose-pine-moon-love);
+
+  --secondary: var(--color-rose-pine-moon-text);
+  --secondary-line: transparent;
+  --secondary-foreground: var(--color-rose-pine-moon-base);
+  --secondary-hover: var(--color-rose-pine-moon-subtle);
+  --secondary-focus: var(--color-rose-pine-moon-subtle);
+  --secondary-active: var(--color-rose-pine-moon-subtle);
+
+  --layer: var(--color-rose-pine-moon-base);
+  --layer-line: var(--border);
+  --layer-foreground: var(--color-rose-pine-moon-text);
+  --layer-hover: var(--color-rose-pine-moon-surface);
+  --layer-focus: var(--color-rose-pine-moon-surface);
+  --layer-active: var(--color-rose-pine-moon-surface);
+
+  --surface: var(--color-rose-pine-moon-surface);
+  --surface-1: var(--color-rose-pine-moon-highlight-low);
+  --surface-2: var(--color-rose-pine-moon-highlight-med);
+  --surface-3: var(--color-rose-pine-moon-highlight-high);
+  --surface-4: var(--color-rose-pine-moon-muted);
+  --surface-5: var(--color-rose-pine-moon-subtle);
+  --surface-line: transparent;
+  --surface-foreground: var(--color-rose-pine-moon-text);
+  --surface-hover: var(--color-rose-pine-moon-highlight-low);
+  --surface-focus: var(--color-rose-pine-moon-highlight-low);
+  --surface-active: var(--color-rose-pine-moon-highlight-low);
+
+  --muted: var(--color-rose-pine-moon-base);
+  --muted-foreground: var(--color-rose-pine-moon-muted);
+  --muted-foreground-1: var(--color-rose-pine-moon-subtle);
+  --muted-foreground-2: var(--color-rose-pine-moon-text);
+  --muted-hover: var(--color-rose-pine-moon-surface);
+  --muted-focus: var(--color-rose-pine-moon-surface);
+  --muted-active: var(--color-rose-pine-moon-surface);
+
+  --destructive: var(--color-rose-pine-moon-love);
+  --destructive-foreground: var(--color-rose-pine-moon-base);
+  --destructive-hover: var(--color-rose-pine-moon-rose);
+  --destructive-focus: var(--color-rose-pine-moon-rose);
+
+  --navbar: var(--color-rose-pine-moon-base);
+  --navbar-line: var(--border);
+  --navbar-divider: var(--border);
+  --navbar-nav-foreground: var(--color-rose-pine-moon-text);
+  --navbar-nav-hover: var(--color-rose-pine-moon-surface);
+  --navbar-nav-focus: var(--color-rose-pine-moon-surface);
+  --navbar-nav-active: var(--color-rose-pine-moon-surface);
+  --navbar-nav-list-divider: var(--border);
+  --navbar-inverse: var(--inverse);
+  --navbar-1: var(--color-rose-pine-moon-surface);
+  --navbar-1-line: var(--border);
+  --navbar-1-divider: var(--border);
+  --navbar-1-nav-foreground: var(--color-rose-pine-moon-text);
+  --navbar-1-nav-hover: var(--color-rose-pine-moon-highlight-low);
+  --navbar-1-nav-focus: var(--color-rose-pine-moon-highlight-low);
+  --navbar-1-nav-active: var(--color-rose-pine-moon-highlight-low);
+  --navbar-1-nav-list-divider: var(--border);
+  --navbar-2: var(--color-rose-pine-moon-overlay);
+  --navbar-2-line: transparent;
+  --navbar-2-divider: var(--border);
+  --navbar-2-nav-foreground: var(--color-rose-pine-moon-text);
+  --navbar-2-nav-hover: var(--color-rose-pine-moon-highlight-low);
+  --navbar-2-nav-focus: var(--color-rose-pine-moon-highlight-low);
+  --navbar-2-nav-active: var(--color-rose-pine-moon-highlight-low);
+  --navbar-2-nav-list-divider: var(--border);
+
+  --sidebar: var(--color-rose-pine-moon-base);
+  --sidebar-line: var(--border);
+  --sidebar-divider: var(--border);
+  --sidebar-nav-foreground: var(--color-rose-pine-moon-text);
+  --sidebar-nav-hover: var(--color-rose-pine-moon-surface);
+  --sidebar-nav-focus: var(--color-rose-pine-moon-surface);
+  --sidebar-nav-active: var(--color-rose-pine-moon-surface);
+  --sidebar-nav-list-divider: var(--border);
+  --sidebar-inverse: var(--inverse);
+  --sidebar-1: var(--color-rose-pine-moon-surface);
+  --sidebar-1-line: var(--border);
+  --sidebar-1-divider: var(--border);
+  --sidebar-1-nav-foreground: var(--color-rose-pine-moon-text);
+  --sidebar-1-nav-hover: var(--color-rose-pine-moon-highlight-low);
+  --sidebar-1-nav-focus: var(--color-rose-pine-moon-highlight-low);
+  --sidebar-1-nav-active: var(--color-rose-pine-moon-highlight-low);
+  --sidebar-1-nav-list-divider: var(--border);
+  --sidebar-2: var(--color-rose-pine-moon-overlay);
+  --sidebar-2-line: transparent;
+  --sidebar-2-divider: var(--border);
+  --sidebar-2-nav-foreground: var(--color-rose-pine-moon-text);
+  --sidebar-2-nav-hover: var(--color-rose-pine-moon-highlight-low);
+  --sidebar-2-nav-focus: var(--color-rose-pine-moon-highlight-low);
+  --sidebar-2-nav-active: var(--color-rose-pine-moon-highlight-low);
+  --sidebar-2-nav-list-divider: var(--border);
+
+  --card: var(--color-rose-pine-moon-base);
+  --card-line: var(--border);
+  --card-divider: var(--border);
+  --card-header: var(--color-rose-pine-moon-surface);
+  --card-footer: var(--color-rose-pine-moon-surface);
+  --card-inverse: var(--inverse);
+
+  --dropdown: var(--color-rose-pine-moon-surface);
+  --dropdown-1: var(--color-rose-pine-moon-overlay);
+  --dropdown-line: transparent;
+  --dropdown-divider: var(--border);
+  --dropdown-header: var(--color-rose-pine-moon-highlight-low);
+  --dropdown-footer: var(--color-rose-pine-moon-highlight-low);
+  --dropdown-item-foreground: var(--color-rose-pine-moon-text);
+  --dropdown-item-hover: var(--color-rose-pine-moon-highlight-low);
+  --dropdown-item-focus: var(--color-rose-pine-moon-highlight-low);
+  --dropdown-item-active: var(--color-rose-pine-moon-highlight-low);
+  --dropdown-inverse: var(--inverse);
+
+  --select: var(--color-rose-pine-moon-surface);
+  --select-1: var(--color-rose-pine-moon-overlay);
+  --select-line: transparent;
+  --select-item-foreground: var(--color-rose-pine-moon-text);
+  --select-item-hover: var(--color-rose-pine-moon-highlight-low);
+  --select-item-focus: var(--color-rose-pine-moon-highlight-low);
+  --select-item-active: var(--color-rose-pine-moon-highlight-low);
+  --select-inverse: var(--inverse);
+
+  --overlay: var(--color-rose-pine-moon-base);
+  --overlay-line: transparent;
+  --overlay-divider: var(--border);
+  --overlay-header: var(--color-rose-pine-moon-surface);
+  --overlay-footer: var(--color-rose-pine-moon-surface);
+  --overlay-inverse: var(--inverse);
+
+  --popover: var(--color-rose-pine-moon-surface);
+  --popover-line: var(--border);
+
+  --tooltip: var(--color-rose-pine-moon-text);
+  --tooltip-foreground: var(--color-rose-pine-text);
+  --tooltip-line: transparent;
+
+  --table-line: var(--border);
+
+  --switch: var(--color-rose-pine-moon-love);
+
+  --footer: var(--color-rose-pine-moon-base);
+  --footer-line: var(--border);
+  --footer-inverse: var(--inverse);
+
+  --scrollbar-track: var(--color-rose-pine-moon-surface);
+  --scrollbar-thumb: var(--color-rose-pine-moon-highlight-high);
+  --scrollbar-track-inverse: var(--color-rose-pine-moon-muted);
+  --scrollbar-thumb-inverse: var(--color-rose-pine-moon-highlight-med);
+
+  --chart-colors-background: var(--color-rose-pine-moon-base);
+  --chart-colors-background-inverse: var(--color-rose-pine-highlight-low);
+  --chart-colors-chart-inverse: var(--color-rose-pine-moon-surface);
+  --chart-colors-foreground: var(--color-rose-pine-moon-subtle);
+  --chart-colors-foreground-inverse: var(--color-rose-pine-base);
+  --chart-primary: var(--color-rose-pine-moon-love);
+  --chart-colors-primary: var(--color-rose-pine-moon-love);
+  --chart-colors-primary-inverse: var(--color-rose-pine-love-300);
+  --chart-colors-primary-hex: var(--color-rose-pine-moon-love);
+  --chart-colors-primary-hex-inverse: var(--color-rose-pine-love-300);
+  --chart-1: var(--color-rose-pine-love-200);
+  --chart-2: var(--color-rose-pine-love-300);
+  --chart-3: var(--color-rose-pine-love-400);
+  --chart-4: var(--color-rose-pine-moon-love);
+  --chart-5: var(--color-rose-pine-love-300);
+  --chart-6: var(--color-rose-pine-moon-iris);
+  --chart-7: var(--color-rose-pine-moon-pine);
+  --chart-8: var(--color-rose-pine-moon-foam);
+  --chart-9: var(--color-rose-pine-moon-rose);
+  --chart-10: var(--color-rose-pine-moon-gold);
+
+  --chart-colors-labels: var(--color-rose-pine-moon-muted);
+  --chart-colors-xaxis-labels: var(--color-rose-pine-moon-muted);
+  --chart-colors-yaxis-labels: var(--color-rose-pine-moon-muted);
+  --chart-colors-grid-border: var(--border);
+  --chart-colors-bar-ranges: var(--color-rose-pine-moon-surface);
+
+  --map-colors-default: var(--color-rose-pine-moon-surface);
+  --map-colors-default-inverse: var(--color-rose-pine-moon-highlight-low);
+  --map-colors-border: var(--color-rose-pine-moon-highlight-high);
+  --map-colors-border-inverse: var(--color-rose-pine-moon-muted);
+}

@@ -8,50 +8,46 @@ const NAV: Array<{ id: string; label: string }> = [
   { id: 'notFound', label: '404' },
 ]
 
-interface Props {
-  mobileOpen: boolean
-  onClose: () => void
-}
-
-export function Sidebar({ mobileOpen, onClose }: Props) {
-  const { currentPage, setCurrentPage, setToken, flushSave, pluginConfigs, flushPluginSaves } = useConfig()
+export function Sidebar() {
+  const { currentPage, setCurrentPage, flushSave, pluginConfigs, flushPluginSaves } = useConfig()
   const hasPlugins = (pluginConfigs?.length ?? 0) > 0
 
+  const closeOverlay = () => {
+    const win = window as any
+    if (win.HSOverlay) {
+      win.HSOverlay.close('#admin-sidebar')
+    }
+  }
+
   const navigate = async (id: string) => {
-    onClose()
+    closeOverlay()
     if (id === currentPage) return
     await flushSave()
     await flushPluginSaves()
     setCurrentPage(id)
   }
 
-  const logout = async () => {
-    onClose()
-    await flushSave()
-    await flushPluginSaves()
-    setToken(null)
-  }
-
   return (
     <aside
-      class={`fixed inset-y-0 left-0 z-50 w-64 md:static md:w-56 md:translate-x-0 flex-shrink-0 bg-phos-canvas border-r border-phos-hairline flex flex-col transition-transform duration-200 ${
-        mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}
+      id="admin-sidebar"
+      class="hs-overlay hs-overlay-open:translate-x-0 hidden fixed inset-y-0 left-0 z-50 w-64 md:static md:w-56 md:block md:translate-x-0 -translate-x-full bg-canvas border-r border-border flex flex-col transition-transform duration-200"
+      role="dialog"
+      tabindex="-1"
       aria-label="Admin navigation"
     >
-      <div class="px-5 pt-6 pb-5 border-b border-phos-hairline flex items-start justify-between gap-2">
+      <div class="px-5 pt-6 pb-5 border-b border-border flex items-start justify-between gap-2">
         <div>
-          <p class="text-phos-micro font-mono uppercase tracking-wider text-phos-coral mb-1">
+          <p class="text-xs font-mono uppercase tracking-wider text-accent mb-1">
             Phos
           </p>
-          <h1 class="font-display text-phos-feature text-phos-ink">
+          <h1 class="font-display font-display text-xl text-ink">
             Site Admin
             </h1>
         </div>
         <button
           type="button"
-          onClick={onClose}
-          class="md:hidden flex h-8 w-8 items-center justify-center rounded-phos-sm text-phos-ink hover:bg-phos-stone transition-colors"
+          onClick={closeOverlay}
+          class="md:hidden flex h-8 w-8 items-center justify-center rounded-sm text-ink hover:bg-surface transition-colors"
           aria-label="Close menu"
         >
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -67,10 +63,10 @@ export function Sidebar({ mobileOpen, onClose }: Props) {
               key={item.id}
               type="button"
               onClick={() => navigate(item.id)}
-              class={`w-full text-left px-5 py-2.5 text-phos-caption font-body transition-colors border-l-2 ${
+              class={`w-full text-left px-5 py-2.5 text-sm font-body transition-colors border-l-2 ${
                 active
-                  ? 'bg-phos-stone text-phos-ink font-medium border-phos-primary'
-                  : 'text-phos-body-muted hover:bg-phos-stone hover:text-phos-ink border-transparent'
+                  ? 'bg-surface text-ink font-medium border-primary'
+                  : 'text-body-muted hover:bg-surface hover:text-ink border-transparent'
               }`}
             >
               {item.label}
@@ -78,28 +74,28 @@ export function Sidebar({ mobileOpen, onClose }: Props) {
           )
         })}
         {hasPlugins && (
-          <div class="border-t border-phos-hairline mt-3 pt-3">
+          <div class="border-t border-border mt-3 pt-3">
             <button
               type="button"
               onClick={() => navigate('plugins')}
-              class={`w-full text-left px-5 py-2.5 text-phos-caption font-body transition-colors border-l-2 ${
+              class={`w-full text-left px-5 py-2.5 text-sm font-body transition-colors border-l-2 ${
                 currentPage === 'plugins'
-                  ? 'bg-phos-stone text-phos-ink font-medium border-phos-primary'
-                  : 'text-phos-body-muted hover:bg-phos-stone hover:text-phos-ink border-transparent'
+                  ? 'bg-surface text-ink font-medium border-primary'
+                  : 'text-body-muted hover:bg-surface hover:text-ink border-transparent'
               }`}
             >
               Plugins
             </button>
           </div>
         )}
-        <div class="border-t border-phos-hairline mt-3 pt-3">
+        <div class="border-t border-border mt-3 pt-3">
           <button
             type="button"
             onClick={() => navigate('categories')}
-            class={`w-full text-left px-5 py-2.5 text-phos-caption font-body transition-colors border-l-2 ${
+            class={`w-full text-left px-5 py-2.5 text-sm font-body transition-colors border-l-2 ${
               currentPage === 'categories'
-                ? 'bg-phos-stone text-phos-ink font-medium border-phos-primary'
-                : 'text-phos-body-muted hover:bg-phos-stone hover:text-phos-ink border-transparent'
+                ? 'bg-surface text-ink font-medium border-primary'
+                : 'text-body-muted hover:bg-surface hover:text-ink border-transparent'
             }`}
           >
             Categories
@@ -107,25 +103,16 @@ export function Sidebar({ mobileOpen, onClose }: Props) {
           <button
             type="button"
             onClick={() => navigate('galleries')}
-            class={`w-full text-left px-5 py-2.5 text-phos-caption font-body transition-colors border-l-2 ${
+            class={`w-full text-left px-5 py-2.5 text-sm font-body transition-colors border-l-2 ${
               currentPage === 'galleries'
-                ? 'bg-phos-stone text-phos-ink font-medium border-phos-primary'
-                : 'text-phos-body-muted hover:bg-phos-stone hover:text-phos-ink border-transparent'
+                ? 'bg-surface text-ink font-medium border-primary'
+                : 'text-body-muted hover:bg-surface hover:text-ink border-transparent'
             }`}
           >
             Galleries
           </button>
         </div>
       </nav>
-      <div class="px-5 py-4 border-t border-phos-hairline">
-        <button
-          type="button"
-          onClick={logout}
-          class="text-phos-caption text-phos-muted hover:text-phos-ink underline-offset-2 hover:underline"
-        >
-          Sign out
-        </button>
-      </div>
     </aside>
   )
 }

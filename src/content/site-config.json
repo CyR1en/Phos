@@ -21,7 +21,9 @@
       "heading": "Light through the lens",
       "subheading": "Portfolio",
       "cta1": "View portfolio",
-      "cta2": "Get in touch"
+      "cta2": "Get in touch",
+      "slideshow_interval": 6000,
+      "overlay_opacity": 0.75
     },
     "services": {
       "enabled": true,

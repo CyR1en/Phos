@@ -11,53 +11,53 @@ const ogDescription = config.contact?.og_description
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription}>
-  <section class="contact-bleed flex flex-1 flex-col bg-phos-pale-blue dark:bg-phos-pale-blue">
-    <div class="mx-auto max-w-7xl px-6 py-24 lg:px-8">
-      <div class="rounded-phos-lg bg-phos-canvas dark:bg-phos-canvas p-8 sm:p-12 border border-phos-card-border dark:border-phos-card-border">
-        <p class="phos-mono-label text-phos-muted dark:text-phos-muted">Contact</p>
-        <h1 class="mt-4 font-display text-phos-display-card text-phos-ink dark:text-phos-ink" data-config="contact.format.heading">{heading}</h1>
-        <p class="mt-4 phos-body-lg text-phos-body-muted dark:text-phos-body-muted" data-config="contact.format.subheading">
+  <section class="contact-bleed flex flex-1 flex-col justify-center bg-surface">
+    <div class="mx-auto w-full max-w-7xl px-6 lg:px-8">
+      <div class="rounded-sm bg-canvas p-8 sm:p-12 border border-border">
+        <p class="font-mono text-xs uppercase tracking-wider text-muted">Contact</p>
+        <h1 class="mt-4 font-display text-2xl text-ink" data-config="contact.format.heading">{heading}</h1>
+        <p class="mt-4 text-lg text-body-muted leading-relaxed" data-config="contact.format.subheading">
           {subheading}
         </p>
 
         {hasSmtp ? (
           <form id="contact-form" class="mt-10 grid gap-5 sm:grid-cols-2 sm:gap-6">
             <div>
-              <label for="name" class="block phos-caption text-phos-ink dark:text-phos-ink">Name</label>
+              <label for="name" class="block text-sm text-ink">Name</label>
               <input
                 type="text" id="name" name="name" required
-                class="mt-2 block w-full rounded-phos-sm border border-phos-border dark:border-phos-border bg-phos-canvas dark:bg-phos-canvas px-4 py-3 phos-caption text-phos-ink dark:text-phos-ink placeholder:text-phos-muted dark:placeholder:text-phos-muted focus:border-phos-form-focus focus:outline-none focus:ring-2 focus:ring-phos-form-focus/20 transition-shadow"
+                class="mt-2 block w-full rounded-sm border border-border bg-canvas px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/20 transition-shadow"
               />
             </div>
 
             <div>
-              <label for="email" class="block phos-caption text-phos-ink dark:text-phos-ink">Email</label>
+              <label for="email" class="block text-sm text-ink">Email</label>
               <input
                 type="email" id="email" name="email" required
-                class="mt-2 block w-full rounded-phos-sm border border-phos-border dark:border-phos-border bg-phos-canvas dark:bg-phos-canvas px-4 py-3 phos-caption text-phos-ink dark:text-phos-ink placeholder:text-phos-muted dark:placeholder:text-phos-muted focus:border-phos-form-focus focus:outline-none focus:ring-2 focus:ring-phos-form-focus/20 transition-shadow"
+                class="mt-2 block w-full rounded-sm border border-border bg-canvas px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/20 transition-shadow"
               />
             </div>
 
             <div class="sm:col-span-2">
-              <label for="message" class="block phos-caption text-phos-ink dark:text-phos-ink">Message</label>
+              <label for="message" class="block text-sm text-ink">Message</label>
               <textarea
                 id="message" name="message" rows="5" required
-                class="mt-2 block w-full rounded-phos-sm border border-phos-border dark:border-phos-border bg-phos-canvas dark:bg-phos-canvas px-4 py-3 phos-caption text-phos-ink dark:text-phos-ink placeholder:text-phos-muted dark:placeholder:text-phos-muted focus:border-phos-form-focus focus:outline-none focus:ring-2 focus:ring-phos-form-focus/20 transition-shadow resize-y"
+                class="mt-2 block w-full rounded-sm border border-border bg-canvas px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/20 transition-shadow resize-y"
               ></textarea>
             </div>
 
             <div class="sm:col-span-2 flex flex-wrap items-center gap-4">
               <button type="submit"
-                class="inline-flex items-center rounded-phos-pill bg-phos-primary dark:bg-phos-primary px-6 py-3 phos-button text-phos-canvas dark:text-phos-canvas hover:opacity-90 transition-opacity"
+                class="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors"
               ><span data-config="contact.format.submitBtn">{submitBtn}</span>
                 <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </button>
               {email && (
-                <span class="phos-caption text-phos-body-muted dark:text-phos-body-muted">or email <a href={`mailto:${email}`} class="text-phos-action-blue dark:text-phos-action-blue underline underline-offset-2 hover:no-underline">{email}</a></span>
+                <span class="text-sm text-body-muted">or email <a href={`mailto:${email}`} class="text-info underline underline-offset-2 hover:no-underline">{email}</a></span>
               )}
             </div>
 
-            <div id="form-status" class="sm:col-span-2 hidden rounded-phos-sm phos-caption p-4"></div>
+            <div id="form-status" class="sm:col-span-2 hidden rounded-sm text-sm p-4"></div>
           </form>
 
           <script>
@@ -68,7 +68,7 @@ const ogDescription = config.contact?.og_description
 
             form.addEventListener('submit', async (e) => {
               e.preventDefault()
-              status.className = 'sm:col-span-2 hidden rounded-phos-sm phos-caption p-4'
+              status.className = 'sm:col-span-2 hidden rounded-sm text-sm p-4'
               btn.disabled = true
               const labelEl = btn.querySelector('span')
               if (labelEl) labelEl.textContent = 'Sending...'
@@ -92,11 +92,11 @@ const ogDescription = config.contact?.og_description
                   throw new Error(data.error || `Submission failed (${res.status})`)
                 }
 
-                status.className = 'sm:col-span-2 rounded-phos-sm phos-caption p-4 bg-phos-pale-green dark:bg-phos-pale-green text-phos-ink dark:text-phos-ink'
+                status.className = 'sm:col-span-2 rounded-sm text-sm p-4 bg-success-bg text-ink'
                 status.textContent = "Message sent! I'll get back to you soon."
                 form.reset()
               } catch (err) {
-                status.className = 'sm:col-span-2 rounded-phos-sm phos-caption p-4 bg-red-900/10 text-phos-error dark:text-phos-error'
+                status.className = 'sm:col-span-2 rounded-sm text-sm p-4 bg-error-bg text-error'
                 status.textContent = err.message || 'Something went wrong. Please try again.'
               } finally {
                 btn.disabled = false
@@ -105,11 +105,11 @@ const ogDescription = config.contact?.og_description
             })
           </script>
         ) : (
-          <div class="mt-10 rounded-phos-sm border border-phos-border dark:border-phos-border p-6 phos-caption text-phos-body-muted dark:text-phos-body-muted">
+          <div class="mt-10 rounded-sm border border-border p-6 text-sm text-body-muted">
             Contact form is not configured yet. Configure SMTP settings in the admin dashboard to enable it.
             {email && (
               <p class="mt-2">
-                Reach out directly at <a href={`mailto:${email}`} class="text-phos-action-blue dark:text-phos-action-blue underline underline-offset-2 hover:no-underline">{email}</a>
+                Reach out directly at <a href={`mailto:${email}`} class="text-info underline underline-offset-2 hover:no-underline">{email}</a>
               </p>
             )}
           </div>
