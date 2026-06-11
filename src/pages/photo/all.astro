@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
-import PhotoCard from '@components/PhotoCard.astro'
+import PhotoGrid from '@components/PhotoGrid.astro'
 import Lightbox from '@components/Lightbox.astro'
 import manifest from '@content/categories.json'
 import config from '@content/site-config.json'
@@ -30,7 +30,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
 ---
 
 <BaseLayout title="All Photos" description="Browse all photos across every category" page="photo/all">
-  <section class="pt-24 pb-12">
+  <section class="pt-12 pb-12">
     <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8">
       <p class="font-mono text-xs uppercase tracking-wider text-muted">Browse</p>
       <h1 class="mt-4 font-display text-3xl sm:text-4xl text-ink">All photos</h1>
@@ -38,7 +38,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
     </div>
   </section>
 
-  <section class="mx-auto max-w-7xl px-6 pb-16 pt-6 sm:pb-24 sm:pt-8 sm:px-6 lg:px-8">
+  <section class="mx-auto pb-24 max-w-7xl px-6 sm:px-6 lg:px-8">
     <div id="filters" class="mb-10 flex flex-wrap gap-2">
       <button class="filter-btn text-sm font-medium rounded-pill border border-primary bg-primary px-4 py-2 text-primary-text min-h-[36px] transition-colors" data-filter="all" aria-pressed="true">
         All
@@ -50,24 +50,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
       ))}
     </div>
 
-    <div id="gallery-grid" class="columns-1 sm:columns-2 lg:columns-3 gap-5">
-      {allPhotos.map((photo, i) => (
-        <div class="gallery-item" data-category={photo.category}>
-          <PhotoCard
-            filename={photo.filename}
-            title={photo.title}
-            thumb={photo.thumb}
-            thumbMobile={photo.thumbMobile}
-            full={photo.full}
-            width={photo.width}
-            height={photo.height}
-            blur={photo.blur}
-            index={i}
-            category={photo.category}
-          />
-        </div>
-      ))}
-    </div>
+    <PhotoGrid photos={allPhotos} wrapperClass="gallery-item" />
 
     <div id="empty-state" class="hidden py-24 text-center text-lg text-muted">
       No photos match the selected category.
@@ -106,8 +89,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
         ;(item as HTMLElement).style.display = matches ? '' : 'none'
         if (matches) {
           visible++
-          const indexBtn = item.querySelector('[data-index]')
-          if (indexBtn) (indexBtn as HTMLElement).dataset.index = String(newIdx++)
+          ;(item as HTMLElement).dataset.index = String(newIdx++)
         }
       })
 

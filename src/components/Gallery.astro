@@ -1,5 +1,5 @@
 ---
-import PhotoCard from '@components/PhotoCard.astro'
+import PhotoGrid from '@components/PhotoGrid.astro'
 
 export interface Photo {
   filename: string
@@ -10,31 +10,14 @@ export interface Photo {
   width: number | null
   height: number | null
   blur: string
+  category?: string
 }
 
 export interface Props {
   photos: Photo[]
-  category: string
 }
 
-const { photos, category } = Astro.props
+const { photos } = Astro.props
 ---
 
-<div class="columns-1 sm:columns-2 lg:columns-3 gap-5">
-  {
-    photos.map((photo, i) => (
-      <PhotoCard
-        filename={photo.filename}
-        title={photo.title}
-        thumb={photo.thumb}
-        thumbMobile={photo.thumbMobile}
-        full={photo.full}
-        width={photo.width}
-        height={photo.height}
-        blur={photo.blur}
-        index={i}
-        category={category}
-      />
-    ))
-  }
-</div>
+<PhotoGrid photos={photos} />

@@ -1,0 +1,41 @@
+---
+import PhotoCard from '@components/PhotoCard.astro'
+
+interface Photo {
+  filename: string
+  title: string
+  full: string
+  thumb: string
+  thumbMobile: string
+  width: number | null
+  height: number | null
+  blur: string
+  category?: string
+}
+
+interface Props {
+  photos: Photo[]
+  wrapperClass?: string
+}
+
+const { photos, wrapperClass } = Astro.props
+---
+
+<div class="columns-1 sm:columns-3 gap-8">
+  {photos.map((photo, i) => (
+    <div class:list={['mb-8 cursor-pointer', wrapperClass]} data-category={photo.category || undefined} data-index={i}>
+      <PhotoCard
+        filename={photo.filename}
+        title={photo.title}
+        thumb={photo.thumb}
+        thumbMobile={photo.thumbMobile}
+        full={photo.full}
+        width={photo.width}
+        height={photo.height}
+        blur={photo.blur}
+        index={i}
+        category={photo.category}
+      />
+    </div>
+  ))}
+</div>
