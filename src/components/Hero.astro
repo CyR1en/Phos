@@ -45,7 +45,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
           />
         </div>
       ))}
-      <div class="absolute inset-0" style={`background: linear-gradient(to top, rgba(0,0,0,${overlayOpacity}) 0%, rgba(0,0,0,${overlayOpacity * 0.6}) 20%, rgba(0,0,0,${overlayOpacity * 0.1}) 38%, rgba(0,0,0,0) 45%);`} />
+      <div class="absolute inset-0" style={`background: linear-gradient(to top, rgba(0,0,0,${overlayOpacity}) 0%, rgba(0,0,0,${overlayOpacity}) 10%, rgba(0,0,0,${overlayOpacity * 0.55}) 30%, rgba(0,0,0,${overlayOpacity * 0.08}) 45%, rgba(0,0,0,0) 55%);`} />
     </div>
   ) : (
     <div class="absolute inset-0 bg-canvas" />
@@ -53,8 +53,8 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 
   <div class="relative z-10 mx-auto w-full max-w-7xl px-6 pb-16 sm:px-6 lg:px-8 lg:pb-20">
     <div class="max-w-4xl">
-      <p class="font-mono text-[13px] font-medium uppercase tracking-wider text-[var(--color-phos-dark-text)]/85" data-config="about.photographer.name">{config.about.photographer.name}</p>
-      <h1 class="mt-4 font-display text-[var(--color-phos-dark-text)] drop-shadow-sm" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1;" data-config="home.hero.heading">
+      <p class="font-mono text-[13px] font-medium uppercase tracking-wider text-[var(--color-phos-dark-text)]" style="text-shadow: 0 1px 8px rgba(0,0,0,0.65);" data-config="about.photographer.name">{config.about.photographer.name}</p>
+      <h1 class="mt-4 font-display text-[var(--color-phos-dark-text)]" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5);" data-config="home.hero.heading">
         {config.home.hero.heading}
       </h1>
       <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-start">

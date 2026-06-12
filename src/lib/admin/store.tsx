@@ -94,6 +94,9 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pluginDebouncesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const pluginDirtyRef = useRef<Set<string>>(new Set())
+  // Refs to avoid stale-closure bugs in flushSave / scheduleSave
+  const configRef = useRef<SiteConfig | null>(config)
+  const dirtyRef = useRef(false)
 
   const queryClient = useQueryClient()
 
@@ -126,7 +129,11 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   })
 
   useEffect(() => {
-    if (configQuery.data) setConfig(configQuery.data)
+    if (configQuery.data) {
+      setConfig(configQuery.data)
+      configRef.current = configQuery.data
+      dirtyRef.current = false
+    }
   }, [configQuery.data])
 
   useEffect(() => {
@@ -149,10 +156,12 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
     onMutate: () => setSaveStatusState('saving'),
     onSuccess: () => {
       setSaveStatusState('saved')
+      dirtyRef.current = false
       queryClient.invalidateQueries({ queryKey: ['config'] })
     },
     onError: (err: unknown) => {
       setSaveStatusState('error')
+      dirtyRef.current = true
       const msg = err instanceof ApiError ? err.message : 'Save failed'
       pushToast('error', msg)
     },
@@ -183,10 +192,13 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   const dismissToast = (id: number) =>
     setToasts((t) => t.filter((x) => x.id !== id))
 
-  const scheduleSave = (next: SiteConfig) => {
+  const scheduleSave = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      putConfigMutation.mutate(next)
+      if (dirtyRef.current && configRef.current) {
+        dirtyRef.current = false
+        putConfigMutation.mutate(configRef.current)
+      }
     }, 1500)
   }
 
@@ -194,8 +206,10 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
     setConfig((cur) => {
       if (!cur) return cur
       const next = setPath(cur, path, value) as SiteConfig
+      configRef.current = next
+      dirtyRef.current = true
       setSaveStatusState('dirty')
-      scheduleSave(next)
+      scheduleSave()
       return next
     })
   }
@@ -204,8 +218,9 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
 
   const flushSave = async () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (config && (saveStatus === 'dirty' || saveStatus === 'saving')) {
-      await putConfigMutation.mutateAsync(config)
+    if (dirtyRef.current && configRef.current) {
+      dirtyRef.current = false
+      await putConfigMutation.mutateAsync(configRef.current)
     }
   }
 
