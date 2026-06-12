@@ -7,7 +7,6 @@
 # Ignore content collection generated files
 .astro
 
-.commandcode
 
 ### OpenCode ###
 # OpenCode generated files
@@ -19,6 +18,10 @@
 
 # Agents.md
 AGENTS.md
+
+.commandcode
+.claude
+.superpowers
 
 ### dotenv ###
 .env
@@ -238,3 +241,8 @@ plugins/
 src/generated/
 
 CLAUDE.md
+
+# IDE / tooling
+.codegraph/
+.reasonix/
+reasonix.toml
