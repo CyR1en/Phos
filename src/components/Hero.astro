@@ -53,8 +53,8 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 
   <div class="relative z-10 mx-auto w-full max-w-7xl px-6 pb-16 sm:px-6 lg:px-8 lg:pb-20">
     <div class="max-w-4xl">
-      <p class="font-mono text-[11px] uppercase tracking-wider text-[var(--color-rose-pine-moon-text)]/60" data-config="about.photographer.name">{config.about.photographer.name}</p>
-      <h1 class="mt-4 font-display text-[var(--color-rose-pine-moon-text)] drop-shadow-sm" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1;" data-config="home.hero.heading">
+      <p class="font-mono text-[13px] font-medium uppercase tracking-wider text-[var(--color-phos-dark-text)]/85" data-config="about.photographer.name">{config.about.photographer.name}</p>
+      <h1 class="mt-4 font-display text-[var(--color-phos-dark-text)] drop-shadow-sm" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1;" data-config="home.hero.heading">
         {config.home.hero.heading}
       </h1>
       <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-start">
@@ -67,7 +67,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
         </a>
         <a
           href="/contact"
-          class="inline-flex items-center justify-center rounded-pill border border-[var(--color-rose-pine-moon-text)]/30 px-5 py-2.5 text-sm font-medium text-[var(--color-rose-pine-moon-text)] hover:bg-[var(--color-rose-pine-moon-text)]/10 transition-colors w-full sm:w-auto"
+          class="inline-flex items-center justify-center rounded-pill border border-[var(--color-phos-dark-text)]/30 px-5 py-2.5 text-sm font-medium text-[var(--color-phos-dark-text)] hover:bg-[var(--color-phos-dark-text)]/10 transition-colors w-full sm:w-auto"
         >
           <span data-config="home.hero.cta2">{config.home.hero.cta2}</span>
         </a>
@@ -81,7 +81,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
         <button
           class="h-1.5 rounded-pill transition-all duration-500"
           class:list={[
-            i === 0 ? 'w-8 bg-[var(--color-rose-pine-moon-text)]' : 'w-1.5 bg-[var(--color-rose-pine-moon-text)]/40 hover:bg-[var(--color-rose-pine-moon-text)]/60',
+            i === 0 ? 'w-8 bg-[var(--color-phos-dark-text)]' : 'w-1.5 bg-[var(--color-phos-dark-text)]/40 hover:bg-[var(--color-phos-dark-text)]/60',
           ]}
           data-hero-dot={i}
           aria-label={`Slide ${i + 1}`}
@@ -119,11 +119,11 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       })
       dots.forEach((d, i) => {
         if (i === index) {
-          d.classList.add('w-8', 'bg-[var(--color-rose-pine-moon-text)]')
-          d.classList.remove('w-1.5', 'bg-[var(--color-rose-pine-moon-text)]/40', 'hover:bg-[var(--color-rose-pine-moon-text)]/60')
+          d.classList.add('w-8', 'bg-[var(--color-phos-dark-text)]')
+          d.classList.remove('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
         } else {
-          d.classList.remove('w-8', 'bg-[var(--color-rose-pine-moon-text)]')
-          d.classList.add('w-1.5', 'bg-[var(--color-rose-pine-moon-text)]/40', 'hover:bg-[var(--color-rose-pine-moon-text)]/60')
+          d.classList.remove('w-8', 'bg-[var(--color-phos-dark-text)]')
+          d.classList.add('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
         }
       })
       current = index

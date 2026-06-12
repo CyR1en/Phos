@@ -47,7 +47,7 @@ const imageMimeType = (url) => {
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-theme="theme-modern-elegant">
+<html lang="en" data-theme={config.site.theme || 'theme-rose-pine'}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -81,6 +81,7 @@ const imageMimeType = (url) => {
 
     <script is:inline>
       (function() {
+        // 1. Apply dark mode immediately from localStorage / system preference (no FOUC)
         try {
           var stored = localStorage.getItem('theme');
           if (stored === 'light') {
@@ -91,18 +92,50 @@ const imageMimeType = (url) => {
             document.documentElement.classList.add('dark');
           }
         } catch(e) {}
-      })();
-    </script>
 
-    <script is:inline>
-      (function() {
-        if (document.querySelector('[data-config]') === null) return;
-        fetch('/site-config.json', { credentials: 'same-origin' })
-          .then(function(r) { return r.ok ? r.json() : null })
-          .then(function(cfg) { if (cfg) applyConfig(cfg); })
-          .catch(function() {});
+        // Cached live theme — survives client-side navigations without a network round-trip
+        var _liveTheme = null;
+
+        // 2. Fetch live config to apply the admin-chosen colour theme + data-config bindings
+        function fetchAndApply() {
+          fetch('/site-config.json', { credentials: 'same-origin' })
+            .then(function(r) { return r.ok ? r.json() : null })
+            .then(function(cfg) { if (cfg) applyConfig(cfg); })
+            .catch(function() {});
+        }
+
+        // Re-apply the correct theme after Astro client-side navigation swaps <html> attrs
+        document.addEventListener('astro:after-swap', function() {
+          // If we already have the live theme cached, apply it synchronously (no flicker)
+          if (_liveTheme) {
+            document.documentElement.setAttribute('data-theme', _liveTheme);
+          }
+          // Then fetch fresh config to pick up any changes + re-bind data-config elements
+          fetchAndApply();
+        });
+
+        fetchAndApply();
 
         function applyConfig(cfg) {
+          // Apply colour theme from live config (so admin theme choice takes effect)
+          if (cfg.site && cfg.site.theme) {
+            _liveTheme = cfg.site.theme;
+            document.documentElement.setAttribute('data-theme', cfg.site.theme);
+          }
+
+          // Sync dark-mode class so it matches the current theme state
+          try {
+            var dm = localStorage.getItem('theme');
+            if (dm === 'dark' || (!dm && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          } catch(e) {}
+
+          // Only apply data-config bindings if the page has them
+          if (document.querySelector('[data-config]') === null) return;
+
           var els = document.querySelectorAll('[data-config]');
           for (var i = 0; i < els.length; i++) {
             var el = els[i];

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 @import "./themes/rose-pine.css";
+@import "./themes/modern-elegant.css";
+@import "./themes/noir.css";
+@import "./themes/nord.css";
+@import "./themes/solarized.css";
+@import "./themes/everforest.css";
 
 @import "../../node_modules/preline/variants.css";
 @source "../../node_modules/preline/dist/index.mjs";
@@ -30,36 +35,36 @@
   --font-body: 'DM Sans', Arial, ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --color-primary: var(--color-rose-pine-love);
-  --color-primary-hover: var(--color-rose-pine-love-600);
-  --color-primary-light: var(--color-rose-pine-love-300);
-  --color-secondary: var(--color-rose-pine-surface);
-  --color-secondary-hover: var(--color-rose-pine-overlay);
-  --color-accent: var(--color-rose-pine-iris);
-  --color-accent-soft: var(--color-rose-pine-foam);
-  --color-accent-hover: var(--color-rose-pine-pine);
-  --color-canvas: var(--color-rose-pine-base);
-  --color-canvas-alt: var(--color-rose-pine-surface);
-  --color-canvas-inverse: var(--color-rose-pine-moon-base);
-  --color-surface: var(--color-rose-pine-surface);
-  --color-surface-hover: var(--color-rose-pine-overlay);
-  --color-border: var(--color-rose-pine-highlight-med);
-  --color-border-light: var(--color-rose-pine-highlight-low);
-  --color-border-hover: var(--color-rose-pine-highlight-high);
-  --color-border-focus: var(--color-rose-pine-iris);
-  --color-ink: var(--color-rose-pine-text);
-  --color-ink-inverse: var(--color-rose-pine-surface);
-  --color-muted: var(--color-rose-pine-muted);
-  --color-muted-inverse: var(--color-rose-pine-moon-muted);
-  --color-body-muted: var(--color-rose-pine-subtle);
-  --color-success: var(--color-rose-pine-pine);
-  --color-success-bg: var(--color-rose-pine-foam);
-  --color-error: var(--color-rose-pine-love);
-  --color-error-bg: var(--color-rose-pine-love-100);
-  --color-info: var(--color-rose-pine-iris);
-  --color-info-bg: var(--color-rose-pine-highlight-low);
-  --color-focus-ring: var(--color-rose-pine-iris);
-  --color-primary-text: var(--color-rose-pine-surface);
+  --color-primary: var(--color-phos-accent);
+  --color-primary-hover: var(--color-phos-accent-600);
+  --color-primary-light: var(--color-phos-accent-300);
+  --color-secondary: var(--color-phos-surface);
+  --color-secondary-hover: var(--color-phos-overlay);
+  --color-accent: var(--color-phos-iris);
+  --color-accent-soft: var(--color-phos-foam);
+  --color-accent-hover: var(--color-phos-pine);
+  --color-canvas: var(--color-phos-base);
+  --color-canvas-alt: var(--color-phos-surface);
+  --color-canvas-inverse: var(--color-phos-dark-base);
+  --color-surface: var(--color-phos-surface);
+  --color-surface-hover: var(--color-phos-overlay);
+  --color-border: var(--color-phos-highlight-med);
+  --color-border-light: var(--color-phos-highlight-low);
+  --color-border-hover: var(--color-phos-highlight-high);
+  --color-border-focus: var(--color-phos-iris);
+  --color-ink: var(--color-phos-text);
+  --color-ink-inverse: var(--color-phos-surface);
+  --color-muted: var(--color-phos-muted);
+  --color-muted-inverse: var(--color-phos-dark-muted);
+  --color-body-muted: var(--color-phos-subtle);
+  --color-success: var(--color-phos-pine);
+  --color-success-bg: var(--color-phos-foam);
+  --color-error: var(--color-phos-accent);
+  --color-error-bg: var(--color-phos-accent-100);
+  --color-info: var(--color-phos-iris);
+  --color-info-bg: var(--color-phos-highlight-low);
+  --color-focus-ring: var(--color-phos-iris);
+  --color-primary-text: var(--color-phos-surface);
 
   --radius-xs: 4px;
   --radius-sm: 8px;
@@ -93,35 +98,35 @@
 
 @layer base {
   .dark {
-    --color-primary: var(--color-rose-pine-moon-love);
-    --color-primary-hover: var(--color-rose-pine-moon-rose);
-    --color-primary-light: var(--color-rose-pine-love-600);
-    --color-secondary: var(--color-rose-pine-moon-surface);
-    --color-secondary-hover: var(--color-rose-pine-moon-overlay);
-    --color-accent: var(--color-rose-pine-moon-iris);
-    --color-accent-soft: var(--color-rose-pine-moon-foam);
-    --color-accent-hover: var(--color-rose-pine-moon-pine);
-    --color-canvas: var(--color-rose-pine-moon-base);
-    --color-canvas-alt: var(--color-rose-pine-moon-surface);
-    --color-canvas-inverse: var(--color-rose-pine-base);
-    --color-surface: var(--color-rose-pine-moon-surface);
-    --color-surface-hover: var(--color-rose-pine-moon-overlay);
-    --color-border: var(--color-rose-pine-moon-highlight-med);
-    --color-border-light: var(--color-rose-pine-moon-highlight-low);
-    --color-border-hover: var(--color-rose-pine-moon-highlight-high);
-    --color-ink: var(--color-rose-pine-moon-text);
-    --color-ink-inverse: var(--color-rose-pine-text);
-    --color-muted: var(--color-rose-pine-moon-muted);
-    --color-muted-inverse: var(--color-rose-pine-muted);
-    --color-body-muted: var(--color-rose-pine-moon-subtle);
-    --color-success: var(--color-rose-pine-moon-pine);
-    --color-success-bg: var(--color-rose-pine-moon-highlight-low);
-    --color-error: var(--color-rose-pine-moon-love);
-    --color-error-bg: var(--color-rose-pine-love-900);
-    --color-info: var(--color-rose-pine-moon-iris);
-    --color-info-bg: var(--color-rose-pine-moon-highlight-low);
-    --color-focus-ring: var(--color-rose-pine-moon-iris);
-    --color-primary-text: var(--color-rose-pine-moon-base);
+    --color-primary: var(--color-phos-dark-accent);
+    --color-primary-hover: var(--color-phos-dark-rose);
+    --color-primary-light: var(--color-phos-accent-600);
+    --color-secondary: var(--color-phos-dark-surface);
+    --color-secondary-hover: var(--color-phos-dark-overlay);
+    --color-accent: var(--color-phos-dark-iris);
+    --color-accent-soft: var(--color-phos-dark-foam);
+    --color-accent-hover: var(--color-phos-dark-pine);
+    --color-canvas: var(--color-phos-dark-base);
+    --color-canvas-alt: var(--color-phos-dark-surface);
+    --color-canvas-inverse: var(--color-phos-base);
+    --color-surface: var(--color-phos-dark-surface);
+    --color-surface-hover: var(--color-phos-dark-overlay);
+    --color-border: var(--color-phos-dark-highlight-med);
+    --color-border-light: var(--color-phos-dark-highlight-low);
+    --color-border-hover: var(--color-phos-dark-highlight-high);
+    --color-ink: var(--color-phos-dark-text);
+    --color-ink-inverse: var(--color-phos-text);
+    --color-muted: var(--color-phos-dark-muted);
+    --color-muted-inverse: var(--color-phos-muted);
+    --color-body-muted: var(--color-phos-dark-subtle);
+    --color-success: var(--color-phos-dark-pine);
+    --color-success-bg: var(--color-phos-dark-highlight-low);
+    --color-error: var(--color-phos-dark-accent);
+    --color-error-bg: var(--color-phos-accent-900);
+    --color-info: var(--color-phos-dark-iris);
+    --color-info-bg: var(--color-phos-dark-highlight-low);
+    --color-focus-ring: var(--color-phos-dark-iris);
+    --color-primary-text: var(--color-phos-dark-base);
 
     color-scheme: dark;
   }
@@ -201,4 +206,16 @@
 .hs-overlay-backdrop {
   background-color: rgb(0 0 0 / 0.6);
   backdrop-filter: blur(2px);
+}
+
+/* Theme picker cards */
+.theme-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.theme-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
+}
+.dark .theme-card:hover {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
 }

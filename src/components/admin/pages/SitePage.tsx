@@ -9,6 +9,7 @@ import { NumberField } from '../fields/NumberField'
 import { SelectField } from '../fields/SelectField'
 import { TextAreaField } from '../fields/TextAreaField'
 import { ObjectField } from '../fields/ObjectField'
+import { ThemePicker } from './ThemePicker'
 
 const PLATFORMS = [
   'instagram',
@@ -150,6 +151,9 @@ export function SitePage() {
             {logoError && <p class="text-base text-error mt-2">{logoError}</p>}
           </div>
           <ToggleField path="site.toggle_demo" label="Toggle Demo" />
+        </Section>
+        <Section title="Theme">
+          <ThemePicker />
         </Section>
         <Section title="Open Graph">
           <TextField path="site.og.image" label="OG Image URL" placeholder="/og.png" />

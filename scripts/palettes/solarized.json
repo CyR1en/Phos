@@ -1,0 +1,40 @@
+{
+  "name": "Solarized",
+  "id": "theme-solarized",
+  "description": "Classic engineered — warm light, cool dark",
+  "credit": "https://ethanschoonover.com/solarized",
+  "light": {
+    "base": "#FDF6E3",
+    "surface": "#EEE8D5",
+    "overlay": "#EEE8D5",
+    "muted": "#93A1A1",
+    "subtle": "#657B83",
+    "text": "#073642",
+    "accent": "#268BD2",
+    "gold": "#B58900",
+    "rose": "#DC322F",
+    "pine": "#859900",
+    "foam": "#2AA198",
+    "iris": "#6C71C4",
+    "highlightLow": "#EEE8D5",
+    "highlightMed": "#D3CBB7",
+    "highlightHigh": "#93A1A1"
+  },
+  "dark": {
+    "base": "#002B36",
+    "surface": "#073642",
+    "overlay": "#073642",
+    "muted": "#586E75",
+    "subtle": "#839496",
+    "text": "#FDF6E3",
+    "accent": "#268BD2",
+    "gold": "#B58900",
+    "rose": "#DC322F",
+    "pine": "#859900",
+    "foam": "#2AA198",
+    "iris": "#6C71C4",
+    "highlightLow": "#073642",
+    "highlightMed": "#002B36",
+    "highlightHigh": "#586E75"
+  }
+}

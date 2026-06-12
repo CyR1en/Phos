@@ -233,6 +233,8 @@ createServer(async (req, res) => {
     const baseline = deepMerge(defaults, current)
     const merged = deepMerge(baseline, body)
     writeFullConfig(merged)
+    // Also write to public/ so the main site can fetch /site-config.json at runtime
+    writeFileSync(join(ROOT, 'public', 'site-config.json'), JSON.stringify(merged, null, 2))
     return json(res, { ok: true })
   }
 
@@ -470,7 +472,7 @@ createServer(async (req, res) => {
     const live = assembleConfig()
     const merged = deepMerge(defaults, live)
     return json(res, merged, 200, {
-      'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+      'Cache-Control': 'no-cache',
     })
   }
 

@@ -1,56 +1,56 @@
-/* ------------------------------ */
-/* -------- Rosé Pine ----------- */
-/* Dawn (light) / Moon (dark)     */
-/* https://rosepinetheme.com       */
-/* ------------------------------ */
+/* ------------------------------------ */
+/* -------- Modern Elegant ------------ */
+/* Refined neutral with indigo accent   */
+/* Warm tones in light, cool in dark     */
+/* ------------------------------------ */
 
-[data-theme="theme-rose-pine"] {
-  /* Dawn palette (exact hex from rosepinetheme.com) */
-  --color-phos-base: #faf4ed;
-  --color-phos-surface: #fffaf3;
-  --color-phos-overlay: #f2e9e1;
-  --color-phos-muted: #9893a5;
-  --color-phos-subtle: #797593;
-  --color-phos-text: #575279;
-  --color-phos-accent: #b4637a;
-  --color-phos-gold: #ea9d34;
-  --color-phos-rose: #d7827e;
-  --color-phos-pine: #286983;
-  --color-phos-foam: #56949f;
-  --color-phos-iris: #907aa9;
-  --color-phos-highlight-low: #f4ede8;
-  --color-phos-highlight-med: #dfdad9;
-  --color-phos-highlight-high: #cecacd;
+[data-theme="theme-modern-elegant"] {
+  /* Light palette - warm neutral */
+  --color-phos-base: #f8f6f3;
+  --color-phos-surface: #fefcf8;
+  --color-phos-overlay: #f0ede8;
+  --color-phos-muted: #a8a29e;
+  --color-phos-subtle: #78716c;
+  --color-phos-text: #1c1917;
+  --color-phos-accent: #4338ca;
+  --color-phos-gold: #d97706;
+  --color-phos-rose: #e11d48;
+  --color-phos-pine: #047857;
+  --color-phos-foam: #0d9488;
+  --color-phos-iris: #7c3aed;
+  --color-phos-highlight-low: #f5f2ed;
+  --color-phos-highlight-med: #e8e3dc;
+  --color-phos-highlight-high: #d6d0c8;
 
-  /* Moon palette → Main Rosé Pine dark palette (exact hex from rosepinetheme.com) */
-  --color-phos-dark-base: #191724;
-  --color-phos-dark-surface: #1f1d2e;
-  --color-phos-dark-overlay: #26233a;
-  --color-phos-dark-muted: #6e6a86;
-  --color-phos-dark-subtle: #908caa;
-  --color-phos-dark-text: #e0def4;
-  --color-phos-dark-accent: #eb6f92;
-  --color-phos-dark-gold: #f6c177;
-  --color-phos-dark-rose: #ebbcba;
-  --color-phos-dark-pine: #31748f;
-  --color-phos-dark-foam: #9ccfd8;
-  --color-phos-dark-iris: #c4a7e7;
-  --color-phos-dark-highlight-low: #21202e;
-  --color-phos-dark-highlight-med: #403d52;
-  --color-phos-dark-highlight-high: #524f67;
+  /* Dark palette - cool deep slate */
+  --color-phos-dark-base: #1a1d23;
+  --color-phos-dark-surface: #21242b;
+  --color-phos-dark-overlay: #282c35;
+  --color-phos-dark-muted: #6b7280;
+  --color-phos-dark-subtle: #9ca3af;
+  --color-phos-dark-text: #e5e7eb;
+  --color-phos-dark-accent: #818cf8;
+  --color-phos-dark-gold: #fbbf24;
+  --color-phos-dark-rose: #fb7185;
+  --color-phos-dark-pine: #34d399;
+  --color-phos-dark-foam: #2dd4bf;
+  --color-phos-dark-iris: #a78bfa;
+  --color-phos-dark-highlight-low: #242830;
+  --color-phos-dark-highlight-med: #2f3340;
+  --color-phos-dark-highlight-high: #3d4250;
 
-  /* Extra shades for love (primary) */
-  --color-phos-accent-50: #fdf2f5;
-  --color-phos-accent-100: #f9d9e2;
-  --color-phos-accent-200: #f0b7c8;
-  --color-phos-accent-300: #e494aa;
-  --color-phos-accent-400: #d17b92;
-  --color-phos-accent-500: #b4637a;
-  --color-phos-accent-600: #9b5368;
-  --color-phos-accent-700: #824356;
-  --color-phos-accent-800: #693344;
-  --color-phos-accent-900: #502332;
-  --color-phos-accent-950: #371320;
+  /* Love (indigo) gradient shades */
+  --color-phos-accent-50: #eef2ff;
+  --color-phos-accent-100: #e0e7ff;
+  --color-phos-accent-200: #c7d2fe;
+  --color-phos-accent-300: #a5b4fc;
+  --color-phos-accent-400: #818cf8;
+  --color-phos-accent-500: #6366f1;
+  --color-phos-accent-600: #4f46e5;
+  --color-phos-accent-700: #4338ca;
+  --color-phos-accent-800: #3730a3;
+  --color-phos-accent-900: #312e81;
+  --color-phos-accent-950: #1e1b4b;
 
   /* Light mode semantic tokens */
   --background: var(--color-phos-base);
@@ -276,7 +276,7 @@
   --map-colors-border-inverse: var(--color-phos-dark-highlight-med);
 }
 
-[data-theme="theme-rose-pine"].dark {
+[data-theme="theme-modern-elegant"].dark {
   --background: var(--color-phos-dark-base);
   --background-1: var(--color-phos-dark-surface);
   --background-2: var(--color-phos-dark-overlay);
@@ -301,9 +301,9 @@
   --primary: var(--color-phos-dark-accent);
   --primary-line: transparent;
   --primary-foreground: var(--color-phos-dark-base);
-  --primary-hover: var(--color-phos-dark-rose);
-  --primary-focus: var(--color-phos-dark-rose);
-  --primary-active: var(--color-phos-dark-rose);
+  --primary-hover: var(--color-phos-dark-iris);
+  --primary-focus: var(--color-phos-dark-iris);
+  --primary-active: var(--color-phos-dark-iris);
   --primary-checked: var(--color-phos-dark-accent);
 
   --secondary: var(--color-phos-dark-text);
@@ -340,7 +340,7 @@
   --muted-focus: var(--color-phos-dark-surface);
   --muted-active: var(--color-phos-dark-surface);
 
-  --destructive: var(--color-phos-dark-accent);
+  --destructive: var(--color-phos-dark-rose);
   --destructive-foreground: var(--color-phos-dark-base);
   --destructive-hover: var(--color-phos-dark-rose);
   --destructive-focus: var(--color-phos-dark-rose);
@@ -459,9 +459,9 @@
   --chart-colors-foreground-inverse: var(--color-phos-base);
   --chart-primary: var(--color-phos-dark-accent);
   --chart-colors-primary: var(--color-phos-dark-accent);
-  --chart-colors-primary-inverse: var(--color-phos-accent-300);
+  --chart-colors-primary-inverse: var(--color-phos-accent-400);
   --chart-colors-primary-hex: var(--color-phos-dark-accent);
-  --chart-colors-primary-hex-inverse: var(--color-phos-accent-300);
+  --chart-colors-primary-hex-inverse: var(--color-phos-accent-400);
   --chart-1: var(--color-phos-accent-200);
   --chart-2: var(--color-phos-accent-300);
   --chart-3: var(--color-phos-accent-400);

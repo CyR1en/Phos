@@ -1,5 +1,6 @@
 export interface SiteConfig {
   site: {
+    theme: string
     page_description: string
     title: string
     description: string

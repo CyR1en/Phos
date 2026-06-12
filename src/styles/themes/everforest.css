@@ -1,56 +1,56 @@
 /* ------------------------------ */
-/* -------- Rosé Pine ----------- */
-/* Dawn (light) / Moon (dark)     */
-/* https://rosepinetheme.com       */
+/* -------- Everforest          --- */
+/* Earthy woodland greens — natural, grounded */
+/* https://github.com/sainnhe/everforest */
 /* ------------------------------ */
 
-[data-theme="theme-rose-pine"] {
-  /* Dawn palette (exact hex from rosepinetheme.com) */
-  --color-phos-base: #faf4ed;
-  --color-phos-surface: #fffaf3;
-  --color-phos-overlay: #f2e9e1;
-  --color-phos-muted: #9893a5;
-  --color-phos-subtle: #797593;
-  --color-phos-text: #575279;
-  --color-phos-accent: #b4637a;
-  --color-phos-gold: #ea9d34;
-  --color-phos-rose: #d7827e;
-  --color-phos-pine: #286983;
-  --color-phos-foam: #56949f;
-  --color-phos-iris: #907aa9;
-  --color-phos-highlight-low: #f4ede8;
-  --color-phos-highlight-med: #dfdad9;
-  --color-phos-highlight-high: #cecacd;
+[data-theme="theme-everforest"] {
+  /* Light palette */
+  --color-phos-base: #FFF9E8;
+  --color-phos-surface: #F6F0E2;
+  --color-phos-overlay: #F0EAD8;
+  --color-phos-muted: #93917A;
+  --color-phos-subtle: #828066;
+  --color-phos-text: #4B4639;
+  --color-phos-accent: #3A94C5;
+  --color-phos-gold: #DFA000;
+  --color-phos-rose: #F85552;
+  --color-phos-pine: #8DA101;
+  --color-phos-foam: #35A77C;
+  --color-phos-iris: #DF69BA;
+  --color-phos-highlight-low: #F0EAD8;
+  --color-phos-highlight-med: #E1DBCA;
+  --color-phos-highlight-high: #A6A293;
 
-  /* Moon palette → Main Rosé Pine dark palette (exact hex from rosepinetheme.com) */
-  --color-phos-dark-base: #191724;
-  --color-phos-dark-surface: #1f1d2e;
-  --color-phos-dark-overlay: #26233a;
-  --color-phos-dark-muted: #6e6a86;
-  --color-phos-dark-subtle: #908caa;
-  --color-phos-dark-text: #e0def4;
-  --color-phos-dark-accent: #eb6f92;
-  --color-phos-dark-gold: #f6c177;
-  --color-phos-dark-rose: #ebbcba;
-  --color-phos-dark-pine: #31748f;
-  --color-phos-dark-foam: #9ccfd8;
-  --color-phos-dark-iris: #c4a7e7;
-  --color-phos-dark-highlight-low: #21202e;
-  --color-phos-dark-highlight-med: #403d52;
-  --color-phos-dark-highlight-high: #524f67;
+  /* Dark palette */
+  --color-phos-dark-base: #2D353B;
+  --color-phos-dark-surface: #343F44;
+  --color-phos-dark-overlay: #3D484D;
+  --color-phos-dark-muted: #7A8478;
+  --color-phos-dark-subtle: #859289;
+  --color-phos-dark-text: #D3C6AA;
+  --color-phos-dark-accent: #7FBBB3;
+  --color-phos-dark-gold: #DBBC7F;
+  --color-phos-dark-rose: #E67E80;
+  --color-phos-dark-pine: #A7C080;
+  --color-phos-dark-foam: #83C092;
+  --color-phos-dark-iris: #D699B6;
+  --color-phos-dark-highlight-low: #343F44;
+  --color-phos-dark-highlight-med: #3D484D;
+  --color-phos-dark-highlight-high: #7A8478;
 
-  /* Extra shades for love (primary) */
-  --color-phos-accent-50: #fdf2f5;
-  --color-phos-accent-100: #f9d9e2;
-  --color-phos-accent-200: #f0b7c8;
-  --color-phos-accent-300: #e494aa;
-  --color-phos-accent-400: #d17b92;
-  --color-phos-accent-500: #b4637a;
-  --color-phos-accent-600: #9b5368;
-  --color-phos-accent-700: #824356;
-  --color-phos-accent-800: #693344;
-  --color-phos-accent-900: #502332;
-  --color-phos-accent-950: #371320;
+  /* Accent shades (50–950) */
+  --color-phos-accent-50: #ffffff;
+  --color-phos-accent-100: #f5f5ff;
+  --color-phos-accent-200: #dcdcf0;
+  --color-phos-accent-300: #bebedc;
+  --color-phos-accent-400: #8c8cb9;
+  --color-phos-accent-500: #3a94c5;
+  --color-phos-accent-600: #3179a2;
+  --color-phos-accent-700: #275f7e;
+  --color-phos-accent-800: #1c4157;
+  --color-phos-accent-900: #112633;
+  --color-phos-accent-950: #09131a;
 
   /* Light mode semantic tokens */
   --background: var(--color-phos-base);
@@ -276,7 +276,7 @@
   --map-colors-border-inverse: var(--color-phos-dark-highlight-med);
 }
 
-[data-theme="theme-rose-pine"].dark {
+[data-theme="theme-everforest"].dark {
   --background: var(--color-phos-dark-base);
   --background-1: var(--color-phos-dark-surface);
   --background-2: var(--color-phos-dark-overlay);
@@ -484,3 +484,4 @@
   --map-colors-border: var(--color-phos-dark-highlight-high);
   --map-colors-border-inverse: var(--color-phos-dark-muted);
 }
+

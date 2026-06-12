@@ -1,0 +1,40 @@
+{
+  "name": "Nord",
+  "id": "theme-nord",
+  "description": "Arctic cool blues — crisp, calm",
+  "credit": "https://www.nordtheme.com",
+  "light": {
+    "base": "#ECEFF4",
+    "surface": "#FFFFFF",
+    "overlay": "#E5E9F0",
+    "muted": "#81A1C1",
+    "subtle": "#5E81AC",
+    "text": "#2E3440",
+    "accent": "#5E81AC",
+    "gold": "#D08770",
+    "rose": "#BF616A",
+    "pine": "#A3BE8C",
+    "foam": "#8FBCBB",
+    "iris": "#B48EAD",
+    "highlightLow": "#E5E9F0",
+    "highlightMed": "#D8DEE9",
+    "highlightHigh": "#81A1C1"
+  },
+  "dark": {
+    "base": "#2E3440",
+    "surface": "#3B4252",
+    "overlay": "#434C5E",
+    "muted": "#4C566A",
+    "subtle": "#81A1C1",
+    "text": "#ECEFF4",
+    "accent": "#88C0D0",
+    "gold": "#EBCB8B",
+    "rose": "#BF616A",
+    "pine": "#A3BE8C",
+    "foam": "#8FBCBB",
+    "iris": "#B48EAD",
+    "highlightLow": "#3B4252",
+    "highlightMed": "#434C5E",
+    "highlightHigh": "#4C566A"
+  }
+}

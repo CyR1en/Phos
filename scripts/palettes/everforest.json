@@ -1,0 +1,40 @@
+{
+  "name": "Everforest",
+  "id": "theme-everforest",
+  "description": "Earthy woodland greens — natural, grounded",
+  "credit": "https://github.com/sainnhe/everforest",
+  "light": {
+    "base": "#FFF9E8",
+    "surface": "#F6F0E2",
+    "overlay": "#F0EAD8",
+    "muted": "#93917A",
+    "subtle": "#828066",
+    "text": "#4B4639",
+    "accent": "#3A94C5",
+    "gold": "#DFA000",
+    "rose": "#F85552",
+    "pine": "#8DA101",
+    "foam": "#35A77C",
+    "iris": "#DF69BA",
+    "highlightLow": "#F0EAD8",
+    "highlightMed": "#E1DBCA",
+    "highlightHigh": "#A6A293"
+  },
+  "dark": {
+    "base": "#2D353B",
+    "surface": "#343F44",
+    "overlay": "#3D484D",
+    "muted": "#7A8478",
+    "subtle": "#859289",
+    "text": "#D3C6AA",
+    "accent": "#7FBBB3",
+    "gold": "#DBBC7F",
+    "rose": "#E67E80",
+    "pine": "#A7C080",
+    "foam": "#83C092",
+    "iris": "#D699B6",
+    "highlightLow": "#343F44",
+    "highlightMed": "#3D484D",
+    "highlightHigh": "#7A8478"
+  }
+}

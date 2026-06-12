@@ -54,6 +54,12 @@ async function main() {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   writeFileSync(DEST_JSON, JSON.stringify(merged, null, 2), 'utf-8')
   console.log(`Wrote merged config to ${DEST_JSON}`)
+
+  // Also write to public/ so the main site can fetch /site-config.json in dev mode
+  const publicDir = join(ROOT, 'public')
+  if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true })
+  writeFileSync(join(publicDir, 'site-config.json'), JSON.stringify(merged, null, 2), 'utf-8')
+  console.log(`Wrote merged config to ${join(publicDir, 'site-config.json')}`)
 }
 
 main().catch((err) => {

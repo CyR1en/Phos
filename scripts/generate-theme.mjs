@@ -1,56 +1,138 @@
-/* ------------------------------ */
-/* -------- Rosé Pine ----------- */
-/* Dawn (light) / Moon (dark)     */
-/* https://rosepinetheme.com       */
-/* ------------------------------ */
+#!/usr/bin/env node
+/**
+ * Generate a theme CSS file from a palette JSON definition.
+ * Usage: node scripts/generate-theme.mjs <palette.json> > src/styles/themes/<theme>.css
+ *
+ * Palette JSON schema:
+ * {
+ *   "name": "Display Name",
+ *   "id": "theme-slug",
+ *   "description": "Short description",
+ *   "credit": "Optional credit/URL",
+ *   "light": {
+ *     "base": "#...", "surface": "#...", "overlay": "#...",
+ *     "muted": "#...", "subtle": "#...", "text": "#...",
+ *     "accent": "#...", "gold": "#...", "rose": "#...",
+ *     "pine": "#...", "foam": "#...", "iris": "#...",
+ *     "highlightLow": "#...", "highlightMed": "#...", "highlightHigh": "#..."
+ *   },
+ *   "dark": { ... same keys ... },
+ *   "accentShadeBase": { "50": "#...", ... "950": "#..." },  // optional; auto-generated if omitted
+ *   "overrides": {
+ *     "primaryHoverShade": "600",       // default: "600"
+ *     "destructiveHoverShade": "600",   // default: "600"
+ *     "primaryForeground": "surface",   // default: "surface"  (light); options: "surface", "text", "base"
+ *     "primaryForegroundDark": "base",  // default: "base"     (dark)
+ *     "destructiveForeground": "surface",    // default: "surface"
+ *     "destructiveForegroundDark": "base"    // default: "base"
+ *   }
+ * }
+ */
 
-[data-theme="theme-rose-pine"] {
-  /* Dawn palette (exact hex from rosepinetheme.com) */
-  --color-phos-base: #faf4ed;
-  --color-phos-surface: #fffaf3;
-  --color-phos-overlay: #f2e9e1;
-  --color-phos-muted: #9893a5;
-  --color-phos-subtle: #797593;
-  --color-phos-text: #575279;
-  --color-phos-accent: #b4637a;
-  --color-phos-gold: #ea9d34;
-  --color-phos-rose: #d7827e;
-  --color-phos-pine: #286983;
-  --color-phos-foam: #56949f;
-  --color-phos-iris: #907aa9;
-  --color-phos-highlight-low: #f4ede8;
-  --color-phos-highlight-med: #dfdad9;
-  --color-phos-highlight-high: #cecacd;
+import { readFileSync } from 'node:fs'
 
-  /* Moon palette → Main Rosé Pine dark palette (exact hex from rosepinetheme.com) */
-  --color-phos-dark-base: #191724;
-  --color-phos-dark-surface: #1f1d2e;
-  --color-phos-dark-overlay: #26233a;
-  --color-phos-dark-muted: #6e6a86;
-  --color-phos-dark-subtle: #908caa;
-  --color-phos-dark-text: #e0def4;
-  --color-phos-dark-accent: #eb6f92;
-  --color-phos-dark-gold: #f6c177;
-  --color-phos-dark-rose: #ebbcba;
-  --color-phos-dark-pine: #31748f;
-  --color-phos-dark-foam: #9ccfd8;
-  --color-phos-dark-iris: #c4a7e7;
-  --color-phos-dark-highlight-low: #21202e;
-  --color-phos-dark-highlight-med: #403d52;
-  --color-phos-dark-highlight-high: #524f67;
+// -------- Color math --------
+function hexToRgb(hex) {
+  const h = hex.replace('#', '')
+  return {
+    r: parseInt(h.substring(0, 2), 16),
+    g: parseInt(h.substring(2, 4), 16),
+    b: parseInt(h.substring(4, 6), 16),
+  }
+}
 
-  /* Extra shades for love (primary) */
-  --color-phos-accent-50: #fdf2f5;
-  --color-phos-accent-100: #f9d9e2;
-  --color-phos-accent-200: #f0b7c8;
-  --color-phos-accent-300: #e494aa;
-  --color-phos-accent-400: #d17b92;
-  --color-phos-accent-500: #b4637a;
-  --color-phos-accent-600: #9b5368;
-  --color-phos-accent-700: #824356;
-  --color-phos-accent-800: #693344;
-  --color-phos-accent-900: #502332;
-  --color-phos-accent-950: #371320;
+function rgbToHex({ r, g, b }) {
+  return '#' + [r, g, b].map((c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('')
+}
+
+/** Generate 50-950 accent shade scale from a single accent color */
+function generateAccentShades(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  const shades = {}
+  // Interpolate from white (50) → accent (500) → black (950)
+  const stops = {
+    50: { r: 255, g: 255, b: 255 },
+    100: { r: 245, g: 245, b: 255 },
+    200: { r: 220, g: 220, b: 240 },
+    300: { r: 190, g: 190, b: 220 },
+    400: { r: 140, g: 140, b: 185 },
+    500: { r, g, b },
+    600: { r: r * 0.85, g: g * 0.82, b: b * 0.82 },
+    700: { r: r * 0.68, g: g * 0.64, b: b * 0.64 },
+    800: { r: r * 0.48, g: g * 0.44, b: b * 0.44 },
+    900: { r: r * 0.30, g: g * 0.26, b: b * 0.26 },
+    950: { r: r * 0.16, g: g * 0.13, b: b * 0.13 },
+  }
+  for (const [key, val] of Object.entries(stops)) {
+    shades[key] = rgbToHex(val)
+  }
+  return shades
+}
+
+// -------- Template --------
+function render(palette) {
+  const p = palette
+  const id = p.id
+  const L = p.light
+  const D = p.dark
+  const ov = p.overrides || {}
+  const primaryHover = ov.primaryHoverShade || '600'
+  const destructiveHover = ov.destructiveHoverShade || '600'
+  const pfLight = ov.primaryForeground || 'surface'
+  const pfDark = ov.primaryForegroundDark || 'base'
+  const dfLight = ov.destructiveForeground || 'surface'
+  const dfDark = ov.destructiveForegroundDark || 'base'
+
+  // Generate accent shades if not provided
+  const shades = p.accentShadeBase || generateAccentShades(L.accent)
+
+  const pfLightVar = pfLight === 'surface' ? 'var(--color-phos-surface)' : pfLight === 'text' ? 'var(--color-phos-text)' : 'var(--color-phos-base)'
+  const dfLightVar = dfLight === 'surface' ? 'var(--color-phos-surface)' : dfLight === 'text' ? 'var(--color-phos-text)' : 'var(--color-phos-base)'
+  const pfDarkVar = pfDark === 'base' ? 'var(--color-phos-dark-base)' : pfDark === 'text' ? 'var(--color-phos-dark-text)' : 'var(--color-phos-dark-surface)'
+  const dfDarkVar = dfDark === 'base' ? 'var(--color-phos-dark-base)' : dfDark === 'text' ? 'var(--color-phos-dark-text)' : 'var(--color-phos-dark-surface)'
+
+  return `/* ------------------------------ */
+/* -------- ${p.name.padEnd(19)} --- */
+/* ${p.description.padEnd(30)} */
+${p.credit ? `/* ${p.credit.padEnd(30)} */\n` : ''}/* ------------------------------ */
+
+[data-theme="${id}"] {
+  /* Light palette */
+  --color-phos-base: ${L.base};
+  --color-phos-surface: ${L.surface};
+  --color-phos-overlay: ${L.overlay};
+  --color-phos-muted: ${L.muted};
+  --color-phos-subtle: ${L.subtle};
+  --color-phos-text: ${L.text};
+  --color-phos-accent: ${L.accent};
+  --color-phos-gold: ${L.gold};
+  --color-phos-rose: ${L.rose};
+  --color-phos-pine: ${L.pine};
+  --color-phos-foam: ${L.foam};
+  --color-phos-iris: ${L.iris};
+  --color-phos-highlight-low: ${L.highlightLow};
+  --color-phos-highlight-med: ${L.highlightMed};
+  --color-phos-highlight-high: ${L.highlightHigh};
+
+  /* Dark palette */
+  --color-phos-dark-base: ${D.base};
+  --color-phos-dark-surface: ${D.surface};
+  --color-phos-dark-overlay: ${D.overlay};
+  --color-phos-dark-muted: ${D.muted};
+  --color-phos-dark-subtle: ${D.subtle};
+  --color-phos-dark-text: ${D.text};
+  --color-phos-dark-accent: ${D.accent};
+  --color-phos-dark-gold: ${D.gold};
+  --color-phos-dark-rose: ${D.rose};
+  --color-phos-dark-pine: ${D.pine};
+  --color-phos-dark-foam: ${D.foam};
+  --color-phos-dark-iris: ${D.iris};
+  --color-phos-dark-highlight-low: ${D.highlightLow};
+  --color-phos-dark-highlight-med: ${D.highlightMed};
+  --color-phos-dark-highlight-high: ${D.highlightHigh};
+
+  /* Accent shades (50–950) */
+${Object.entries(shades).map(([k, v]) => `  --color-phos-accent-${k}: ${v};`).join('\n')}
 
   /* Light mode semantic tokens */
   --background: var(--color-phos-base);
@@ -87,10 +169,10 @@
 
   --primary: var(--color-phos-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-surface);
-  --primary-hover: var(--color-phos-accent-600);
-  --primary-focus: var(--color-phos-accent-600);
-  --primary-active: var(--color-phos-accent-600);
+  --primary-foreground: ${pfLightVar};
+  --primary-hover: var(--color-phos-accent-${primaryHover});
+  --primary-focus: var(--color-phos-accent-${primaryHover});
+  --primary-active: var(--color-phos-accent-${primaryHover});
   --primary-checked: var(--color-phos-accent);
 
   --secondary: var(--color-phos-text);
@@ -128,9 +210,9 @@
   --muted-active: var(--color-phos-overlay);
 
   --destructive: var(--color-phos-accent);
-  --destructive-foreground: var(--color-phos-surface);
-  --destructive-hover: var(--color-phos-accent-600);
-  --destructive-focus: var(--color-phos-accent-600);
+  --destructive-foreground: ${dfLightVar};
+  --destructive-hover: var(--color-phos-accent-${destructiveHover});
+  --destructive-focus: var(--color-phos-accent-${destructiveHover});
 
   --navbar: var(--color-phos-base);
   --navbar-line: var(--border);
@@ -276,7 +358,7 @@
   --map-colors-border-inverse: var(--color-phos-dark-highlight-med);
 }
 
-[data-theme="theme-rose-pine"].dark {
+[data-theme="${id}"].dark {
   --background: var(--color-phos-dark-base);
   --background-1: var(--color-phos-dark-surface);
   --background-2: var(--color-phos-dark-overlay);
@@ -300,7 +382,7 @@
 
   --primary: var(--color-phos-dark-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-dark-base);
+  --primary-foreground: ${pfDarkVar};
   --primary-hover: var(--color-phos-dark-rose);
   --primary-focus: var(--color-phos-dark-rose);
   --primary-active: var(--color-phos-dark-rose);
@@ -341,7 +423,7 @@
   --muted-active: var(--color-phos-dark-surface);
 
   --destructive: var(--color-phos-dark-accent);
-  --destructive-foreground: var(--color-phos-dark-base);
+  --destructive-foreground: ${dfDarkVar};
   --destructive-hover: var(--color-phos-dark-rose);
   --destructive-focus: var(--color-phos-dark-rose);
 
@@ -484,3 +566,16 @@
   --map-colors-border: var(--color-phos-dark-highlight-high);
   --map-colors-border-inverse: var(--color-phos-dark-muted);
 }
+`
+}
+
+// -------- CLI --------
+const inputPath = process.argv[2]
+if (!inputPath) {
+  console.error('Usage: node scripts/generate-theme.mjs <palette.json>')
+  process.exit(1)
+}
+
+const raw = readFileSync(inputPath, 'utf-8')
+const palette = JSON.parse(raw)
+console.log(render(palette))
