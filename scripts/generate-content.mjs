@@ -334,10 +334,22 @@ async function main() {
 
       const categoryMap = new Map(categories.map(c => [c.slug, c]))
 
+      const allPhotos = db.prepare(
+        'SELECT gallery_id, category, filename, position FROM gallery_photos ORDER BY position'
+      ).all()
+
+      const photoMap = new Map()
+      for (const p of allPhotos) {
+        let list = photoMap.get(p.gallery_id)
+        if (!list) {
+          list = []
+          photoMap.set(p.gallery_id, list)
+        }
+        list.push({ category: p.category, filename: p.filename, position: p.position })
+      }
+
       const galleries = dbGalleries.map(g => {
-        const dbPhotos = db.prepare(
-          'SELECT category, filename, position FROM gallery_photos WHERE gallery_id = ? ORDER BY position'
-        ).all(g.id)
+        const dbPhotos = photoMap.get(g.id) || []
 
         const photos = dbPhotos
           .map(p => {
