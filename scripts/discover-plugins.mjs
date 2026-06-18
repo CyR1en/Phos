@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
-import { resolve, join, dirname, relative } from 'node:path'
+import { resolve, join, dirname, relative, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getPluginConfig } from '../lib/db.mjs'
 import { deepMerge } from '../lib/merge.mjs'
@@ -36,6 +36,11 @@ function discover() {
       continue
     }
     const entryPath = resolve(dir, manifest.entry)
+    const rel = relative(dir, entryPath)
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      console.error(`[discover-plugins] Plugin "${name}" entry path escapes plugin directory: ${manifest.entry}`)
+      continue
+    }
     if (!existsSync(entryPath)) {
       console.warn(`[plugins] ${name}: entry ${manifest.entry} not found, skipping`)
       continue
@@ -44,6 +49,11 @@ function discover() {
     let configSource = 'none'
     if (manifest.config) {
       const configPath = resolve(dir, manifest.config)
+      const configRel = relative(dir, configPath)
+      if (configRel.startsWith('..') || isAbsolute(configRel)) {
+        console.error(`[discover-plugins] Plugin "${name}" config path escapes plugin directory: ${manifest.config}`)
+        continue
+      }
       if (existsSync(configPath)) {
         try {
           config = JSON.parse(readFileSync(configPath, 'utf8'))

@@ -16,20 +16,22 @@
 </button>
 
 <script>
-  const btn = document.getElementById('theme-toggle')
-  const sun = document.getElementById('sun-icon')
-  const moon = document.getElementById('moon-icon')
-  const auto = document.getElementById('auto-icon')
-  const states = ['light', 'dark', 'auto']
+  const btn = document.getElementById('theme-toggle')!
+  const sun = document.getElementById('sun-icon')!
+  const moon = document.getElementById('moon-icon')!
+  const auto = document.getElementById('auto-icon')!
+  const states = ['light', 'dark', 'auto'] as const
   const mq = window.matchMedia('(prefers-color-scheme: dark)')
 
-  function updateIcons(mode) {
+  type ThemeMode = 'light' | 'dark' | 'auto'
+
+  function updateIcons(mode: ThemeMode) {
     sun.classList.toggle('hidden', mode !== 'light')
     moon.classList.toggle('hidden', mode !== 'dark')
     auto.classList.toggle('hidden', mode !== 'auto')
   }
 
-  function applyTheme(mode) {
+  function applyTheme(mode: ThemeMode) {
     if (mode === 'auto') {
       document.documentElement.classList.toggle('dark', mq.matches)
     } else {
@@ -38,11 +40,11 @@
     updateIcons(mode)
   }
 
-  function getMode() {
-    return localStorage.getItem('theme') || 'auto'
+  function getMode(): ThemeMode {
+    return (localStorage.getItem('theme') as ThemeMode) || 'auto'
   }
 
-  function setMode(mode) {
+  function setMode(mode: ThemeMode) {
     localStorage.setItem('theme', mode)
     applyTheme(mode)
   }
@@ -54,8 +56,8 @@
   applyTheme(getMode())
 
   btn.addEventListener('click', function () {
-    var current = getMode()
-    var next = states[(states.indexOf(current) + 1) % states.length]
+    const current = getMode()
+    const next = states[(states.indexOf(current) + 1) % states.length]
     setMode(next)
   })
 </script>

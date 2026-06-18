@@ -15,6 +15,7 @@ services:
       - CONFIG_PATH=/config/site-config.json
       - PUBLIC_SITE_URL=${PUBLIC_SITE_URL:-http://localhost:8080}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - ADMIN_ALLOW_DEFAULT=1
       - ADMIN_PORT=3001
       - LISTEN_PORT=${LISTEN_PORT:-8080}
       - DB_PATH=/config/site.db

@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { migrateFromJson, getMeta, open } from '../lib/db.mjs'
+import { deepMerge } from '../lib/merge.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -15,27 +16,6 @@ function readJSON(p) {
   } catch {
     return null
   }
-}
-
-function deepMerge(target, source) {
-  const result = { ...target }
-  for (const key of Object.keys(source)) {
-    if (
-      source[key] &&
-      typeof source[key] === 'object' &&
-      !Array.isArray(source[key]) &&
-      result[key] &&
-      typeof result[key] === 'object' &&
-      !Array.isArray(result[key])
-    ) {
-      result[key] = deepMerge(result[key], source[key])
-    } else {
-      if (source[key] !== undefined) {
-        result[key] = source[key]
-      }
-    }
-  }
-  return result
 }
 
 function main() {

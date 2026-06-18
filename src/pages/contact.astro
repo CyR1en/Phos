@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
-import config from '@content/site-config.json'
+import config from '@lib/config'
 
 const { heading, subheading, submitBtn } = config.contact.format
 const { host, port, user, pass, fromEmail, toEmail } = config.contact.smtp
@@ -61,10 +61,10 @@ const ogDescription = config.contact?.og_description
           </form>
 
           <script>
-            const form = document.getElementById('contact-form')
-            const status = document.getElementById('form-status')
-            const btn = form.querySelector('button[type="submit"]')
-            const originalBtnText = btn.textContent
+            const form = document.getElementById('contact-form') as HTMLFormElement
+            const status = document.getElementById('form-status')!
+            const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement
+            const originalBtnText = btn.textContent || ''
 
             form.addEventListener('submit', async (e) => {
               e.preventDefault()
@@ -95,7 +95,7 @@ const ogDescription = config.contact?.og_description
                 status.className = 'sm:col-span-2 rounded-sm text-sm p-4 bg-success-bg text-ink'
                 status.textContent = "Message sent! I'll get back to you soon."
                 form.reset()
-              } catch (err) {
+              } catch (err: any) {
                 status.className = 'sm:col-span-2 rounded-sm text-sm p-4 bg-error-bg text-error'
                 status.textContent = err.message || 'Something went wrong. Please try again.'
               } finally {

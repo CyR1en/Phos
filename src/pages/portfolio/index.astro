@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
-import config from '@content/site-config.json'
+import config from '@lib/config'
 
 let galleries: any[] = []
 try {
-  const gals = await import('@content/galleries.json').then(m => m.default || m)
+  const gals = await import('@lib/galleries').then(m => m.default || m)
   galleries = gals.galleries || []
 } catch {
   galleries = []

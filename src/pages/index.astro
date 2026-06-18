@@ -5,12 +5,12 @@ import Services from '@components/Services.astro'
 import Testimonials from '@components/Testimonials.astro'
 import CTA from '@components/CTA.astro'
 import CategoryCard from '@components/CategoryCard.astro'
-import manifest from '@content/categories.json'
-import config from '@content/site-config.json'
+import manifest from '@lib/categories'
+import config from '@lib/config'
 
 let galleries: any[] = []
 try {
-  const gals = await import('@content/galleries.json').then(m => m.default || m)
+  const gals = await import('@lib/galleries').then(m => m.default || m)
   galleries = gals.galleries || []
 } catch {
   galleries = []

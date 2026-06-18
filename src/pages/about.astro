@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
-import config from '@content/site-config.json'
+import config from '@lib/config'
 import Plugins from '@components/Plugins.astro'
 import CTA from '@components/CTA.astro'
 
@@ -118,5 +118,4 @@ const ogDescription = config.about?.og_description
       />
     </div>
   )}
-</script>
 </BaseLayout>

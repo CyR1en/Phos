@@ -23,6 +23,13 @@ function slugify(name) {
 }
 const PORT = parseInt(process.env.ADMIN_PORT || '3001', 10)
 const PASSWORD = process.env.ADMIN_PASSWORD || 'admin'
+// Refuse to start with the default password in production unless explicitly allowed
+if (PASSWORD === 'admin' && process.env.NODE_ENV === 'production' && process.env.ADMIN_ALLOW_DEFAULT !== '1') {
+  console.error('[admin] FATAL: ADMIN_PASSWORD is unset or set to the default "admin". Refusing to start in production. Set ADMIN_PASSWORD to a strong value, or set ADMIN_ALLOW_DEFAULT=1 to override.')
+  process.exit(1)
+}
+const ALLOWED_ORIGIN = process.env.PUBLIC_SITE_URL || null
+const MAX_BODY_BYTES = 2 * 1024 * 1024
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif'])
 
@@ -45,10 +52,20 @@ function json(res, data, status = 200, extraHeaders = {}) {
 function parseBody(req) {
   return new Promise((resolve) => {
     let body = ''
-    req.on('data', (chunk) => (body += chunk))
+    let size = 0
+    req.on('data', (chunk) => {
+      size += chunk.length
+      if (size > MAX_BODY_BYTES) {
+        req.destroy()
+        resolve(null)
+        return
+      }
+      body += chunk
+    })
     req.on('end', () => {
       try { resolve(JSON.parse(body)) } catch { resolve(null) }
     })
+    req.on('error', () => resolve(null))
   })
 }
 
@@ -59,6 +76,93 @@ function requireAuth(req, res) {
     return false
   }
   return true
+}
+
+// Simple in-memory rate limiter (fixed window per IP+route)
+const rateBuckets = new Map()
+function rateLimit(key, maxRequests, windowMs) {
+  const now = Date.now()
+  const bucket = rateBuckets.get(key)
+  if (!bucket || now > bucket.resetAt) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs })
+    return true
+  }
+  if (bucket.count >= maxRequests) return false
+  bucket.count++
+  return true
+}
+// Periodic cleanup of expired buckets (every 5 min) to avoid memory growth
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, b] of rateBuckets) {
+    if (now > b.resetAt) rateBuckets.delete(k)
+  }
+}, 300000).unref()
+
+function clientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown'
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// Strip CR/LF to prevent header injection
+function stripCrlf(s) {
+  return String(s).replace(/[\r\n]/g, '')
+}
+
+// Remove sensitive fields (SMTP credentials) from a config object before
+// serving it to unauthenticated clients. Returns a deep clone — the original
+// config returned by assembleConfig() is never mutated.
+function stripSecrets(config) {
+  const clone = JSON.parse(JSON.stringify(config))
+  if (clone?.contact?.smtp) {
+    delete clone.contact.smtp.pass
+    delete clone.contact.smtp.user
+  }
+  return clone
+}
+
+const ALLOWED_CONFIG_KEYS = new Set(['site', 'home', 'about', 'contact', 'notFound', 'portfolio'])
+
+function validateConfig(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return 'Config must be a JSON object'
+  }
+  for (const key of Object.keys(body)) {
+    if (!ALLOWED_CONFIG_KEYS.has(key)) {
+      return `Unknown config key: "${key}". Allowed: ${[...ALLOWED_CONFIG_KEYS].join(', ')}`
+    }
+  }
+  return null // null = valid
+}
+
+// Prune XSS / XXE vectors from an admin-uploaded SVG string before it is
+// written to disk and inlined site-wide via set:html. Removes <script> blocks,
+// event handler attributes, javascript: URIs, ENTITY declarations and CDATA.
+function sanitizeSvg(svg) {
+  let s = String(svg)
+  // Remove CDATA blocks (can be used to hide payloads)
+  s = s.replace(/<!\[CDATA\[[\s\S]*?\]\]>/gi, '')
+  // Remove ENTITY declarations (XXE protection)
+  s = s.replace(/<!ENTITY[\s\S]*?>/gi, '')
+  // Remove script tags (including content) and self-closing variants
+  s = s.replace(/<script[\s\S]*?<\/script>/gi, '')
+  s = s.replace(/<script[^>]*\/>/gi, '')
+  // Remove event handler attributes (on*=), quoted and unquoted
+  s = s.replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+  s = s.replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+  s = s.replace(/\son\w+\s*=\s*[^\s>]+/gi, '')
+  // Remove javascript: URIs in href / xlink:href
+  s = s.replace(/\s(?:xlink:)?href\s*=\s*"javascript:[^"]*"/gi, '')
+  s = s.replace(/\s(?:xlink:)?href\s*=\s*'javascript:[^']*'/gi, '')
+  return s
 }
 
 function listPhotoFiles(dir) {
@@ -151,7 +255,7 @@ function createTask(command, args, options, timeoutMs) {
   const task = { id, status: 'running', lines: [], error: null, doneAt: null }
   tasks.set(id, task)
 
-  const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'], shell: true })
+  const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] })
   child.stdout.on('data', (d) => pushOutput(task, d))
   child.stderr.on('data', (d) => pushOutput(task, d))
 
@@ -188,10 +292,19 @@ setInterval(() => {
 }, 60000)
 
 createServer(async (req, res) => {
+  const startTime = Date.now()
+  res.on('finish', () => {
+    const duration = Date.now() - startTime
+    console.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`)
+  })
+
   const url = new URL(req.url, `http://localhost:${PORT}`)
   const path = url.pathname
 
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  if (ALLOWED_ORIGIN) {
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
@@ -209,6 +322,10 @@ createServer(async (req, res) => {
   }
 
   if (path === '/api/login' && req.method === 'POST') {
+    const ip = clientIp(req)
+    if (!rateLimit(`login:${ip}`, 10, 900000)) {
+      return json(res, { error: 'Too many login attempts. Try again later.' }, 429)
+    }
     const body = await parseBody(req)
     if (body?.password === PASSWORD) {
       return json(res, { token: PASSWORD })
@@ -228,6 +345,10 @@ createServer(async (req, res) => {
     if (!requireAuth(req, res)) return
     const body = await parseBody(req)
     if (!body) return json(res, { error: 'Invalid JSON' }, 400)
+    const validationError = validateConfig(body)
+    if (validationError) {
+      return json(res, { error: validationError }, 400)
+    }
     const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
     const current = assembleConfig()
     const baseline = deepMerge(defaults, current)
@@ -321,7 +442,11 @@ createServer(async (req, res) => {
     let files = {}
 
     if (ext === 'svg') {
-      writeLogo('logo.svg', light.buffer)
+      // Sanitize before writing to disk: the SVG is inlined via set:html in
+      // Header.astro on every page, so any <script>/onload/javascript: payload
+      // would be stored XSS site-wide. PNG/JPG need no sanitization.
+      const sanitized = Buffer.from(sanitizeSvg(light.buffer.toString('utf-8')), 'utf-8')
+      writeLogo('logo.svg', sanitized)
       files = { type: 'svg', light: '/logo.svg', dark: '/logo.svg' }
     } else {
       writeLogo(`logo_light.${ext}`, light.buffer)
@@ -449,12 +574,20 @@ createServer(async (req, res) => {
 
   if (path === '/api/regenerate' && req.method === 'POST') {
     if (!requireAuth(req, res)) return
+    const ip = clientIp(req)
+    if (!rateLimit(`build:${ip}`, 3, 600000)) {
+      return json(res, { error: 'Too many requests. Try again later.' }, 429)
+    }
     const taskId = createTask('node', ['scripts/generate-content.mjs'], { cwd: ROOT }, 120000)
     return json(res, { taskId })
   }
 
   if (path === '/api/republish' && req.method === 'POST') {
     if (!requireAuth(req, res)) return
+    const ip = clientIp(req)
+    if (!rateLimit(`republish:${ip}`, 3, 600000)) {
+      return json(res, { error: 'Too many requests. Try again later.' }, 429)
+    }
     const taskId = createTask('npm', ['run', 'build'], { cwd: ROOT }, 300000)
     return json(res, { taskId })
   }
@@ -471,16 +604,30 @@ createServer(async (req, res) => {
     const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
     const live = assembleConfig()
     const merged = deepMerge(defaults, live)
-    return json(res, merged, 200, {
+    // This endpoint is unauthenticated (fetched by BaseLayout.astro at runtime)
+    // and has Access-Control-Allow-Origin: *, so strip SMTP credentials before
+    // serving. The frontend never needs them — /api/contact reads SMTP server-side.
+    return json(res, stripSecrets(merged), 200, {
       'Cache-Control': 'no-cache',
     })
   }
 
   if (path === '/api/contact' && req.method === 'POST') {
+    const ip = clientIp(req)
+    if (!rateLimit(`contact:${ip}`, 5, 900000)) {
+      return json(res, { error: 'Too many requests. Try again later.' }, 429)
+    }
     const body = await parseBody(req)
     if (!body || !body.name || !body.email || !body.message) {
       return json(res, { error: 'Name, email, and message are required' }, 400)
     }
+
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRe.test(body.email)) {
+      return json(res, { error: 'A valid email address is required' }, 400)
+    }
+
+    const safeName = stripCrlf(body.name)
 
     try {
       const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
@@ -504,12 +651,12 @@ createServer(async (req, res) => {
       })
 
       await transporter.sendMail({
-        from: `"${body.name}" <${smtp.fromEmail}>`,
+        from: `"${safeName}" <${smtp.fromEmail}>`,
         replyTo: body.email,
         to: smtp.toEmail,
-        subject: `Contact form submission from ${body.name}`,
-        text: `Name: ${body.name}\nEmail: ${body.email}\n\nMessage:\n${body.message}`,
-        html: `<p><strong>Name:</strong> ${body.name}</p><p><strong>Email:</strong> ${body.email}</p><p><strong>Message:</strong></p><p>${body.message}</p>`,
+        subject: `Contact form submission from ${safeName}`,
+        text: `Name: ${safeName}\nEmail: ${body.email}\n\nMessage:\n${body.message}`,
+        html: `<p><strong>Name:</strong> ${escapeHtml(body.name)}</p><p><strong>Email:</strong> ${escapeHtml(body.email)}</p><p><strong>Message:</strong></p><p>${escapeHtml(body.message)}</p>`,
       })
 
       return json(res, { ok: true })

@@ -14,7 +14,7 @@ export interface Props {
   }>
 }
 
-import config from '@content/site-config.json'
+import config from '@lib/config'
 
 const { heroPriority } = Astro.props
 const hasSlideshow = heroPriority.length > 1
@@ -95,27 +95,27 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
   const slides = document.querySelectorAll('[data-hero-slide]')
   const dots = document.querySelectorAll('[data-hero-dot]')
   const heroBg = document.getElementById('hero-bg')
-  const heroSection = document.querySelector('[data-hero-interval]')
+  const heroSection = document.querySelector('[data-hero-interval]') as HTMLElement | null
   if (slides.length > 0) {
     window.addEventListener('load', () => {
       slides.forEach((slide) => {
-        const img = slide.querySelector('img[data-full-src]')
+        const img = slide.querySelector('img[data-full-src]') as HTMLImageElement | null
         if (!img) return
         const fullSrc = img.dataset.fullSrc
         const fullImg = new Image()
-        fullImg.onload = () => { img.src = fullSrc; img.removeAttribute('data-full-src') }
-        fullImg.src = fullSrc
+        fullImg.onload = () => { img.src = fullSrc || ''; img.removeAttribute('data-full-src') }
+        fullImg.src = fullSrc || ''
       })
     }, { once: true, passive: true })
   }
 
   if (slides.length > 1) {
     let current = 0
-    let interval = null
+    let interval: ReturnType<typeof setInterval> | null = null
 
-    function showSlide(index) {
+    function showSlide(index: number) {
       slides.forEach((s, i) => {
-        s.style.opacity = i === index ? '1' : '0'
+        ;(s as HTMLElement).style.opacity = i === index ? '1' : '0'
       })
       dots.forEach((d, i) => {
         if (i === index) {
@@ -135,7 +135,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 
     function start() {
       if (interval) clearInterval(interval)
-      const heroInterval = parseInt(heroSection.dataset.heroInterval, 10) || 6000
+      const heroInterval = parseInt(heroSection?.dataset.heroInterval || '', 10) || 6000
       interval = setInterval(next, heroInterval)
     }
 
@@ -148,7 +148,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 
     dots.forEach((dot) => {
       dot.addEventListener('click', () => {
-        const idx = parseInt(dot.dataset.heroDot, 10)
+        const idx = parseInt((dot as HTMLElement).dataset.heroDot || '', 10)
         if (!isNaN(idx) && idx !== current) showSlide(idx)
         start()
       })
@@ -177,14 +177,14 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       let lowFpsCount = 0
       let lastFrameTime = performance.now()
 
-      const onLenisScroll = (lenis) => {
+      const onLenisScroll = (lenis: any) => {
         const now = performance.now()
         const dt = now - lastFrameTime
         lastFrameTime = now
         if (dt > 50) {
           lowFpsCount++
           if (lowFpsCount > 10) {
-            window.__lenis.off('scroll', onLenisScroll)
+            ;(window as any).__lenis.off('scroll', onLenisScroll)
             heroBg.style.transform = ''
             return
           }
@@ -197,8 +197,8 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
         lastY = y
         heroBg.style.transform = `translate3d(0, ${y}px, 0)`
       }
-      if (window.__lenis) {
-        window.__lenis.on('scroll', onLenisScroll)
+      if ((window as any).__lenis) {
+        ;(window as any).__lenis.on('scroll', onLenisScroll)
       }
     }
   }

@@ -27,6 +27,7 @@ export interface SiteConfig {
       overlay_opacity: number
     }
     services: {
+      enabled: boolean
       heading: string
       subheading: string
     }
@@ -41,10 +42,12 @@ export interface SiteConfig {
       }>
     }
     testimonials: {
+      enabled: boolean
       heading: string
       testimonials: Array<{ quote: string; author: string; role: string }>
     }
     cta: {
+      enabled: boolean
       heading: string
       body: string
       button: string
@@ -154,3 +157,54 @@ export interface GalleryPhoto {
 }
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+
+// --- Build-time manifest types (for src/content/*.json imports) ---
+
+export interface ManifestPhoto {
+  filename: string
+  title: string
+  description: string
+  full: string
+  thumb: string
+  thumbMobile: string
+  width: number | null
+  height: number | null
+  blur: string
+  hero_priority: number
+}
+
+export interface ManifestCategory {
+  slug: string
+  name: string
+  description: string
+  cover: string
+  coverWidth: number | null
+  coverHeight: number | null
+  coverBlur: string
+  order: number
+  offer_service: boolean
+  photoCount: number
+  photos: ManifestPhoto[]
+}
+
+export interface HeroPriorityPhoto {
+  full: string
+  thumb: string
+  title: string
+  description: string
+  blur: string
+  width: number | null
+  height: number | null
+  category: string
+  categoryName: string
+  hero_priority: number
+}
+
+export interface CategoriesManifest {
+  categories: ManifestCategory[]
+  heroPriority: HeroPriorityPhoto[]
+}
+
+export interface GalleriesManifest {
+  galleries: Gallery[]
+}

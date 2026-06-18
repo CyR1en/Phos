@@ -3,9 +3,10 @@ import { plugins, components } from '../generated/plugins.mjs'
 
 const { name } = Astro.props
 const matches = plugins.filter((p) => p.slot === name)
+const componentMap = components as Record<string, any>
 ---
 {matches.map((p) => {
-  const Component = components[p.name]
+  const Component = componentMap[p.name]
   if (!Component) return null
   return <Component {...p.config} />
 })}

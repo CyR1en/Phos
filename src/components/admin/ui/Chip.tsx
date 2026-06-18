@@ -1,5 +1,7 @@
+import type { ComponentChildren } from 'preact'
+
 interface Props {
-  children: string
+  children?: ComponentChildren
   active?: boolean
   onClick?: () => void
 }

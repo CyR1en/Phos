@@ -3,7 +3,7 @@ import '../styles/global.css'
 import Header from '@components/Header.astro'
 import Footer from '@components/Footer.astro'
 import SmoothScroll from '@components/SmoothScroll.astro'
-import config from '@content/site-config.json'
+import config from '@lib/config'
 
 export interface Props {
   title: string
@@ -21,7 +21,7 @@ const siteUrl = import.meta.env.PUBLIC_SITE_URL
 const canonical = siteUrl ? `${siteUrl}/${page || ''}` : undefined
 
 const configOg = config.site?.og
-const resolveUrl = (path) => siteUrl ? `${siteUrl}${path}` : undefined
+const resolveUrl = (path: string) => siteUrl ? `${siteUrl}${path}` : undefined
 const ogImage = image
   ? (image.startsWith('http') ? image : resolveUrl(image))
   : (configOg?.image ? resolveUrl(configOg.image) : undefined)
@@ -38,11 +38,11 @@ const configTwitter = twitterHandle ? { site: twitterHandle, creator: twitterHan
 
 const ogImageAlt = (image && configOg?.imageAlt) ? configOg.imageAlt : undefined
 
-const imageMimeType = (url) => {
+const imageMimeType = (url: string | undefined) => {
   if (!url) return undefined
   const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase()
-  const mimes = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif' }
-  return mimes[ext] || undefined
+  const mimes: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif' }
+  return mimes[ext || ''] || undefined
 }
 ---
 
@@ -63,8 +63,8 @@ const imageMimeType = (url) => {
     <meta property="og:locale" content={configOg?.locale || 'en_US'} />
     {canonical && <meta property="og:url" content={canonical} />}
     {ogImage && <meta property="og:image" content={ogImage} />}
-    {ogImage && configOg?.imageWidth && <meta property="og:image:width" content={configOg.imageWidth} />}
-    {ogImage && configOg?.imageHeight && <meta property="og:image:height" content={configOg.imageHeight} />}
+    {ogImage && configOg?.imageWidth && <meta property="og:image:width" content={configOg.imageWidth.toString()} />}
+    {ogImage && configOg?.imageHeight && <meta property="og:image:height" content={configOg.imageHeight.toString()} />}
     {ogImage && ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
     {ogImage && <meta property="og:image:type" content={imageMimeType(ogImage)} />}
 

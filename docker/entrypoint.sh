@@ -25,7 +25,7 @@ usermod -u "$PUID" appuser
 groupmod -g "$PGID" appuser
 
 chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config 2>/dev/null || true
-chmod 777 /config
+chmod 750 /config
 
 CONFIG_PATH="${CONFIG_PATH:-/config/site-config.json}"
 export CONFIG_PATH
