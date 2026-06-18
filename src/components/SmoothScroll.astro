@@ -11,7 +11,7 @@ const lenis = new Lenis({
   autoRaf: true,
 })
 
-window.__lenis = lenis
+;(window as any).__lenis = lenis
 
 const observer = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {

@@ -1,4 +1,4 @@
-import { readdir, stat, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
+import { readdir, stat, lstat, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, extname, parse, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -152,7 +152,12 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
 
 async function processCategory(entry, cache) {
   const entryPath = join(PHOTOS_SOURCE, entry)
-  const entryStat = await stat(entryPath)
+  const entryStat = await lstat(entryPath)
+
+  if (entryStat.isSymbolicLink()) {
+    console.warn(`[generate-content] Skipping symlink: ${entryPath}`)
+    return null
+  }
 
   if (!entryStat.isDirectory() || entry.startsWith('.')) return null
 
@@ -160,7 +165,16 @@ async function processCategory(entry, cache) {
 
   let meta = {}
   const metaPath = join(entryPath, '_meta.yaml')
-  if (existsSync(metaPath)) {
+  let isMetaSymlink = false
+  try {
+    const metaStat = await lstat(metaPath)
+    if (metaStat.isSymbolicLink()) {
+      isMetaSymlink = true
+      console.warn(`[generate-content] Skipping symlinked meta file: ${metaPath}`)
+    }
+  } catch {}
+
+  if (!isMetaSymlink && existsSync(metaPath)) {
     try {
       meta = yaml.parse(await readFile(metaPath, 'utf-8')) || {}
     } catch (e) {
@@ -168,9 +182,24 @@ async function processCategory(entry, cache) {
     }
   }
 
-  const files = (await readdir(entryPath)).filter(
-    (f) => IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')
-  ).sort()
+  const rawFiles = await readdir(entryPath)
+  const files = []
+  for (const f of rawFiles) {
+    if (IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')) {
+      const fPath = join(entryPath, f)
+      try {
+        const fStat = await lstat(fPath)
+        if (fStat.isSymbolicLink()) {
+          console.warn(`[generate-content] Skipping symlink: ${fPath}`)
+          continue
+        }
+        files.push(f)
+      } catch {
+        continue
+      }
+    }
+  }
+  files.sort()
 
   if (files.length === 0) return null
 
@@ -223,7 +252,15 @@ async function scanPhotos(sourceDir) {
   for (const entry of entries) {
     const entryPath = join(sourceDir, entry)
     let s
-    try { s = await stat(entryPath) } catch { continue }
+    try {
+      s = await lstat(entryPath)
+    } catch {
+      continue
+    }
+    if (s.isSymbolicLink()) {
+      console.warn(`[generate-content] Skipping symlink: ${entryPath}`)
+      continue
+    }
     if (s.isDirectory() && !entry.startsWith('.')) {
       slugToDir[slugify(entry)] = entry
     }
@@ -231,10 +268,26 @@ async function scanPhotos(sourceDir) {
 
   const activeRelPaths = new Set()
   for (const [slug, dirName] of Object.entries(slugToDir)) {
-    const catFiles = await readdir(join(sourceDir, dirName))
+    const catDirPath = join(sourceDir, dirName)
+    let catFiles
+    try {
+      catFiles = await readdir(catDirPath)
+    } catch {
+      continue
+    }
     for (const f of catFiles) {
       if (IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')) {
-        activeRelPaths.add(`${slug}/${f}`)
+        const fPath = join(catDirPath, f)
+        try {
+          const fStat = await lstat(fPath)
+          if (fStat.isSymbolicLink()) {
+            console.warn(`[generate-content] Skipping symlink: ${fPath}`)
+            continue
+          }
+          activeRelPaths.add(`${slug}/${f}`)
+        } catch {
+          continue
+        }
       }
     }
   }

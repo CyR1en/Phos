@@ -2,8 +2,8 @@
 import BaseLayout from '@layouts/BaseLayout.astro'
 import PhotoGrid from '@components/PhotoGrid.astro'
 import Lightbox from '@components/Lightbox.astro'
-import manifest from '@content/categories.json'
-import config from '@content/site-config.json'
+import manifest from '@lib/categories'
+import config from '@lib/config'
 
 const { categories } = manifest
 
@@ -96,7 +96,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
       emptyState?.classList.toggle('hidden', visible > 0)
 
       const filtered = filter === 'all' ? fullData : fullData.filter((p: any) => p.category === filter)
-      window.__updateLightboxData(filtered)
+      window.__updateLightboxData?.(filtered)
     }
 
     filterBtns.forEach((btn) => {

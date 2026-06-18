@@ -1,6 +1,6 @@
 ---
-import manifest from '@content/categories.json'
-import config from '@content/site-config.json'
+import manifest from '@lib/categories'
+import config from '@lib/config'
 const { categories } = manifest
 const serviceCategories = categories.filter((cat) => cat.offer_service)
 ---

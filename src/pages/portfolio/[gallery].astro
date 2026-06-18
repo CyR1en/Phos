@@ -1,12 +1,12 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
-import Gallery from '@components/Gallery.astro'
+import PhotoGallery from '@components/Gallery.astro'
 import Lightbox from '@components/Lightbox.astro'
 
 export async function getStaticPaths() {
   let galleries: any[] = []
   try {
-    const gals = await import('@content/galleries.json').then(m => m.default || m)
+    const gals = await import('@lib/galleries').then(m => m.default || m)
     galleries = gals.galleries || []
   } catch {
     galleries = []
@@ -44,7 +44,7 @@ const ogImage = gallery.coverFull ? `${siteUrl}${gallery.coverFull}` : undefined
   </section>
 
   <section class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8">
-    <Gallery photos={photos} />
+    <PhotoGallery photos={photos} />
   </section>
 
   <Lightbox photos={photos} />

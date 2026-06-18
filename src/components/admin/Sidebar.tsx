@@ -45,7 +45,7 @@ export function Sidebar() {
       id="admin-sidebar"
       class="hs-overlay hs-overlay-open:translate-x-0 hidden fixed inset-y-0 left-0 z-50 w-64 md:static md:w-56 md:block md:translate-x-0 -translate-x-full bg-canvas border-r border-border flex flex-col transition-transform duration-200"
       role="dialog"
-      tabindex="-1"
+      tabindex={-1}
       aria-label="Admin navigation"
     >
       <div class="px-5 pt-6 pb-5 border-b border-border flex items-start justify-between gap-2">

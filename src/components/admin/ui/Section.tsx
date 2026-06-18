@@ -3,7 +3,7 @@ import type { ComponentChildren } from 'preact'
 interface Props {
   title?: string
   description?: string
-  children: ComponentChildren
+  children?: ComponentChildren
   class?: string
   bare?: boolean
 }

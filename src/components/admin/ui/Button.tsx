@@ -5,7 +5,9 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 interface Props extends Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> {
   variant?: Variant
   size?: 'sm' | 'md'
-  children: ComponentChildren
+  children?: ComponentChildren
+  type?: 'submit' | 'button' | 'reset'
+  disabled?: boolean
 }
 
 const base =

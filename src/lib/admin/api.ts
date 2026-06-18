@@ -1,4 +1,4 @@
-import type { CategoriesResponse, PluginManifest, PluginsResponse, SiteConfig } from './types'
+import type { CategoriesResponse, Gallery, PluginManifest, PluginsResponse, SiteConfig } from './types'
 
 const TOKEN_KEY = 'phos-admin-token'
 

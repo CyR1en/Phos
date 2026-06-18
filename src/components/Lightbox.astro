@@ -58,29 +58,30 @@ const serialized = JSON.stringify(photos)
 </div>
 
 <script>
-  const lightbox = document.getElementById('lightbox')
-  const img = document.getElementById('lightbox-img')
-  const blurEl = document.getElementById('lightbox-blur')
-  const errorEl = document.getElementById('lightbox-error')
-  const titleEl = document.getElementById('lightbox-title')
-  const counterEl = document.getElementById('lightbox-counter')
-  const closeBtn = document.getElementById('lightbox-close')
-  const prevBtn = document.getElementById('lightbox-prev')
-  const nextBtn = document.getElementById('lightbox-next')
+  const lightbox = document.getElementById('lightbox')!
+  const img = document.getElementById('lightbox-img') as HTMLImageElement
+  const blurEl = document.getElementById('lightbox-blur')!
+  const errorEl = document.getElementById('lightbox-error')!
+  const titleEl = document.getElementById('lightbox-title')!
+  const counterEl = document.getElementById('lightbox-counter')!
+  const closeBtn = document.getElementById('lightbox-close') as HTMLButtonElement
+  const prevBtn = document.getElementById('lightbox-prev') as HTMLButtonElement
+  const nextBtn = document.getElementById('lightbox-next') as HTMLButtonElement
   const swipeHint = document.getElementById('swipe-hint')
 
   let currentIndex = 0
   let transitioning = false
-  let lastFocused = null
+  let lastFocused: HTMLElement | null = null
 
-  function getPhotos() {
+  function getPhotos(): any[] {
     try {
       const el = document.getElementById('lightbox-data')
+      if (!el || !el.textContent) return []
       return JSON.parse(el.textContent)
     } catch { return [] }
   }
 
-  function open(idx) {
+  function open(idx: number) {
     const data = getPhotos()
     const photo = data[idx]
     if (!photo) return
@@ -98,18 +99,18 @@ const serialized = JSON.stringify(photos)
     if (img.complete && img.naturalWidth) { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
 
     lightbox.classList.remove('hidden')
-    lastFocused = document.activeElement
-    requestAnimationFrame(() => {
+    lastFocused = document.activeElement as HTMLElement | null
+    ;requestAnimationFrame(() => {
       lightbox.classList.add('flex')
-    closeBtn.focus()
-    requestAnimationFrame(() => lightbox.classList.add('lightbox-enter'))
+      closeBtn.focus()
+      requestAnimationFrame(() => lightbox.classList.add('lightbox-enter'))
 
-    if (swipeHint) {
-      swipeHint.style.opacity = '1'
-      setTimeout(() => { swipeHint.style.opacity = '0' }, 2000)
-    }
+      if (swipeHint) {
+        swipeHint.style.opacity = '1'
+        setTimeout(() => { swipeHint.style.opacity = '0' }, 2000)
+      }
     })
-    window.__lenis?.stop()
+    ;(window as any).__lenis?.stop()
     document.body.style.overflow = 'hidden'
   }
 
@@ -123,12 +124,12 @@ const serialized = JSON.stringify(photos)
         lightbox.classList.add('hidden')
         lightbox.classList.remove('flex', 'lightbox-exit')
         document.body.style.removeProperty('overflow')
-        window.__lenis?.start()
+        ;(window as any).__lenis?.start()
       }
     }, 200)
   }
 
-  function showBlur(photo) {
+  function showBlur(photo: any) {
     if (photo.blur) {
       blurEl.style.display = 'block'
       blurEl.style.backgroundImage = `url('${photo.blur}')`
@@ -139,14 +140,14 @@ const serialized = JSON.stringify(photos)
 
   function showError() { errorEl.classList.remove('hidden') }
 
-  function updateMeta(photo, data) {
+  function updateMeta(photo: any, data: any[]) {
     titleEl.textContent = photo.title
     counterEl.textContent = `${currentIndex + 1} / ${data.length}`
     prevBtn.classList.toggle('hidden', currentIndex === 0)
     nextBtn.classList.toggle('hidden', currentIndex === data.length - 1)
   }
 
-  function transitionTo(photo, data) {
+  function transitionTo(photo: any, data: any[]) {
     if (transitioning || !photo) return
     transitioning = true
     img.style.opacity = '0'
@@ -154,7 +155,7 @@ const serialized = JSON.stringify(photos)
     showBlur(photo)
     updateMeta(photo, data)
 
-    function onFadeOut(e) {
+    function onFadeOut(e: TransitionEvent) {
       if (e && e.propertyName !== 'opacity') return
       img.removeEventListener('transitionend', onFadeOut)
       swapImage(photo, data)
@@ -168,7 +169,7 @@ const serialized = JSON.stringify(photos)
     }
   }
 
-  function swapImage(photo, data) {
+  function swapImage(photo: any, data: any[]) {
     img.src = photo.full
     img.alt = photo.title
     img.onload = () => { hideBlur(); img.style.opacity = '1'; transitioning = false; preloadAdjacent(data) }
@@ -178,7 +179,7 @@ const serialized = JSON.stringify(photos)
     }
   }
 
-  function preloadAdjacent(data) {
+  function preloadAdjacent(data: any[]) {
     document.querySelectorAll('link[rel="preload"][as="image"][data-lb]').forEach(el => el.remove())
     for (const i of [currentIndex - 1, currentIndex + 1]) {
       if (i >= 0 && i < data.length) {
@@ -206,9 +207,9 @@ const serialized = JSON.stringify(photos)
   }
 
   document.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-index]')
+    const btn = (e.target as HTMLElement).closest('[data-index]') as HTMLElement | null
     if (!btn) return
-    const idx = parseInt(btn.dataset.index, 10)
+    const idx = parseInt(btn.dataset.index || '', 10)
     const data = getPhotos()
     if (!isNaN(idx) && idx >= 0 && idx < data.length) open(idx)
   })
@@ -234,7 +235,7 @@ const serialized = JSON.stringify(photos)
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) dx > 0 ? prev() : next()
   })
 
-  window.__updateLightboxData = (data) => {
+  ;(window as any).__updateLightboxData = (data: any[]) => {
     const el = document.getElementById('lightbox-data')
     if (el) el.textContent = JSON.stringify(data)
     currentIndex = 0
