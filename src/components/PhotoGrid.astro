@@ -23,7 +23,7 @@ const { photos, wrapperClass } = Astro.props
 
 <div class="columns-1 sm:columns-3 gap-8">
   {photos.map((photo, i) => (
-    <div class:list={['mb-8 cursor-pointer', wrapperClass]} data-category={photo.category || undefined} data-index={i}>
+    <div class:list={['mb-8 cursor-pointer break-inside-avoid photo-card-wrap', wrapperClass]} data-category={photo.category || undefined} data-index={i}>
       <PhotoCard
         filename={photo.filename}
         title={photo.title}
@@ -39,3 +39,43 @@ const { photos, wrapperClass } = Astro.props
     </div>
   ))}
 </div>
+
+<style>
+  .photo-card-wrap {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+</style>
+
+<script>
+  import { inView, animate } from 'framer-motion/dom'
+
+  function initPhotoGrid() {
+    const cards = document.querySelectorAll('.photo-card-wrap')
+    cards.forEach((card) => {
+      if ((card as HTMLElement).dataset.animated) return
+      ;(card as HTMLElement).dataset.animated = 'true'
+
+      const index = parseInt((card as HTMLElement).dataset.index || '0', 10)
+      const delay = (index % 3) * 0.12 // Stagger columns slightly
+
+      inView(card, (element) => {
+        animate(
+          element,
+          { opacity: 1, y: 0 },
+          {
+            duration: 0.9,
+            ease: [0.16, 1, 0.3, 1],
+            delay: delay,
+          }
+        )
+      }, { margin: "0px 0px -50px 0px" })
+    })
+  }
+
+  // Run immediately for initial load
+  initPhotoGrid()
+
+  // Run on subsequent navigations
+  document.addEventListener('astro:after-swap', initPhotoGrid)
+</script>

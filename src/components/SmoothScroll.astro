@@ -1,5 +1,6 @@
 <script>
 import Lenis from 'lenis'
+import { inView, animate } from 'framer-motion/dom'
 
 const lenis = new Lenis({
   lerp: 0.15,
@@ -13,14 +14,43 @@ const lenis = new Lenis({
 
 ;(window as any).__lenis = lenis
 
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach((entry) => {
-    if (entry.isIntersecting) {
-      entry.target.setAttribute('data-visible', '')
-      observer.unobserve(entry.target)
-    }
-  })
-}, { threshold: 0.1 })
+function initScrollAnimations() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.setAttribute('data-visible', '')
+        observer.unobserve(entry.target)
+      }
+    })
+  }, { threshold: 0.1 })
 
-document.querySelectorAll('[data-animate]').forEach((el) => observer.observe(el))
+  document.querySelectorAll('[data-animate]').forEach((el) => observer.observe(el))
+
+  const headers = document.querySelectorAll('[data-animate-header]')
+  headers.forEach((header) => {
+    // Prevent re-binding if already animated
+    if ((header as HTMLElement).dataset.animated) return
+    ;(header as HTMLElement).dataset.animated = 'true'
+    
+    inView(header, (element) => {
+      const children = element.children
+      animate(
+        Array.from(children),
+        { opacity: [0, 1], y: [20, 0] },
+        {
+          duration: 0.9,
+          ease: [0.16, 1, 0.3, 1],
+          delay: (i) => i * 0.12,
+        }
+      )
+      element.classList.remove('opacity-0')
+    }, { margin: "0px 0px -60px 0px" })
+  })
+}
+
+// Run immediately for initial load
+initScrollAnimations()
+
+// Run on subsequent navigations
+document.addEventListener('astro:after-swap', initScrollAnimations)
 </script>

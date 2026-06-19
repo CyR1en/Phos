@@ -90,9 +90,9 @@ const ogDescription = config.home?.og_description || config.site.description
     <section id="showcase" data-animate class="animate-reveal py-20">
       <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="flex flex-wrap items-end justify-between gap-6">
-          <div>
+          <div data-animate-header class="opacity-0">
             <p class="font-mono text-xs uppercase tracking-wider text-muted">Showcase</p>
-            <h2 class="mt-4 font-display text-3xl sm:text-4xl text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
+            <h2 class="mt-4 font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
           </div>
           <a href="/photo/all/" class="text-sm font-medium text-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
         </div>

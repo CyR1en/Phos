@@ -34,7 +34,7 @@ const ogImage = gallery.coverFull ? `${siteUrl}${gallery.coverFull}` : undefined
         Galleries
       </a>
 
-      <div class="border-b border-border pb-12">
+      <div class="border-b border-border pb-12 opacity-0" data-animate-header>
         <p class="font-mono text-xs uppercase tracking-wider text-muted">Gallery</p>
         <h1 class="mt-4 font-display text-5xl sm:text-6xl text-ink">{gallery.name}</h1>
         {gallery.description && <p class="mt-6 max-w-2xl text-lg text-body-muted leading-relaxed">{gallery.description}</p>}

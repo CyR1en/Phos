@@ -40,6 +40,7 @@ export function CategoriesPage() {
   } = useConfig()
   const queryClient = useQueryClient()
   const [localMeta, setLocalMeta] = useState<Record<string, unknown>>({})
+  const [selectedPhotoFilename, setSelectedPhotoFilename] = useState<string | null>(null)
 
   const cat = (categories ?? []).find((c) => c.slug === selectedCategory)
 
@@ -48,6 +49,16 @@ export function CategoriesPage() {
       setLocalMeta(JSON.parse(JSON.stringify(cat.meta || {})))
     }
   }, [selectedCategory, cat?.slug])
+
+  useEffect(() => {
+    if (cat && cat.photos.length > 0) {
+      if (!cat.photos.includes(selectedPhotoFilename || '')) {
+        setSelectedPhotoFilename(cat.photos[0])
+      }
+    } else {
+      setSelectedPhotoFilename(null)
+    }
+  }, [cat?.slug])
 
   const saveMutation = useMutation({
     mutationFn: ({ slug, meta }: { slug: string; meta: Record<string, unknown> }) =>
@@ -230,36 +241,60 @@ export function CategoriesPage() {
             </div>
           </Section>
           <Section title="Photos">
-            <div class="space-y-4">
-              {cat.photos.map((filename) => {
-                const photoMeta =
-                  ((localMeta.photos as Record<string, PhotoMeta>) || {})[filename] || {}
-                const isCover =
-                  ((localMeta.cover as string) || cat.photos[0]) === filename
-                const heroPriority = photoMeta.hero_priority ?? 0
-                return (
-                  <div
-                    key={filename}
-                    class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-border-light rounded-md p-4 bg-canvas"
-                  >
-                    <div class="flex items-center">
-                      <img
-                        src={`/photos/thumbs/${cat.slug}/${filename.replace(/\.[^.]+$/, '.webp')}`}
-                        alt={filename}
-                        loading="lazy"
-                        onError={(e) => {
-                          ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                        }}
-                        class="w-full max-h-64 object-contain rounded-sm bg-border-light"
-                      />
-                    </div>
-                    <div class="space-y-3">
-                      <div class="flex items-center justify-between">
-                        <span class="text-sm font-mono text-ink">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+              {/* Left pane: compact grid of thumbnails */}
+              <div class="md:col-span-5 space-y-3">
+                <p class="text-xs font-mono uppercase tracking-wider text-muted">
+                  Select a photo to edit
+                </p>
+                <div class="grid grid-cols-4 gap-2 overflow-y-auto max-h-[550px] p-1.5 border border-border-light rounded-md bg-surface">
+                  {cat.photos.map((filename) => {
+                    const isSelected = selectedPhotoFilename === filename
+                    const isCover = ((localMeta.cover as string) || cat.photos[0]) === filename
+                    const thumbName = filename.replace(/\.[^.]+$/, '.webp')
+                    return (
+                      <button
+                        key={filename}
+                        type="button"
+                        onClick={() => setSelectedPhotoFilename(filename)}
+                        class={`relative aspect-square rounded-xs overflow-hidden border-2 transition-all ${
+                          isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-border'
+                        }`}
+                      >
+                        <img
+                          src={`/photos/thumbs/${cat.slug}/${thumbName}`}
+                          alt={filename}
+                          loading="lazy"
+                          class="w-full h-full object-cover"
+                        />
+                        {isCover && (
+                          <span class="absolute top-0.5 right-0.5 text-[10px] bg-primary text-primary-text px-1 py-0.2 rounded-xs">
+                            ★
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Right pane: detail editor for the selected photo */}
+              <div class="md:col-span-7">
+                {selectedPhotoFilename ? (() => {
+                  const filename = selectedPhotoFilename
+                  const photoMeta =
+                    ((localMeta.photos as Record<string, PhotoMeta>) || {})[filename] || {}
+                  const isCover =
+                    ((localMeta.cover as string) || cat.photos[0]) === filename
+                  const heroPriority = photoMeta.hero_priority ?? 0
+                  return (
+                    <div class="border border-border-light rounded-md p-4 bg-canvas space-y-4">
+                      <div class="flex items-center justify-between border-b border-border-light pb-3 gap-2">
+                        <span class="text-sm font-mono text-ink truncate block flex-1" title={filename}>
                           {filename}
                         </span>
                         {isCover ? (
-                          <span class="text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-xs bg-primary text-primary-text">
+                          <span class="text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-xs bg-primary text-primary-text flex-shrink-0">
                             ★ Cover
                           </span>
                         ) : (
@@ -267,74 +302,99 @@ export function CategoriesPage() {
                             variant="secondary"
                             size="sm"
                             onClick={() => makeCover(filename)}
+                            class="flex-shrink-0"
                           >
                             Make cover
                           </Button>
                         )}
                       </div>
-                      <div>
-                        <FieldLabel>Title</FieldLabel>
-                        <input
-                          type="text"
-                          value={photoMeta.title || ''}
-                          onInput={(e) =>
-                            setPhotoField(
-                              filename,
-                              'title',
-                              (e.currentTarget as HTMLInputElement).value || undefined,
-                            )
-                          }
-                          class={inputCls()}
-                        />
-                      </div>
-                      <div>
-                        <FieldLabel>Description</FieldLabel>
-                        <textarea
-                          rows={2}
-                          value={photoMeta.description || ''}
-                          onInput={(e) =>
-                            setPhotoField(
-                              filename,
-                              'description',
-                              (e.currentTarget as HTMLTextAreaElement).value || undefined,
-                            )
-                          }
-                          class={inputCls()}
-                        />
-                      </div>
-                      <div>
-                        <FieldLabel>Hero priority</FieldLabel>
-                        <div class="flex items-center gap-3">
-                          <input
-                            type="range"
-                            min={0}
-                            max={5}
-                            value={heroPriority}
-                            onInput={(e) =>
-                              setPhotoField(
-                                filename,
-                                'hero_priority',
-                                Number((e.currentTarget as HTMLInputElement).value),
-                              )
-                            }
-                            class="flex-1 accent-primary"
+
+                      <div class="flex flex-col gap-4">
+                        <div class="w-full flex items-center justify-center bg-surface rounded-sm p-2 border border-border-light">
+                          <img
+                            src={`/photos/thumbs/${cat.slug}/${filename.replace(/\.[^.]+$/, '.webp')}`}
+                            alt={filename}
+                            loading="lazy"
+                            onError={(e) => {
+                              ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                            }}
+                            class="max-h-64 object-contain rounded-xs bg-border-light"
                           />
-                          <span class="text-sm text-body-muted w-8 text-center font-mono">
-                            {heroPriority}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setPhotoField(filename, 'hero_priority', 0)}
-                          >
-                            reset
-                          </Button>
+                        </div>
+
+                        <div class="space-y-3">
+                          <div>
+                            <FieldLabel>Title</FieldLabel>
+                            <input
+                              type="text"
+                              value={photoMeta.title || ''}
+                              onInput={(e) =>
+                                setPhotoField(
+                                  filename,
+                                  'title',
+                                  (e.currentTarget as HTMLInputElement).value || undefined,
+                                )
+                              }
+                              class={inputCls()}
+                            />
+                          </div>
+                          <div>
+                            <FieldLabel>Description</FieldLabel>
+                            <textarea
+                              rows={2}
+                              value={photoMeta.description || ''}
+                              onInput={(e) =>
+                                setPhotoField(
+                                  filename,
+                                  'description',
+                                  (e.currentTarget as HTMLTextAreaElement).value || undefined,
+                                )
+                              }
+                              class={inputCls()}
+                            />
+                          </div>
+                          <div>
+                            <FieldLabel>Hero priority</FieldLabel>
+                            <div class="flex items-center gap-3">
+                              <input
+                                type="range"
+                                min={0}
+                                max={5}
+                                value={heroPriority}
+                                onInput={(e) =>
+                                  setPhotoField(
+                                    filename,
+                                    'hero_priority',
+                                    Number((e.currentTarget as HTMLInputElement).value),
+                                  )
+                                }
+                                class="flex-1 accent-primary"
+                              />
+                              <span class="text-sm text-body-muted w-8 text-center font-mono">
+                                {heroPriority}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setPhotoField(filename, 'hero_priority', 0)}
+                              >
+                                reset
+                              </Button>
+                            </div>
+                            <p class="mt-1.5 text-xs text-body-muted/80">
+                              0 = Excluded, 1-5 = Priority level for homepage slideshow
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  )
+                })() : (
+                  <div class="border border-border-light border-dashed rounded-md p-8 text-center bg-canvas">
+                    <p class="text-muted">Select a photo from the grid to edit its details.</p>
                   </div>
-                )
-              })}
+                )}
+              </div>
             </div>
           </Section>
         </div>

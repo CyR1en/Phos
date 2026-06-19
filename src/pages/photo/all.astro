@@ -31,9 +31,9 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
 
 <BaseLayout title="All Photos" description="Browse all photos across every category" page="photo/all">
   <section class="pt-12 pb-12">
-    <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 opacity-0" data-animate-header>
       <p class="font-mono text-xs uppercase tracking-wider text-muted">Browse</p>
-      <h1 class="mt-4 font-display text-3xl sm:text-4xl text-ink">All photos</h1>
+      <h1 class="mt-4 font-display text-ink">All photos</h1>
       <p class="mt-4 text-lg text-body-muted leading-relaxed">Every photo across all categories</p>
     </div>
   </section>
@@ -60,58 +60,92 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
   <Lightbox photos={allPhotos} />
 
   <script>
-    const filterBtns = document.querySelectorAll('.filter-btn')
-    const items = document.querySelectorAll('.gallery-item')
-    const emptyState = document.getElementById('empty-state')
-    const fullData = JSON.parse(document.getElementById('lightbox-data')?.textContent || '[]')
+    import { animate, stagger } from 'framer-motion/dom'
 
-    const urlParams = new URLSearchParams(window.location.search)
-    const initialCat = urlParams.get('cat')
+    function initFilters() {
+      const filtersContainer = document.getElementById('filters')
+      const items = document.querySelectorAll('.gallery-item')
+      const emptyState = document.getElementById('empty-state')
+      const fullData = JSON.parse(document.getElementById('lightbox-data')?.textContent || '[]')
 
-    function applyFilter(filter: string) {
-      filterBtns.forEach((b) => {
-        b.classList.remove('bg-primary', 'text-primary-text', 'border-primary')
-        b.classList.add('border-border', 'text-ink')
-        b.setAttribute('aria-pressed', 'false')
-      })
+      const urlParams = new URLSearchParams(window.location.search)
+      const initialCat = urlParams.get('cat')
 
-      const activeBtn = document.querySelector(`[data-filter="${filter}"]`) || document.querySelector('[data-filter="all"]')
-      if (activeBtn) {
-        activeBtn.classList.add('bg-primary', 'text-primary-text', 'border-primary')
-        activeBtn.classList.remove('border-border', 'text-ink')
-        activeBtn.setAttribute('aria-pressed', 'true')
+      function applyFilter(filter: string) {
+        // Update button states
+        const currentBtns = document.querySelectorAll('.filter-btn')
+        currentBtns.forEach((b) => {
+          b.classList.remove('bg-primary', 'text-primary-text', 'border-primary')
+          b.classList.add('border-border', 'text-ink')
+          b.setAttribute('aria-pressed', 'false')
+        })
+
+        const activeBtn = document.querySelector(`[data-filter="${filter}"]`) || document.querySelector('[data-filter="all"]')
+        if (activeBtn) {
+          activeBtn.classList.add('bg-primary', 'text-primary-text', 'border-primary')
+          activeBtn.classList.remove('border-border', 'text-ink')
+          activeBtn.setAttribute('aria-pressed', 'true')
+        }
+
+        let visible = 0
+        let newIdx = 0
+        const visibleItems: HTMLElement[] = []
+        
+        items.forEach((item) => {
+          const matches = filter === 'all' || (item as HTMLElement).dataset.category === filter
+          ;(item as HTMLElement).style.display = matches ? '' : 'none'
+          if (matches) {
+            visible++
+            ;(item as HTMLElement).dataset.index = String(newIdx++)
+            visibleItems.push(item as HTMLElement)
+          }
+        })
+
+        emptyState?.classList.toggle('hidden', visible > 0)
+
+        if (visibleItems.length > 0) {
+          // Use Framer Motion keyframes to force the start state, avoiding manual style manipulation
+          animate(
+            visibleItems,
+            { opacity: [0, 1], y: [24, 0] },
+            {
+              duration: 0.7,
+              ease: [0.16, 1, 0.3, 1],
+              delay: stagger(0.06),
+            }
+          )
+        }
+
+        const filtered = filter === 'all' ? fullData : fullData.filter((p: any) => p.category === filter)
+        window.__updateLightboxData?.(filtered)
       }
 
-      let visible = 0
-      let newIdx = 0
-      items.forEach((item) => {
-        const matches = filter === 'all' || (item as HTMLElement).dataset.category === filter
-        ;(item as HTMLElement).style.display = matches ? '' : 'none'
-        if (matches) {
-          visible++
-          ;(item as HTMLElement).dataset.index = String(newIdx++)
-        }
-      })
+      // Use event delegation to avoid cloning nodes and losing references
+      if (filtersContainer && !filtersContainer.dataset.bound) {
+        filtersContainer.dataset.bound = 'true'
+        filtersContainer.addEventListener('click', (e) => {
+          const btn = (e.target as HTMLElement).closest('.filter-btn') as HTMLElement | null
+          if (!btn) return
+          
+          const filter = btn.dataset.filter || 'all'
+          applyFilter(filter)
+          
+          const url = new URL(window.location.href)
+          if (filter === 'all') url.searchParams.delete('cat')
+          else url.searchParams.set('cat', filter)
+          history.replaceState(null, '', url.toString())
+        })
+      }
 
-      emptyState?.classList.toggle('hidden', visible > 0)
-
-      const filtered = filter === 'all' ? fullData : fullData.filter((p: any) => p.category === filter)
-      window.__updateLightboxData?.(filtered)
+      if (initialCat) {
+        applyFilter(initialCat)
+      }
     }
 
-    filterBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const filter = (btn as HTMLElement).dataset.filter || 'all'
-        applyFilter(filter)
-        const url = new URL(window.location.href)
-        if (filter === 'all') url.searchParams.delete('cat')
-        else url.searchParams.set('cat', filter)
-        history.replaceState(null, '', url.toString())
-      })
-    })
+    // Run immediately for initial load
+    initFilters()
 
-    if (initialCat) {
-      applyFilter(initialCat)
-    }
+    // Run on subsequent navigations
+    document.addEventListener('astro:after-swap', initFilters)
   </script>
 </BaseLayout>

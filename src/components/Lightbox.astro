@@ -20,237 +20,356 @@ const serialized = JSON.stringify(photos)
 
 <div
   id="lightbox"
-  class="fixed inset-0 z-50 hidden items-center justify-center bg-canvas/95 backdrop-blur-sm"
+  class="fixed inset-0 z-50 hidden flex-col bg-black/95 backdrop-blur-sm"
   role="dialog"
   aria-modal="true"
   aria-label="Image lightbox"
 >
-  <button id="lightbox-close" class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-pill bg-canvas-inverse/10 text-ink hover:bg-canvas-inverse/20 transition-colors" aria-label="Close lightbox">
+  <button id="lightbox-close" class="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-pill bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Close lightbox">
     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
   </button>
 
-  <button id="lightbox-prev" class="absolute left-2 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-canvas-inverse/10 p-3 text-ink hover:bg-canvas-inverse/20 transition-colors sm:flex" aria-label="Previous image">
+  <button id="lightbox-prev" class="absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-white/10 p-3 text-white hover:bg-white/20 transition-colors sm:flex" aria-label="Previous image">
     <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
-  <button id="lightbox-next" class="absolute right-2 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-canvas-inverse/10 p-3 text-ink hover:bg-canvas-inverse/20 transition-colors sm:flex" aria-label="Next image">
+  <button id="lightbox-next" class="absolute right-4 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-white/10 p-3 text-white hover:bg-white/20 transition-colors sm:flex" aria-label="Next image">
     <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
   </button>
 
-  <div class="flex h-full w-full items-center justify-center p-2 sm:p-12">
-    <div class="relative max-h-[90vh] max-w-full">
+  <div class="flex-1 min-h-0 w-full flex items-center justify-center p-4 sm:p-12">
+    <div class="relative max-h-full max-w-full flex items-center justify-center">
       <div id="lightbox-blur" class="absolute inset-0 rounded-xs bg-cover bg-center blur-xl" style="display:none"></div>
-      <img id="lightbox-img" class="relative max-h-[90vh] max-w-full w-auto h-auto object-contain select-none rounded-xs" src="" alt="" style="transition: opacity 0.3s ease" />
-      <div id="lightbox-error" class="absolute inset-0 hidden flex-col items-center justify-center rounded-xs bg-canvas/60 text-ink/60 text-sm">
+      <img id="lightbox-img" class="max-h-full max-w-full w-auto h-auto object-contain select-none rounded-xs cursor-zoom-in" src="" alt="" style="transition: opacity 0.3s ease, transform 0.3s ease" />
+      <div id="lightbox-error" class="absolute inset-0 hidden flex-col items-center justify-center rounded-xs bg-black/60 text-white/60 text-sm">
         <span>Failed to load image</span>
       </div>
       <!-- Swipe hint for mobile -->
       <div id="swipe-hint" class="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none opacity-0 transition-opacity duration-1000 sm:hidden">
-        <svg class="size-8 text-ink/30 -translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
-        <svg class="size-8 text-ink/30 translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18l6-6-6-6"/></svg>
+        <svg class="size-8 text-white/30 -translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
+        <svg class="size-8 text-white/30 translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18l6-6-6-6"/></svg>
       </div>
     </div>
   </div>
 
-  <div id="lightbox-title" class="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-ink/70 text-center px-4 max-w-md pointer-events-none"></div>
-  <div id="lightbox-counter" class="absolute bottom-12 left-1/2 -translate-x-1/2 text-xs text-ink/40 pointer-events-none"></div>
+  <div class="w-full bg-black/60 border-t border-white/10 py-4 px-6 flex flex-col items-center justify-center text-center select-none z-10">
+    <div id="lightbox-title" class="text-sm font-medium text-white/90 max-w-2xl truncate"></div>
+    <div id="lightbox-counter" class="text-xs text-white/50 mt-1"></div>
+  </div>
   <div id="lightbox-data" style="display:none" set:text={serialized} />
 </div>
 
 <script>
-  const lightbox = document.getElementById('lightbox')!
-  const img = document.getElementById('lightbox-img') as HTMLImageElement
-  const blurEl = document.getElementById('lightbox-blur')!
-  const errorEl = document.getElementById('lightbox-error')!
-  const titleEl = document.getElementById('lightbox-title')!
-  const counterEl = document.getElementById('lightbox-counter')!
-  const closeBtn = document.getElementById('lightbox-close') as HTMLButtonElement
-  const prevBtn = document.getElementById('lightbox-prev') as HTMLButtonElement
-  const nextBtn = document.getElementById('lightbox-next') as HTMLButtonElement
-  const swipeHint = document.getElementById('swipe-hint')
+  function initLightbox() {
+    const lightbox = document.getElementById('lightbox')
+    if (!lightbox) return
 
-  let currentIndex = 0
-  let transitioning = false
-  let lastFocused: HTMLElement | null = null
+    const img = document.getElementById('lightbox-img') as HTMLImageElement
+    const blurEl = document.getElementById('lightbox-blur')!
+    const errorEl = document.getElementById('lightbox-error')!
+    const titleEl = document.getElementById('lightbox-title')!
+    const counterEl = document.getElementById('lightbox-counter')!
+    const closeBtn = document.getElementById('lightbox-close') as HTMLButtonElement
+    const prevBtn = document.getElementById('lightbox-prev') as HTMLButtonElement
+    const nextBtn = document.getElementById('lightbox-next') as HTMLButtonElement
+    const swipeHint = document.getElementById('swipe-hint')
 
-  function getPhotos(): any[] {
-    try {
-      const el = document.getElementById('lightbox-data')
-      if (!el || !el.textContent) return []
-      return JSON.parse(el.textContent)
-    } catch { return [] }
-  }
+    let currentIndex = 0
+    let transitioning = false
+    let lastFocused: HTMLElement | null = null
+    let isZoomed = false
 
-  function open(idx: number) {
-    const data = getPhotos()
-    const photo = data[idx]
-    if (!photo) return
-    currentIndex = idx
-    transitioning = false
-    img.src = photo.full
-    img.alt = photo.title
-    errorEl.classList.add('hidden')
-    showBlur(photo)
-    updateMeta(photo, data)
+    function getPhotos(): any[] {
+      try {
+        const el = document.getElementById('lightbox-data')
+        if (!el || !el.textContent) return []
+        return JSON.parse(el.textContent)
+      } catch { return [] }
+    }
 
-    img.onload = () => { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
-    img.onerror = () => { img.style.opacity = '1'; showError(); hideBlur() }
+    function getFocusableElements(): HTMLElement[] {
+      const all = [closeBtn, prevBtn, nextBtn]
+      return all.filter(btn => !btn.classList.contains('hidden') && btn.offsetParent !== null)
+    }
 
-    if (img.complete && img.naturalWidth) { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
-
-    lightbox.classList.remove('hidden')
-    lastFocused = document.activeElement as HTMLElement | null
-    ;requestAnimationFrame(() => {
-      lightbox.classList.add('flex')
-      closeBtn.focus()
-      requestAnimationFrame(() => lightbox.classList.add('lightbox-enter'))
-
-      if (swipeHint) {
-        swipeHint.style.opacity = '1'
-        setTimeout(() => { swipeHint.style.opacity = '0' }, 2000)
+    function toggleZoom(e?: Event) {
+      if (e) e.preventDefault()
+      isZoomed = !isZoomed
+      if (isZoomed) {
+        img.classList.add('scale-150', 'cursor-zoom-out')
+        img.classList.remove('cursor-zoom-in')
+      } else {
+        img.classList.remove('scale-150', 'cursor-zoom-out')
+        img.classList.add('cursor-zoom-in')
       }
+    }
+
+    function resetZoom() {
+      isZoomed = false
+      img.classList.remove('scale-150', 'cursor-zoom-out')
+      img.classList.add('cursor-zoom-in')
+    }
+
+    img.addEventListener('dblclick', (e) => toggleZoom(e))
+
+    let lastTap = 0
+    img.addEventListener('touchend', (e) => {
+      const currentTime = new Date().getTime()
+      const tapLength = currentTime - lastTap
+      if (tapLength < 300 && tapLength > 0) {
+        toggleZoom(e)
+      }
+      lastTap = currentTime
     })
-    ;(window as any).__lenis?.stop()
-    document.body.style.overflow = 'hidden'
-  }
 
-  function close() {
-    img.style.opacity = '0'
-    lightbox.classList.remove('lightbox-enter')
-    lightbox.classList.add('lightbox-exit')
-    if (lastFocused) { lastFocused.focus(); lastFocused = null }
-    setTimeout(() => {
-      if (!lightbox.classList.contains('hidden')) {
-        lightbox.classList.add('hidden')
-        lightbox.classList.remove('flex', 'lightbox-exit')
-        document.body.style.removeProperty('overflow')
-        ;(window as any).__lenis?.start()
-      }
-    }, 200)
-  }
-
-  function showBlur(photo: any) {
-    if (photo.blur) {
-      blurEl.style.display = 'block'
-      blurEl.style.backgroundImage = `url('${photo.blur}')`
-    }
-  }
-
-  function hideBlur() { blurEl.style.display = 'none' }
-
-  function showError() { errorEl.classList.remove('hidden') }
-
-  function updateMeta(photo: any, data: any[]) {
-    titleEl.textContent = photo.title
-    counterEl.textContent = `${currentIndex + 1} / ${data.length}`
-    prevBtn.classList.toggle('hidden', currentIndex === 0)
-    nextBtn.classList.toggle('hidden', currentIndex === data.length - 1)
-  }
-
-  function transitionTo(photo: any, data: any[]) {
-    if (transitioning || !photo) return
-    transitioning = true
-    img.style.opacity = '0'
-    errorEl.classList.add('hidden')
-    showBlur(photo)
-    updateMeta(photo, data)
-
-    function onFadeOut(e: TransitionEvent) {
-      if (e && e.propertyName !== 'opacity') return
-      img.removeEventListener('transitionend', onFadeOut)
-      swapImage(photo, data)
-    }
-
-    const dur = parseFloat(getComputedStyle(img).transitionDuration) * 1000 || 300
-    if (dur < 10 || img.style.opacity === '0') {
-      swapImage(photo, data)
-    } else {
-      img.addEventListener('transitionend', onFadeOut)
-    }
-  }
-
-  function swapImage(photo: any, data: any[]) {
-    img.src = photo.full
-    img.alt = photo.title
-    img.onload = () => { hideBlur(); img.style.opacity = '1'; transitioning = false; preloadAdjacent(data) }
-    img.onerror = () => { showError(); hideBlur(); img.style.opacity = '1'; transitioning = false }
-    if (img.complete && img.naturalWidth) {
-      hideBlur(); img.style.opacity = '1'; transitioning = false; preloadAdjacent(data)
-    }
-  }
-
-  function preloadAdjacent(data: any[]) {
-    document.querySelectorAll('link[rel="preload"][as="image"][data-lb]').forEach(el => el.remove())
-    for (const i of [currentIndex - 1, currentIndex + 1]) {
-      if (i >= 0 && i < data.length) {
-        const link = document.createElement('link')
-        link.rel = 'preload'; link.as = 'image'
-        link.href = data[i].full
-        link.setAttribute('data-lb', '')
-        document.head.appendChild(link)
-      }
-    }
-  }
-
-  function cancelPreload() {
-    document.querySelectorAll('link[rel="preload"][as="image"][data-lb]').forEach(el => el.remove())
-  }
-
-  function prev() {
-    const data = getPhotos()
-    if (currentIndex > 0) { currentIndex--; transitionTo(data[currentIndex], data) }
-  }
-
-  function next() {
-    const data = getPhotos()
-    if (currentIndex < data.length - 1) { currentIndex++; transitionTo(data[currentIndex], data) }
-  }
-
-  document.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('[data-index]') as HTMLElement | null
-    if (!btn) return
-    const idx = parseInt(btn.dataset.index || '', 10)
-    const data = getPhotos()
-    if (!isNaN(idx) && idx >= 0 && idx < data.length) open(idx)
-  })
-
-  closeBtn.addEventListener('click', close)
-  prevBtn.addEventListener('click', prev)
-  nextBtn.addEventListener('click', next)
-
-  document.addEventListener('keydown', (e) => {
-    if (lightbox.classList.contains('hidden')) return
-    if (e.key === 'Escape') { e.preventDefault(); close() }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }
-    if (e.key === 'ArrowRight') { e.preventDefault(); next() }
-  })
-
-  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) close() })
-
-  let tx = 0, ty = 0
-  lightbox.addEventListener('touchstart', (e) => { tx = e.changedTouches[0].screenX; ty = e.changedTouches[0].screenY })
-  lightbox.addEventListener('touchend', (e) => {
-    const dx = e.changedTouches[0].screenX - tx
-    const dy = e.changedTouches[0].screenY - ty
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) dx > 0 ? prev() : next()
-  })
-
-  ;(window as any).__updateLightboxData = (data: any[]) => {
-    const el = document.getElementById('lightbox-data')
-    if (el) el.textContent = JSON.stringify(data)
-    currentIndex = 0
-    if (!lightbox.classList.contains('hidden') && data.length > 0) {
-      const photo = data[0]
-      img.style.opacity = '0'
+    function open(idx: number) {
+      const data = getPhotos()
+      const photo = data[idx]
+      if (!photo) return
+      currentIndex = idx
+      transitioning = false
+      resetZoom()
+      img.style.transform = 'none'
       img.src = photo.full
       img.alt = photo.title
       errorEl.classList.add('hidden')
       showBlur(photo)
       updateMeta(photo, data)
-      cancelPreload()
+
       img.onload = () => { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
       img.onerror = () => { img.style.opacity = '1'; showError(); hideBlur() }
+
       if (img.complete && img.naturalWidth) { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
+
+      lightbox!.classList.remove('hidden')
+      lastFocused = document.activeElement as HTMLElement | null
+      ;requestAnimationFrame(() => {
+        lightbox!.classList.add('flex')
+        closeBtn.focus()
+        requestAnimationFrame(() => lightbox!.classList.add('lightbox-enter'))
+
+        if (swipeHint) {
+          swipeHint.style.opacity = '1'
+          setTimeout(() => { swipeHint.style.opacity = '0' }, 2000)
+        }
+      })
+      ;(window as any).__lenis?.stop()
+      document.body.style.overflow = 'hidden'
+    }
+
+    function close() {
+      img.style.opacity = '0'
+      resetZoom()
+      img.style.transform = 'none'
+      lightbox!.classList.remove('lightbox-enter')
+      lightbox!.classList.add('lightbox-exit')
+      if (lastFocused) { lastFocused.focus(); lastFocused = null }
+      setTimeout(() => {
+        if (!lightbox!.classList.contains('hidden')) {
+          lightbox!.classList.add('hidden')
+          lightbox!.classList.remove('flex', 'lightbox-exit')
+          document.body.style.removeProperty('overflow')
+          ;(window as any).__lenis?.start()
+        }
+      }, 200)
+    }
+
+    function showBlur(photo: any) {
+      if (photo.blur) {
+        blurEl.style.display = 'block'
+        blurEl.style.backgroundImage = `url('${photo.blur}')`
+      }
+    }
+
+    function hideBlur() { blurEl.style.display = 'none' }
+
+    function showError() { errorEl.classList.remove('hidden') }
+
+    function updateMeta(photo: any, data: any[]) {
+      titleEl.textContent = photo.title
+      counterEl.textContent = `${currentIndex + 1} / ${data.length}`
+      prevBtn.classList.toggle('hidden', currentIndex === 0)
+      nextBtn.classList.toggle('hidden', currentIndex === data.length - 1)
+    }
+
+    function transitionTo(photo: any, data: any[]) {
+      if (transitioning || !photo) return
+      transitioning = true
+      resetZoom()
+      img.style.transform = 'none'
+      img.style.opacity = '0'
+      errorEl.classList.add('hidden')
+      showBlur(photo)
+      updateMeta(photo, data)
+
+      function onFadeOut(e: TransitionEvent) {
+        if (e && e.propertyName !== 'opacity') return
+        img.removeEventListener('transitionend', onFadeOut)
+        swapImage(photo, data)
+      }
+
+      const dur = parseFloat(getComputedStyle(img).transitionDuration) * 1000 || 300
+      if (dur < 10 || img.style.opacity === '0') {
+        swapImage(photo, data)
+      } else {
+        img.addEventListener('transitionend', onFadeOut)
+      }
+    }
+
+    function swapImage(photo: any, data: any[]) {
+      resetZoom()
+      img.style.transform = 'none'
+      img.src = photo.full
+      img.alt = photo.title
+      img.onload = () => { hideBlur(); img.style.opacity = '1'; transitioning = false; preloadAdjacent(data) }
+      img.onerror = () => { showError(); hideBlur(); img.style.opacity = '1'; transitioning = false }
+      if (img.complete && img.naturalWidth) {
+        hideBlur(); img.style.opacity = '1'; transitioning = false; preloadAdjacent(data)
+      }
+    }
+
+    function preloadAdjacent(data: any[]) {
+      document.querySelectorAll('link[rel="preload"][as="image"][data-lb]').forEach(el => el.remove())
+      for (const i of [currentIndex - 1, currentIndex + 1]) {
+        if (i >= 0 && i < data.length) {
+          const link = document.createElement('link')
+          link.rel = 'preload'; link.as = 'image'
+          link.href = data[i].full
+          link.setAttribute('data-lb', '')
+          document.head.appendChild(link)
+        }
+      }
+    }
+
+    function cancelPreload() {
+      document.querySelectorAll('link[rel="preload"][as="image"][data-lb]').forEach(el => el.remove())
+    }
+
+    function prev() {
+      const data = getPhotos()
+      if (currentIndex > 0) { currentIndex--; transitionTo(data[currentIndex], data) }
+    }
+
+    function next() {
+      const data = getPhotos()
+      if (currentIndex < data.length - 1) { currentIndex++; transitionTo(data[currentIndex], data) }
+    }
+
+    // Remove old global listeners to prevent duplicates
+    const oldClickHandler = (window as any).__lightboxClickHandler
+    if (oldClickHandler) document.removeEventListener('click', oldClickHandler)
+    
+    const clickHandler = (e: MouseEvent) => {
+      const btn = (e.target as HTMLElement).closest('[data-index]') as HTMLElement | null
+      if (!btn) return
+      const idx = parseInt(btn.dataset.index || '', 10)
+      const data = getPhotos()
+      if (!isNaN(idx) && idx >= 0 && idx < data.length) open(idx)
+    }
+    document.addEventListener('click', clickHandler)
+    ;(window as any).__lightboxClickHandler = clickHandler
+
+    closeBtn.addEventListener('click', close)
+    prevBtn.addEventListener('click', prev)
+    nextBtn.addEventListener('click', next)
+
+    const oldKeyHandler = (window as any).__lightboxKeyHandler
+    if (oldKeyHandler) document.removeEventListener('keydown', oldKeyHandler)
+
+    const keyHandler = (e: KeyboardEvent) => {
+      if (lightbox!.classList.contains('hidden')) return
+      if (e.key === 'Escape') { e.preventDefault(); close() }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }
+      if (e.key === 'ArrowRight') { e.preventDefault(); next() }
+      if (e.key === 'Tab') {
+        const focusable = getFocusableElements()
+        if (focusable.length === 0) {
+          e.preventDefault()
+          return
+        }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus()
+            e.preventDefault()
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus()
+            e.preventDefault()
+          }
+        }
+      }
+    }
+    document.addEventListener('keydown', keyHandler)
+    ;(window as any).__lightboxKeyHandler = keyHandler
+
+    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) close() })
+
+    let tx = 0, ty = 0
+    let isSwiping = false
+
+    lightbox.addEventListener('touchstart', (e) => {
+      if (transitioning || e.touches.length > 1) return
+      tx = e.touches[0].clientX
+      ty = e.touches[0].clientY
+      isSwiping = true
+      img.style.transition = 'none'
+    }, { passive: true })
+
+    lightbox.addEventListener('touchmove', (e) => {
+      if (!isSwiping || isZoomed) return
+      const dx = e.touches[0].clientX - tx
+      const dy = e.touches[0].clientY - ty
+      if (Math.abs(dx) > Math.abs(dy)) {
+        img.style.transform = `translateX(${dx * 0.5}px)`
+      }
+    }, { passive: true })
+
+    lightbox.addEventListener('touchend', (e) => {
+      if (!isSwiping) return
+      isSwiping = false
+      const dx = e.changedTouches[0].clientX - tx
+      const dy = e.changedTouches[0].clientY - ty
+
+      img.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
+      img.style.transform = 'none'
+
+      if (!isZoomed && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) {
+          prev()
+        } else {
+          next()
+        }
+      }
+    }, { passive: true })
+
+    ;(window as any).__updateLightboxData = (data: any[]) => {
+      const el = document.getElementById('lightbox-data')
+      if (el) el.textContent = JSON.stringify(data)
+      currentIndex = 0
+      if (!lightbox!.classList.contains('hidden') && data.length > 0) {
+        const photo = data[0]
+        resetZoom()
+        img.style.transform = 'none'
+        img.style.opacity = '0'
+        img.src = photo.full
+        img.alt = photo.title
+        errorEl.classList.add('hidden')
+        showBlur(photo)
+        updateMeta(photo, data)
+        cancelPreload()
+        img.onload = () => { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
+        img.onerror = () => { img.style.opacity = '1'; showError(); hideBlur() }
+        if (img.complete && img.naturalWidth) { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
+      }
     }
   }
+
+  // Run immediately for initial load
+  initLightbox()
+
+  // Run on subsequent navigations
+  document.addEventListener('astro:after-swap', initLightbox)
 </script>

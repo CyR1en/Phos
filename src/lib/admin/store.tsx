@@ -17,6 +17,7 @@ export interface Toast {
   id: number
   kind: ToastKind
   message: string
+  exiting?: boolean
 }
 
 interface ConfigCtx {
@@ -45,6 +46,9 @@ interface ConfigCtx {
   buildStatus: 'idle' | 'running' | 'done' | 'error'
   buildLog: string[]
   clearBuildStatus: () => void
+  errors: Record<string, boolean>
+  setError: (id: string, hasError: boolean) => void
+  hasErrors: boolean
 }
 
 const Ctx = createContext<ConfigCtx | null>(null)
@@ -90,6 +94,15 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   const [buildStatus, setBuildStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [buildLog, setBuildLog] = useState<string[]>([])
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [errors, setErrors] = useState<Record<string, boolean>>({})
+  const hasErrors = useMemo(() => Object.values(errors).some(Boolean), [errors])
+
+  const setError = (id: string, hasError: boolean) => {
+    setErrors((prev) => {
+      if (prev[id] === hasError) return prev
+      return { ...prev, [id]: hasError }
+    })
+  }
   const toastIdRef = useRef(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pluginDebouncesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
@@ -189,11 +202,21 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
     setToasts((t) => [...t, { id, kind, message }])
     setTimeout(() => dismissToast(id), 4000)
   }
-  const dismissToast = (id: number) =>
-    setToasts((t) => t.filter((x) => x.id !== id))
+  const dismissToast = (id: number) => {
+    setToasts((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, exiting: true } : t))
+    )
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id))
+    }, 300)
+  }
 
   const scheduleSave = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (hasErrors) {
+      setSaveStatusState('error')
+      return
+    }
     debounceRef.current = setTimeout(() => {
       if (dirtyRef.current && configRef.current) {
         dirtyRef.current = false
@@ -218,6 +241,11 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
 
   const flushSave = async () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (hasErrors) {
+      pushToast('error', 'Cannot save: Please fix validation errors first.')
+      setSaveStatusState('error')
+      throw new Error('Validation errors')
+    }
     if (dirtyRef.current && configRef.current) {
       dirtyRef.current = false
       await putConfigMutation.mutateAsync(configRef.current)
@@ -353,9 +381,12 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
       buildStatus,
       buildLog,
       clearBuildStatus,
+      errors,
+      setError,
+      hasErrors,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [token, config, categories, pluginConfigs, selectedCategory, currentPage, saveStatus, toasts, buildStatus, buildLog],
+    [token, config, categories, pluginConfigs, selectedCategory, currentPage, saveStatus, toasts, buildStatus, buildLog, errors, hasErrors],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

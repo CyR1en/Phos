@@ -16,7 +16,7 @@ const { filename, title, thumb, thumbMobile } = Astro.props
 ---
 
 <img
-  class="w-full h-auto object-cover rounded-lg"
+  class="w-full h-auto object-cover rounded-lg shadow-sm hover:shadow-md hover:scale-[1.02] transition-transform duration-500"
   src={thumb}
   srcset={`${thumbMobile} 400w, ${thumb} 800w`}
   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

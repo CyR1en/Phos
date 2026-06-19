@@ -219,3 +219,34 @@
 .dark .theme-card:hover {
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
 }
+
+/* Toast Animations */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-out {
+  animation: toastSlideOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

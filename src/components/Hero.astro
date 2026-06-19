@@ -53,21 +53,21 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 
   <div class="relative z-10 mx-auto w-full max-w-7xl px-6 pb-16 sm:px-6 lg:px-8 lg:pb-20">
     <div class="max-w-4xl">
-      <p class="font-mono text-[13px] font-medium uppercase tracking-wider text-[var(--color-phos-dark-text)]" style="text-shadow: 0 1px 8px rgba(0,0,0,0.65);" data-config="about.photographer.name">{config.about.photographer.name}</p>
-      <h1 class="mt-4 font-display text-[var(--color-phos-dark-text)]" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5);" data-config="home.hero.heading">
+      <p data-hero-photographer class="font-mono text-[13px] font-medium uppercase tracking-wider text-[var(--color-phos-dark-text)] opacity-0" style="text-shadow: 0 1px 8px rgba(0,0,0,0.65);" data-config="about.photographer.name">{config.about.photographer.name}</p>
+      <h1 data-hero-heading class="mt-4 font-display text-[var(--color-phos-dark-text)] opacity-0" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5);" data-config="home.hero.heading">
         {config.home.hero.heading}
       </h1>
-      <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-start">
+      <div data-hero-ctas class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-start">
         <a
           href="/portfolio"
-          class="inline-flex items-center justify-center rounded-pill bg-canvas px-5 py-2.5 text-sm font-medium text-ink hover:bg-canvas-alt transition-colors w-full sm:w-auto"
+          class="inline-flex items-center justify-center rounded-pill bg-canvas px-5 py-2.5 text-sm font-medium text-ink hover:bg-canvas-alt transition-colors w-full sm:w-auto opacity-0"
         >
           <span data-config="home.hero.cta1">{config.home.hero.cta1}</span>
           <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
         <a
           href="/contact"
-          class="inline-flex items-center justify-center rounded-pill border border-[var(--color-phos-dark-text)]/30 px-5 py-2.5 text-sm font-medium text-[var(--color-phos-dark-text)] hover:bg-[var(--color-phos-dark-text)]/10 transition-colors w-full sm:w-auto"
+          class="inline-flex items-center justify-center rounded-pill border border-[var(--color-phos-dark-text)]/30 px-5 py-2.5 text-sm font-medium text-[var(--color-phos-dark-text)] hover:bg-[var(--color-phos-dark-text)]/10 transition-colors w-full sm:w-auto opacity-0"
         >
           <span data-config="home.hero.cta2">{config.home.hero.cta2}</span>
         </a>
@@ -92,12 +92,16 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 </section>
 
 <script>
-  const slides = document.querySelectorAll('[data-hero-slide]')
-  const dots = document.querySelectorAll('[data-hero-dot]')
-  const heroBg = document.getElementById('hero-bg')
-  const heroSection = document.querySelector('[data-hero-interval]') as HTMLElement | null
-  if (slides.length > 0) {
-    window.addEventListener('load', () => {
+  import { animate, stagger } from 'framer-motion/dom'
+
+  function initHero() {
+    const slides = document.querySelectorAll('[data-hero-slide]')
+    const dots = document.querySelectorAll('[data-hero-dot]')
+    const heroBg = document.getElementById('hero-bg')
+    const heroSection = document.querySelector('[data-hero-interval]') as HTMLElement | null
+
+    if (slides.length > 0) {
+      // Lazy load full size images
       slides.forEach((slide) => {
         const img = slide.querySelector('img[data-full-src]') as HTMLImageElement | null
         if (!img) return
@@ -106,100 +110,180 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
         fullImg.onload = () => { img.src = fullSrc || ''; img.removeAttribute('data-full-src') }
         fullImg.src = fullSrc || ''
       })
-    }, { once: true, passive: true })
-  }
-
-  if (slides.length > 1) {
-    let current = 0
-    let interval: ReturnType<typeof setInterval> | null = null
-
-    function showSlide(index: number) {
-      slides.forEach((s, i) => {
-        ;(s as HTMLElement).style.opacity = i === index ? '1' : '0'
-      })
-      dots.forEach((d, i) => {
-        if (i === index) {
-          d.classList.add('w-8', 'bg-[var(--color-phos-dark-text)]')
-          d.classList.remove('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
-        } else {
-          d.classList.remove('w-8', 'bg-[var(--color-phos-dark-text)]')
-          d.classList.add('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
-        }
-      })
-      current = index
     }
 
-    function next() {
-      showSlide((current + 1) % slides.length)
-    }
-
-    function start() {
-      if (interval) clearInterval(interval)
-      const heroInterval = parseInt(heroSection?.dataset.heroInterval || '', 10) || 6000
-      interval = setInterval(next, heroInterval)
-    }
-
-    function stop() {
-      if (interval) {
-        clearInterval(interval)
-        interval = null
+    // --- Framer Motion Animations ---
+    // 1. Background image cinematic reveal
+    const firstSlide = document.querySelector('[data-hero-slide="0"]')
+    if (firstSlide) {
+      const img = firstSlide.querySelector('img')
+      if (img) {
+        animate(img, 
+          { scale: [1.12, 1], opacity: [0.2, 1] }, 
+          { duration: 2.8, ease: [0.16, 1, 0.3, 1] }
+        )
       }
     }
 
-    dots.forEach((dot) => {
-      dot.addEventListener('click', () => {
-        const idx = parseInt((dot as HTMLElement).dataset.heroDot || '', 10)
-        if (!isNaN(idx) && idx !== current) showSlide(idx)
-        start()
-      })
-    })
-
-    if (heroBg) {
-      heroBg.addEventListener('mouseenter', stop)
-      heroBg.addEventListener('mouseleave', start)
+    // 2. Photographer's name entrance
+    const name = document.querySelector('[data-hero-photographer]')
+    if (name) {
+      animate(name, 
+        { y: [15, 0], opacity: [0, 1] }, 
+        { duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.1 }
+      )
     }
 
-    start()
+    // 3. Split heading into words for a reveal effect
+    const heading = document.querySelector('[data-hero-heading]') as HTMLElement | null
+    if (heading && !heading.dataset.animated) {
+      heading.dataset.animated = 'true'
+      const text = heading.textContent?.trim() || ''
+      if (text) {
+        heading.innerHTML = text.split(/\s+/).map(word => {
+          return `<span class="inline-block overflow-hidden pb-1 -mb-1"><span class="inline-block hero-word translate-y-full opacity-0">${word}</span></span>`
+        }).join(' ')
 
+        heading.classList.remove('opacity-0')
 
-  }
-
-  if (heroBg) {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const isLowEnd = (() => {
-      const cores = navigator.hardwareConcurrency || 4
-      const mem = (navigator as any).deviceMemory || 4
-      return cores <= 2 || mem <= 2
-    })()
-
-    if (!prefersReduced && !isLowEnd) {
-      let lastY = 0
-      let lowFpsCount = 0
-      let lastFrameTime = performance.now()
-
-      const onLenisScroll = (lenis: any) => {
-        const now = performance.now()
-        const dt = now - lastFrameTime
-        lastFrameTime = now
-        if (dt > 50) {
-          lowFpsCount++
-          if (lowFpsCount > 10) {
-            ;(window as any).__lenis.off('scroll', onLenisScroll)
-            heroBg.style.transform = ''
-            return
+        const words = heading.querySelectorAll('.hero-word')
+        animate(words, 
+          { y: ['100%', '0%'], opacity: [0, 1] }, 
+          { 
+            duration: 1.2, 
+            ease: [0.16, 1, 0.3, 1],
+            delay: stagger(0.06, { startDelay: 0.3 }) 
           }
-        } else {
-          lowFpsCount = Math.max(0, lowFpsCount - 1)
+        )
+      }
+    }
+
+    // 4. CTA buttons stagger reveal
+    const ctas = document.querySelectorAll('[data-hero-ctas] > a')
+    if (ctas.length > 0) {
+      animate(ctas, 
+        { y: [20, 0], opacity: [0, 1] }, 
+        { 
+          duration: 1.2, 
+          ease: [0.16, 1, 0.3, 1],
+          delay: stagger(0.1, { startDelay: 0.8 })
+        }
+      )
+    }
+
+    // --- Slideshow Setup ---
+    if (slides.length > 1) {
+      let current = 0
+      let interval: ReturnType<typeof setInterval> | null = null
+
+      function showSlide(index: number) {
+        slides.forEach((s, i) => {
+          ;(s as HTMLElement).style.opacity = i === index ? '1' : '0'
+        })
+        dots.forEach((d, i) => {
+          if (i === index) {
+            d.classList.add('w-8', 'bg-[var(--color-phos-dark-text)]')
+            d.classList.remove('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
+          } else {
+            d.classList.remove('w-8', 'bg-[var(--color-phos-dark-text)]')
+            d.classList.add('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
+          }
+        })
+        current = index
+      }
+
+      function next() {
+        showSlide((current + 1) % slides.length)
+      }
+
+      function start() {
+        if (interval) clearInterval(interval)
+        const heroInterval = parseInt(heroSection?.dataset.heroInterval || '', 10) || 6000
+        interval = setInterval(next, heroInterval)
+      }
+
+      function stop() {
+        if (interval) {
+          clearInterval(interval)
+          interval = null
+        }
+      }
+
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const idx = parseInt((dot as HTMLElement).dataset.heroDot || '', 10)
+          if (!isNaN(idx) && idx !== current) showSlide(idx)
+          start()
+        })
+      })
+
+      if (heroBg) {
+        heroBg.addEventListener('mouseenter', stop)
+        heroBg.addEventListener('mouseleave', start)
+      }
+
+      start()
+
+      // Clean up interval on page swap to avoid memory leaks
+      document.addEventListener('astro:before-swap', () => {
+        stop()
+      }, { once: true })
+    }
+
+    // --- Parallax Setup ---
+    if (heroBg) {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const isLowEnd = (() => {
+        const cores = navigator.hardwareConcurrency || 4
+        const mem = (navigator as any).deviceMemory || 4
+        return cores <= 2 || mem <= 2
+      })()
+
+      if (!prefersReduced && !isLowEnd) {
+        let lastY = 0
+        let lowFpsCount = 0
+        let lastFrameTime = performance.now()
+
+        const onLenisScroll = (lenis: any) => {
+          const now = performance.now()
+          const dt = now - lastFrameTime
+          lastFrameTime = now
+          if (dt > 50) {
+            lowFpsCount++
+            if (lowFpsCount > 10) {
+              if ((window as any).__lenis) {
+                ;(window as any).__lenis.off('scroll', onLenisScroll)
+              }
+              heroBg.style.transform = ''
+              return
+            }
+          } else {
+            lowFpsCount = Math.max(0, lowFpsCount - 1)
+          }
+
+          const y = lenis.animatedScroll * 0.4
+          if (Math.abs(y - lastY) < 1) return
+          lastY = y
+          heroBg.style.transform = `translate3d(0, ${y}px, 0)`
         }
 
-        const y = lenis.animatedScroll * 0.4
-        if (Math.abs(y - lastY) < 1) return
-        lastY = y
-        heroBg.style.transform = `translate3d(0, ${y}px, 0)`
-      }
-      if ((window as any).__lenis) {
-        ;(window as any).__lenis.on('scroll', onLenisScroll)
+        if ((window as any).__lenis) {
+          ;(window as any).__lenis.on('scroll', onLenisScroll)
+          
+          // Clean up scroll listener on page swap
+          document.addEventListener('astro:before-swap', () => {
+            if ((window as any).__lenis) {
+              ;(window as any).__lenis.off('scroll', onLenisScroll)
+            }
+          }, { once: true })
+        }
       }
     }
   }
+
+  // Run immediately for initial load (module scripts are deferred, so DOM is ready)
+  initHero()
+
+  // Run on subsequent client-side navigations
+  document.addEventListener('astro:after-swap', initHero)
 </script>

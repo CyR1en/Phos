@@ -21,8 +21,8 @@ const ogDescription = config.about?.og_description
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription}>
-  <section data-animate class="animate-reveal flex min-h-[70vh] lg:h-dvh flex-col lg:flex-row overflow-hidden">
-    <div class="relative h-[50vh] sm:h-[40vh] lg:h-full w-full lg:w-1/2 shrink-0 overflow-hidden bg-surface">
+  <section data-animate class="animate-reveal flex min-h-[70vh] flex-col lg:flex-row">
+    <div class="relative h-[50vh] sm:h-[40vh] lg:h-[calc(100vh-80px)] w-full lg:w-1/2 shrink-0 overflow-hidden bg-surface lg:sticky lg:top-20">
       {aboutPhoto ? (
         <img
           src={aboutPhoto}
@@ -34,8 +34,8 @@ const ogDescription = config.about?.og_description
         <div class="absolute inset-0 bg-gradient-to-br from-surface to-border" />
       )}
     </div>
-    <div class="relative flex-1 overflow-y-auto flex items-center px-6 py-12 sm:py-16 lg:px-12 lg:py-0 xl:px-16">
-      <div class="max-w-xl">
+    <div class="relative flex-1 flex items-center px-6 py-12 sm:py-16 lg:px-12 lg:py-24 xl:px-16">
+      <div class="max-w-xl opacity-0" data-animate-header>
         <p class="font-mono text-xs uppercase tracking-wider text-accent">About</p>
         <h1 class="mt-6 font-display text-3xl sm:text-5xl text-ink leading-none" data-config="about.photographer.name">
           {config.about.photographer.name}
@@ -87,10 +87,12 @@ const ogDescription = config.about?.og_description
     <section data-animate class="animate-reveal py-20">
       <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="border-t border-border pt-12 sm:pt-16">
-          <p class="font-mono text-xs uppercase tracking-wider text-muted">Equipment</p>
-          <h2 class="mt-4 font-display text-2xl text-ink" data-config="about.gear.heading">
-            {gearLabel}
-          </h2>
+          <div data-animate-header class="opacity-0">
+            <p class="font-mono text-xs uppercase tracking-wider text-muted">Equipment</p>
+            <h2 class="mt-4 font-display text-2xl text-ink" data-config="about.gear.heading">
+              {gearLabel}
+            </h2>
+          </div>
           <div class="mt-10 flex flex-col rounded-lg border border-border bg-canvas-alt divide-y divide-border">
             {gearList.map((item) => (
               <div class="inline-flex items-center gap-x-3 py-3.5 px-5 text-lg text-ink">

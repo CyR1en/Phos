@@ -33,6 +33,34 @@ function GalleryEditor({
   const [description, setDescription] = useState(gallery.description)
   const [orderNum, setOrderNum] = useState(gallery.order_num)
   const [selectedPhotos, setSelectedPhotos] = useState<GalleryPhoto[]>(gallery.photos)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleDragStart = (e: DragEvent, index: number) => {
+    setDraggedIndex(index)
+    setIsDragging(true)
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move'
+    }
+  }
+
+  const handleDragEnter = (index: number) => {
+    if (draggedIndex === null || draggedIndex === index) return
+
+    setSelectedPhotos((prev) => {
+      const list = [...prev]
+      const draggedItem = list[draggedIndex]
+      list.splice(draggedIndex, 1)
+      list.splice(index, 0, draggedItem)
+      return list.map((p, idx) => ({ ...p, position: idx }))
+    })
+    setDraggedIndex(index)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+    setTimeout(() => setIsDragging(false), 50)
+  }
 
   useEffect(() => {
     const win = window as any
@@ -145,43 +173,61 @@ function GalleryEditor({
           </div>
         </Section>
 
-        <Section title="Cover Photo" description="Select a cover from the photos in this gallery.">
+        <Section title="Gallery Photos" description="Drag and drop to reorder photos. Click a photo to set it as the gallery cover.">
           {gallery.cover && (
             <p class="text-sm text-muted mb-2">
-              Current: <code class="font-mono text-ink">{gallery.cover}</code>
+              Current Cover: <code class="font-mono text-ink">{gallery.cover}</code>
             </p>
           )}
           {selectedPhotos.length === 0 ? (
             <p class="text-muted">Add photos to the gallery first to set a cover.</p>
           ) : (
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {selectedPhotos.map((p) => {
-                const coverRef = `${p.category}/${p.filename}`
-                const isCover = gallery.cover === coverRef
-                const thumbName = p.filename.replace(/\.[^.]+$/, '.webp')
-                return (
-                  <button
-                    key={coverRef}
-                    type="button"
-                    onClick={() => setCoverPhoto(p)}
-                    class={`relative rounded-xs overflow-hidden border-2 transition-colors ${
-                      isCover ? 'border-primary' : 'border-transparent hover:border-border'
-                    }`}
-                  >
-                    <img
-                      src={`/photos/thumbs/${p.category}/${thumbName}`}
-                      alt={p.filename}
-                      loading="lazy"
-                      class="w-full aspect-[4/3] object-cover"
-                    />
-                    {isCover && (
-                      <span class="absolute top-1 right-1 text-xs bg-primary text-primary-text px-1.5 py-0.5 rounded-xs">
-                        Cover
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
+            <div class="space-y-4">
+              <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {selectedPhotos.map((p, index) => {
+                  const coverRef = `${p.category}/${p.filename}`
+                  const isCover = gallery.cover === coverRef
+                  const thumbName = p.filename.replace(/\.[^.]+$/, '.webp')
+                  return (
+                    <div
+                      key={coverRef}
+                      draggable={true}
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragEnter={() => handleDragEnter(index)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => e.preventDefault()}
+                      onClick={() => {
+                        if (isDragging) return
+                        setCoverPhoto(p)
+                      }}
+                      class={`relative rounded-xs overflow-hidden border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
+                        draggedIndex === index
+                          ? 'opacity-40 scale-95 border-dashed border-primary'
+                          : isCover
+                            ? 'border-primary'
+                            : 'border-transparent hover:border-border'
+                      }`}
+                    >
+                      <img
+                        src={`/photos/thumbs/${p.category}/${thumbName}`}
+                        alt={p.filename}
+                        loading="lazy"
+                        class="w-full aspect-[4/3] object-cover pointer-events-none"
+                      />
+                      {isCover && (
+                        <span class="absolute top-1 right-1 text-xs bg-primary text-primary-text px-1.5 py-0.5 rounded-xs pointer-events-none">
+                          Cover
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <div class="flex gap-3">
+                <Button variant="primary" onClick={savePhotos} disabled={photosMutation.isPending}>
+                  {photosMutation.isPending ? 'Saving...' : 'Save photo order'}
+                </Button>
+              </div>
             </div>
           )}
         </Section>

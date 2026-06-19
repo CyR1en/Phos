@@ -14,11 +14,13 @@ const ogDescription = config.contact?.og_description
   <section class="contact-bleed flex flex-1 flex-col justify-center bg-surface">
     <div class="mx-auto w-full max-w-7xl px-6 lg:px-8">
       <div class="rounded-sm bg-canvas p-8 sm:p-12 border border-border">
-        <p class="font-mono text-xs uppercase tracking-wider text-muted">Contact</p>
-        <h1 class="mt-4 font-display text-2xl text-ink" data-config="contact.format.heading">{heading}</h1>
-        <p class="mt-4 text-lg text-body-muted leading-relaxed" data-config="contact.format.subheading">
-          {subheading}
-        </p>
+        <div data-animate-header class="opacity-0">
+          <p class="font-mono text-xs uppercase tracking-wider text-muted">Contact</p>
+          <h1 class="mt-4 font-display text-ink" data-config="contact.format.heading">{heading}</h1>
+          <p class="mt-4 text-lg text-body-muted leading-relaxed" data-config="contact.format.subheading">
+            {subheading}
+          </p>
+        </div>
 
         {hasSmtp ? (
           <form id="contact-form" class="mt-10 grid gap-5 sm:grid-cols-2 sm:gap-6">

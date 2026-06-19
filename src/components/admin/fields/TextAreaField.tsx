@@ -1,7 +1,8 @@
+import { useEffect } from 'preact/hooks'
 import { useConfig } from '../../../lib/admin/store'
 
 function countWords(text: string): number {
-  return text.split(/\s+/).filter(Boolean).length
+  return text.trim().split(/\s+/).filter(Boolean).length
 }
 
 interface Props {
@@ -12,9 +13,21 @@ interface Props {
 }
 
 export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
-  const { getValue, setValue, flushSave } = useConfig()
+  const { getValue, setValue, flushSave, setError } = useConfig()
   const value = (getValue(path) as string | undefined) ?? ''
   const wordCount = countWords(value)
+  const isOverLimit = maxWords ? wordCount > maxWords : false
+
+  useEffect(() => {
+    if (maxWords && setError) {
+      setError(path, isOverLimit)
+    }
+    return () => {
+      if (maxWords && setError) {
+        setError(path, false)
+      }
+    }
+  }, [path, isOverLimit, maxWords, setError])
 
   return (
     <div>
@@ -25,20 +38,22 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
         rows={rows}
         value={value}
         onInput={(e) => {
-          let val = (e.currentTarget as HTMLTextAreaElement).value
-          if (maxWords) {
-            const words = val.split(/\s+/).filter(Boolean)
-            if (words.length > maxWords) {
-              val = words.slice(0, maxWords).join(' ')
-            }
-          }
+          const val = (e.currentTarget as HTMLTextAreaElement).value
           setValue(path, val)
         }}
-        onBlur={() => flushSave()}
-        class="w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body resize-y focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20"
+        onBlur={() => {
+          if (!isOverLimit) {
+            flushSave()?.catch(() => {})
+          }
+        }}
+        class={`w-full px-3 py-2 bg-canvas border rounded-xs text-base font-body resize-y focus:outline-none focus:ring-2 ${
+          isOverLimit
+            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+            : 'border-border focus:border-border-focus focus:ring-border-focus/20'
+        }`}
       />
       {maxWords && (
-        <p class="mt-1 text-xs text-body-muted/60">
+        <p class={`mt-1 text-xs ${isOverLimit ? 'text-red-500 font-semibold' : 'text-body-muted/60'}`}>
           {wordCount}/{maxWords} words
         </p>
       )}
