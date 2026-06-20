@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useConfig } from '../../../lib/admin/store'
+import { api } from '../../../lib/admin/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '../../ui/dialog'
 import { Plus, X, GripVertical } from 'lucide-react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
@@ -37,11 +38,9 @@ export function HeroPhotosField({ path, label }: Props) {
 
   useEffect(() => {
     if (isOpen) {
-      fetch('/api/categories', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` }
-      })
-        .then(res => res.json())
+      api.getCategories()
         .then(data => setCategories(data.categories || []))
+        .catch(err => console.error('Failed to fetch categories:', err))
       setSelectedPhotos([...photos])
     }
   }, [isOpen, photos])
@@ -121,7 +120,7 @@ export function HeroPhotosField({ path, label }: Props) {
                         onClick={() => !isDisabled && togglePhotoSelection(photoPath)}
                         className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 transition-all ${isSelected ? 'border-[var(--color-focus-ring)]' : 'border-transparent hover:border-[var(--color-border)]'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <img src={`/photos/${cat.slug}/_thumb_${photo}`} alt={photo} className="w-full h-full object-cover" loading="lazy" />
+                        <img src={`/photos/thumbs/${cat.slug}/${photo.replace(/\.[^.]+$/, ".webp")}`} alt={photo} className="w-full h-full object-cover" loading="lazy" />
                         {isSelected && (
                           <div className="absolute top-1 right-1 bg-[var(--color-focus-ring)] text-white rounded-full p-0.5">
                             <X size={12} className="rotate-45" />
