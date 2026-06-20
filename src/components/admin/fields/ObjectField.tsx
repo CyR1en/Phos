@@ -5,6 +5,7 @@ import { TextAreaField } from './TextAreaField'
 import { ToggleField } from './ToggleField'
 import { NumberField } from './NumberField'
 import { ArrayField } from './ArrayField'
+import { HeroPhotosField } from './HeroPhotosField'
 import { Section } from '../ui/Section'
 
 interface Props {
@@ -33,6 +34,9 @@ export function ObjectField({ path }: Props) {
         const fieldPath = `${path}.${key}`
         const label = prettify(key)
 
+        if (fieldPath === 'home.hero.photos') {
+          return <HeroPhotosField key={fieldPath} path={fieldPath} label={label} />
+        }
         if (Array.isArray(value)) {
           return <ArrayField key={fieldPath} path={fieldPath} label={label} />
         }

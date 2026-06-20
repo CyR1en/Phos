@@ -399,38 +399,6 @@ export function CategoriesPage() {
                                 class={textareaCls()}
                               />
                             </div>
-                            <div>
-                              <FieldLabel>Homepage Slideshow Priority</FieldLabel>
-                              <div class="flex items-center gap-4 bg-canvas/50 border border-border rounded-sm p-3 shadow-2xs">
-                                <input
-                                  type="range"
-                                  min={0}
-                                  max={5}
-                                  value={heroPriority}
-                                  onInput={(e) =>
-                                    setPhotoField(
-                                      filename,
-                                      'hero_priority',
-                                      Number((e.currentTarget as HTMLInputElement).value),
-                                    )
-                                  }
-                                  class="flex-1 accent-primary cursor-pointer h-1.5 bg-border rounded-lg appearance-none"
-                                />
-                                <span class="text-sm font-mono font-medium text-ink w-8 text-center bg-canvas border border-border rounded-sm py-0.5 px-1 shadow-2xs">
-                                  {heroPriority}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setPhotoField(filename, 'hero_priority', 0)}
-                                >
-                                  Reset
-                                </Button>
-                              </div>
-                              <p class="mt-2 text-xs text-muted leading-relaxed">
-                                0 = Excluded from slideshow. 1-5 = Priority level for homepage hero slideshow (higher shows first).
-                              </p>
-                            </div>
                           </div>
                         </div>
                       </div>

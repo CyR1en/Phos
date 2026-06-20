@@ -25,6 +25,7 @@ export interface SiteConfig {
       cta2: string
       slideshow_interval: number
       overlay_opacity: number
+      photos: string[]
     }
     services: {
       enabled: boolean

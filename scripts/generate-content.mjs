@@ -8,7 +8,7 @@ import yaml from 'yaml'
 import Database from 'better-sqlite3'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || '/photos'
+const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || (existsSync('/photos') ? '/photos' : join(__dirname, '..', 'photos'))
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'photos')
 const CACHE_PATH = process.env.PHOTOS_CACHE_PATH || join(OUTPUT_DIR, '.cache.json')
 const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
@@ -307,11 +307,26 @@ async function scanPhotos(sourceDir) {
   const categories = results.filter(Boolean)
   categories.sort((a, b) => a.order - b.order)
 
-  const heroPriority = categories
-    .flatMap((cat) =>
-      cat.photos
-        .filter((p) => p.hero_priority > 0)
-        .map((p) => ({
+  let config = {}
+  try {
+    const configPath = join(ROOT, 'src', 'content', 'site-config.json')
+    if (existsSync(configPath)) {
+      config = JSON.parse(await readFile(configPath, 'utf-8'))
+    }
+  } catch (err) {
+    console.warn('Could not read site-config.json for hero photos:', err.message)
+  }
+
+  const heroPhotosConfig = config?.home?.hero?.photos || []
+  
+  const heroPriority = []
+  for (const photoPath of heroPhotosConfig) {
+    const [catSlug, filename] = photoPath.split('/')
+    const cat = categories.find(c => c.slug === catSlug)
+    if (cat) {
+      const p = cat.photos.find(photo => photo.filename === filename)
+      if (p) {
+        heroPriority.push({
           full: p.full,
           thumb: p.thumb,
           thumbMobile: p.thumbMobile,
@@ -322,10 +337,11 @@ async function scanPhotos(sourceDir) {
           height: p.height,
           category: cat.slug,
           categoryName: cat.name,
-          hero_priority: p.hero_priority,
-        }))
-    )
-    .sort((a, b) => b.hero_priority - a.hero_priority)
+          hero_priority: heroPhotosConfig.length - heroPriority.length, // Keep order
+        })
+      }
+    }
+  }
 
   await saveCache(cache)
 
