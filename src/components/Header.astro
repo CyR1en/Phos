@@ -53,7 +53,8 @@ function isActive(path: string) {
 
     <div class="hidden items-center gap-8 sm:flex">
       <a href="/" class:list={["text-sm font-medium transition-colors", isActive('/') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Home</a>
-      <a href="/portfolio" class:list={["text-sm font-medium transition-colors", isActive('/portfolio') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Portfolio</a>
+      <a href="/galleries" class:list={["text-sm font-medium transition-colors", isActive('/galleries') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Galleries</a>
+      <a href="/photos/all" class:list={["text-sm font-medium transition-colors", isActive('/photos') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Photos</a>
       <a href="/about" class:list={["text-sm font-medium transition-colors", isActive('/about') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>About</a>
       <a href="/contact" class:list={["text-sm font-medium transition-colors", isActive('/contact') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Contact</a>
     </div>
@@ -93,7 +94,8 @@ function isActive(path: string) {
   </div>
   <nav class="flex flex-col gap-2 px-6 pt-8">
     <a href="/" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Home</a>
-    <a href="/portfolio" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/portfolio') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Portfolio</a>
+    <a href="/galleries" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/galleries') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Galleries</a>
+    <a href="/photos/all" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/photos') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Photos</a>
     <a href="/about" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/about') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>About</a>
     <a href="/contact" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/contact') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Contact</a>
   </nav>

@@ -16,7 +16,7 @@ export interface Props {
 const { name, slug, description, cover, coverWidth, coverHeight, photoCount, blur, link, displayTitle, displayDescription } = Astro.props
 const cardTitle = displayTitle || name
 const cardDescription = displayDescription !== undefined ? displayDescription : description
-const cardLink = link || `/photo/all/?cat=${slug}`
+const cardLink = link || `/photos/all/?cat=${slug}`
 ---
 
 <a

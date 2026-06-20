@@ -64,7 +64,7 @@ const ogDescription = config.home?.og_description || config.site.description
           coverHeight: null,
           photoCount: gal.photoCount,
           blur: gal.coverBlur,
-          link: `/portfolio/${gal.slug}/`,
+          link: `/galleries/${gal.slug}/`,
           displayTitle: item.title || undefined,
           displayDescription: item.description !== undefined ? item.description : undefined,
         }
@@ -80,7 +80,7 @@ const ogDescription = config.home?.og_description || config.site.description
         coverHeight: cat.coverHeight,
         photoCount: cat.photoCount,
         blur: cat.coverBlur,
-        link: `/photo/all/?cat=${cat.slug}`,
+        link: `/photos/all/?cat=${cat.slug}`,
         displayTitle: item.title || undefined,
         displayDescription: item.description !== undefined ? item.description : undefined,
       }
@@ -94,7 +94,7 @@ const ogDescription = config.home?.og_description || config.site.description
             <p class="font-mono text-xs uppercase tracking-wider text-muted">Showcase</p>
             <h2 class="mt-4 font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
           </div>
-          <a href="/photo/all/" class="text-sm font-medium text-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
+          <a href="/photos/all/" class="text-sm font-medium text-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
         </div>
 
         {items.length > 0 ? (

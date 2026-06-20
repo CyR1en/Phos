@@ -14,7 +14,7 @@ const ogTitle = config.portfolio?.og_title || 'Portfolio'
 const ogDescription = config.portfolio?.og_description
 ---
 
-<BaseLayout title={ogTitle} description={ogDescription} page="portfolio">
+<BaseLayout title={ogTitle} description={ogDescription} page="galleries">
   <section class="pt-16 lg:pt-24 pb-8 lg:pb-12">
     <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 opacity-0" data-animate-header>
       <p class="font-mono text-xs uppercase tracking-wider text-muted">Portfolio</p>
@@ -28,7 +28,7 @@ const ogDescription = config.portfolio?.og_description
       <div class="py-24 text-center">
         <p class="text-lg text-muted mb-6">No galleries yet.</p>
         <a
-          href="/photo/all/"
+          href="/photos/all/"
           class="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors"
         >
           Browse all photos
@@ -39,7 +39,7 @@ const ogDescription = config.portfolio?.og_description
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {galleries.map((gallery) => (
           <a
-            href={`/portfolio/${gallery.slug}/`}
+            href={`/galleries/${gallery.slug}/`}
             class="group block rounded-lg overflow-hidden border border-border-light hover:border-border-hover transition-colors bg-canvas"
           >
             {gallery.cover && (
@@ -66,4 +66,21 @@ const ogDescription = config.portfolio?.og_description
       </div>
     )}
   </section>
+
+  {galleries.length > 0 && (
+    <section class="mx-auto max-w-7xl px-6 pb-16 lg:pb-24 lg:px-8">
+      <div class="rounded-lg border border-border-light bg-canvas p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div>
+          <p class="text-lg text-body-muted">Looking for everything?</p>
+        </div>
+        <a
+          href="/photos/all/"
+          class="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors"
+        >
+          Browse all photos
+          <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </section>
+  )}
 </BaseLayout>
