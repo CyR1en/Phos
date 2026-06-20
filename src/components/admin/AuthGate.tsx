@@ -27,36 +27,44 @@ export function AuthGate() {
     <div class="min-h-screen bg-canvas flex items-center justify-center p-4">
       <form
         onSubmit={submit}
-        class="w-full max-w-sm bg-canvas border border-border rounded-lg p-8 shadow-sm"
+        class="w-full max-w-sm bg-surface border border-border rounded-sm p-8 shadow-md space-y-6"
       >
-        <p class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
-          Site Admin
-        </p>
-        <h1 class="font-display font-display text-2xl text-ink mb-1">
-          Sign in
-        </h1>
-        <p class="text-sm text-muted mb-6">
-          Enter your admin password to manage site content.
-        </p>
-        <label class="block text-sm font-medium text-body-muted mb-1.5">
-          Password
-        </label>
-        <input
-          type="password"
-          value={password}
-          onInput={(e) =>
-            setPassword((e.currentTarget as HTMLInputElement).value)
-          }
-          autoFocus
-          class="w-full px-3 py-2.5 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20 mb-4"
-        />
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={submitting || !password}
-        >
-          {submitting ? 'Signing in…' : 'Sign in'}
-        </Button>
+        <div class="space-y-1.5 text-center">
+          <div class="size-9 rounded-xs bg-primary flex items-center justify-center text-primary-text font-display font-bold text-lg shadow-sm mx-auto mb-3">
+            Φ
+          </div>
+          <h1 class="font-display text-2xl font-bold text-ink tracking-tight">
+            Sign In
+          </h1>
+          <p class="text-sm text-body-muted leading-relaxed">
+            Enter your admin password to manage site content.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-ink block">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onInput={(e) =>
+                setPassword((e.currentTarget as HTMLInputElement).value)
+              }
+              autoFocus
+              class="flex h-10 w-full rounded-sm border border-border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus"
+            />
+          </div>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={submitting || !password}
+            class="w-full h-10"
+          >
+            {submitting ? 'Signing in…' : 'Sign in'}
+          </Button>
+        </div>
       </form>
     </div>
   )

@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { SaveIndicator } from './SaveIndicator'
 import { ToastViewport } from './ui/Toast'
 import { Tooltip } from './ui/Tooltip'
+import { ThemeToggle } from './ui/ThemeToggle'
 import { SaveIcon, RepublishPhotosIcon, RepublishSiteIcon, SignOutIcon, SpinnerIcon } from './ui/Icons'
 import { ConfigProvider, useConfig } from '../../lib/admin/store'
 import { SitePage } from './pages/SitePage'
@@ -126,27 +127,27 @@ function DashboardBody() {
   return (
     <div class="min-h-screen bg-canvas flex">
       <Sidebar />
-      <main class="flex-1 flex flex-col min-w-0">
-        <header class="bg-primary text-primary-text">
-          <div class="px-4 md:px-8 py-3 flex items-center justify-between md:justify-end gap-2">
+      <main class="flex-1 flex flex-col min-w-0 md:ml-64">
+        <header class="sticky top-0 z-40 h-16 border-b border-border box-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/60 text-ink">
+          <div class="h-full px-4 md:px-8 flex items-center justify-between md:justify-end gap-4">
             <button
               type="button"
               data-hs-overlay="#admin-sidebar"
-              class="md:hidden flex h-9 w-9 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover transition-colors"
+              class="md:hidden flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
               aria-label="Open menu"
             >
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12h18M3 6h18M3 18h18" />
               </svg>
             </button>
-<div class="flex items-center gap-1 sm:gap-1.5">
+            <div class="flex items-center gap-1 sm:gap-2">
               <SaveIndicator />
               {showConfigButtons ? (
-                <Tooltip text="Save" shortcut="⌘S">
+                <Tooltip text="Save changes" shortcut="⌘S">
                   <button
                     type="button"
                     onClick={() => flushSave()}
-                    class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors"
+                    class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
                     aria-label="Save"
                   >
                     <SaveIcon />
@@ -158,7 +159,7 @@ function DashboardBody() {
                   type="button"
                   onClick={onRegenerate}
                   disabled={running}
-                  class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Republish photos"
                 >
                   {running ? <SpinnerIcon /> : <RepublishPhotosIcon />}
@@ -169,18 +170,19 @@ function DashboardBody() {
                   type="button"
                   onClick={onRepublish}
                   disabled={running}
-                  class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Republish site"
                 >
                   {running ? <SpinnerIcon /> : <RepublishSiteIcon />}
                 </button>
               </Tooltip>
-              <div class="w-px h-5 bg-primary-text/20 mx-1" />
+              <div class="w-px h-4 bg-border mx-1" />
+              <ThemeToggle />
               <Tooltip text="Sign out">
                 <button
                   type="button"
                   onClick={signOut}
-                  class="flex h-8 w-8 items-center justify-center rounded-sm text-primary-text hover:bg-primary-hover/50 transition-colors"
+                  class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
                   aria-label="Sign out"
                 >
                   <SignOutIcon />
@@ -196,7 +198,7 @@ function DashboardBody() {
       <ToastViewport />
       {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
         <div
-          class="fixed bottom-0 inset-x-0 z-50 bg-canvas border-t border-border shadow-2xl transition-all duration-300"
+          class="fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-border shadow-2xl transition-all duration-300"
           onMouseEnter={() => {
             if (countdown !== null) {
               hasInteracted.current = true
@@ -208,13 +210,13 @@ function DashboardBody() {
         >
           <div class={[
             'flex items-center justify-between px-4 py-3 border-b border-border',
-            buildStatus === 'running' && 'bg-surface',
-            buildStatus === 'done' && 'bg-success-bg',
-            buildStatus === 'error' && 'bg-error-bg',
+            buildStatus === 'running' && 'bg-surface text-ink',
+            buildStatus === 'done' && 'bg-success-bg/10 text-success border-b-success/20',
+            buildStatus === 'error' && 'bg-error-bg/10 text-error border-b-error/20',
           ].filter(Boolean).join(' ')}>
             <div class="flex items-center gap-2.5">
               {buildStatus === 'running' && (
-                <span class="size-2 rounded-full bg-ink animate-pulse" />
+                <span class="size-2 rounded-full bg-primary animate-pulse" />
               )}
               {buildStatus === 'done' && (
                 <svg class="size-4 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -226,8 +228,8 @@ function DashboardBody() {
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               )}
-              <span class="font-display text-base text-ink">
-                {buildStatus === 'running' && 'Building'}
+              <span class="text-sm font-medium text-ink">
+                {buildStatus === 'running' && 'Building...'}
                 {buildStatus === 'done' && 'Build complete'}
                 {buildStatus === 'error' && 'Build failed'}
               </span>
@@ -241,7 +243,7 @@ function DashboardBody() {
               <button
                 type="button"
                 onClick={clearBuildStatus}
-                class="text-muted hover:text-ink transition-colors p-1 rounded-xs hover:bg-surface"
+                class="text-muted hover:text-ink transition-colors p-1 rounded-xs hover:bg-surface-hover"
                 aria-label="Close build log"
               >
                 <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -250,7 +252,7 @@ function DashboardBody() {
               </button>
             </div>
           </div>
-          <div ref={logRef} class="p-4 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-body-muted">
+          <div ref={logRef} class="p-4 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-muted bg-canvas/40">
             {buildLog.map((line, i) => (
               <div key={i} class="leading-relaxed">{line}</div>
             ))}

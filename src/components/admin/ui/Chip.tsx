@@ -8,10 +8,10 @@ interface Props {
 
 export function Chip({ children, active, onClick }: Props) {
   const base =
-    'inline-flex items-center px-3.5 py-2 font-display text-xl font-display rounded-pill border transition-colors'
+    'inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-sm border transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus'
   const cls = active
-    ? `${base} bg-primary text-primary-text border-primary`
-    : `${base} bg-canvas text-primary border-primary hover:bg-surface`
+    ? `${base} bg-primary text-primary-text border-primary shadow-xs`
+    : `${base} bg-surface text-ink border-border hover:bg-surface-hover hover:border-border-hover`
   if (onClick) {
     return (
       <button type="button" class={cls} onClick={onClick}>

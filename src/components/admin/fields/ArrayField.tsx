@@ -15,13 +15,8 @@ export function ArrayField({ path, label }: Props) {
   const arr = getValue(path) as unknown[] | undefined
   if (!Array.isArray(arr)) return null
 
-  const isStringArray = arr.every((x) => typeof x === 'string') || arr.length === 0 && typeof arr[0] === 'string'
+  const isStringArray = arr.every((x) => typeof x === 'string') || (arr.length === 0 && typeof arr[0] === 'string')
   const isObjectArray = arr.length > 0 && typeof arr[0] === 'object'
-
-  const updateAt = (i: number, v: unknown) => {
-    const next = arr.map((x, idx) => (idx === i ? v : x))
-    setValue(path, next)
-  }
 
   const removeAt = (i: number) => {
     const next = arr.filter((_, idx) => idx !== i)
@@ -41,30 +36,39 @@ export function ArrayField({ path, label }: Props) {
   }
 
   return (
-    <div class="border-t border-border pt-4 mt-4">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-sm font-medium text-ink font-mono uppercase tracking-wider">
+    <div class="border-t border-border pt-6 mt-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-semibold text-ink uppercase tracking-wider font-mono">
           {label}
         </span>
         <Button variant="secondary" size="sm" onClick={addItem}>
-          + Add item
+          <svg class="size-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add Item
         </Button>
       </div>
-      <div class="space-y-3">
+      <div class="space-y-4">
         {arr.map((item, i) => (
           <div
             key={i}
-            class="border border-border-light rounded-sm p-4 bg-canvas"
+            class="border border-border rounded-sm p-5 bg-surface/30 shadow-2xs relative group/item"
           >
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-mono text-muted">
-                #{i + 1}
+            <div class="flex items-center justify-between border-b border-border-light pb-3 mb-4">
+              <span class="text-xs font-mono font-medium text-muted">
+                Item #{i + 1}
               </span>
               <Button
                 variant="danger"
                 size="sm"
                 onClick={() => removeAt(i)}
+                class="opacity-90 group-hover/item:opacity-100 transition-opacity"
               >
+                <svg class="size-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
                 Remove
               </Button>
             </div>
@@ -75,7 +79,7 @@ export function ArrayField({ path, label }: Props) {
                 rows={2}
               />
             ) : isObjectArray && item && typeof item === 'object' ? (
-              <div class="space-y-3">
+              <div class="space-y-4">
                 {Object.entries(item as Record<string, unknown>).map(
                   ([k, v]) => {
                     const subPath = `${path}.${i}.${k}`
@@ -123,9 +127,11 @@ export function ArrayField({ path, label }: Props) {
           </div>
         ))}
         {arr.length === 0 && (
-          <p class="text-sm text-muted italic">
-            No items. Click + Add item to create one.
-          </p>
+          <div class="border border-dashed border-border rounded-sm p-8 text-center bg-surface/10">
+            <p class="text-sm text-muted italic">
+              No items. Click Add Item to create one.
+            </p>
+          </div>
         )}
       </div>
     </div>

@@ -15,7 +15,7 @@ export function ContactPage() {
           {config?.contact?.page_description}
         </p>
       </div>
-      <div class="space-y-6">
+      <div class="space-y-8">
         <Section title="Open Graph">
           <TextField path="contact.og_title" label="Title" />
           <TextField path="contact.og_description" label="Description" />

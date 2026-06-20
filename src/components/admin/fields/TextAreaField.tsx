@@ -30,8 +30,8 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
   }, [path, isOverLimit, maxWords, setError])
 
   return (
-    <div>
-      <label class="block text-sm font-medium text-body-muted mb-1.5">
+    <div class="space-y-1.5">
+      <label class="text-sm font-medium text-ink block">
         {label}
       </label>
       <textarea
@@ -46,16 +46,18 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
             flushSave()?.catch(() => {})
           }
         }}
-        class={`w-full px-3 py-2 bg-canvas border rounded-xs text-base font-body resize-y focus:outline-none focus:ring-2 ${
+        class={`flex min-h-[60px] w-full rounded-sm border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 resize-y ${
           isOverLimit
-            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
-            : 'border-border focus:border-border-focus focus:ring-border-focus/20'
+            ? 'border-error focus-visible:ring-error focus-visible:border-error'
+            : 'border-border focus-visible:ring-border-focus focus-visible:border-border-focus'
         }`}
       />
       {maxWords && (
-        <p class={`mt-1 text-xs ${isOverLimit ? 'text-red-500 font-semibold' : 'text-body-muted/60'}`}>
-          {wordCount}/{maxWords} words
-        </p>
+        <div class="flex justify-end">
+          <p class={`text-xs ${isOverLimit ? 'text-error font-semibold' : 'text-muted'}`}>
+            {wordCount} / {maxWords} words
+          </p>
+        </div>
       )}
     </div>
   )

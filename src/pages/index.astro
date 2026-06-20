@@ -36,7 +36,7 @@ const ogDescription = config.home?.og_description || config.site.description
   <Hero heroPriority={heroPriority} />
 
   {config.home.hero.subheading && (
-    <section data-animate class="animate-reveal py-16 md:py-20">
+    <section data-animate class="animate-reveal py-16 lg:py-24">
       <div class="mx-auto max-w-2xl px-6 text-center">
         <p class="text-lg md:text-xl text-muted leading-relaxed" data-config="home.hero.subheading">{config.home.hero.subheading}</p>
       </div>
@@ -87,9 +87,9 @@ const ogDescription = config.home?.og_description || config.site.description
     }).filter(Boolean)
 
     return (
-    <section id="showcase" data-animate class="animate-reveal py-20">
+    <section id="showcase" data-animate class="animate-reveal py-16 lg:py-24">
       <div class="mx-auto max-w-7xl px-6 lg:px-8">
-        <div class="flex flex-wrap items-end justify-between gap-6">
+        <div class="flex flex-wrap items-end justify-between gap-8">
           <div data-animate-header class="opacity-0">
             <p class="font-mono text-xs uppercase tracking-wider text-muted">Showcase</p>
             <h2 class="mt-4 font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
@@ -98,7 +98,7 @@ const ogDescription = config.home?.og_description || config.site.description
         </div>
 
         {items.length > 0 ? (
-          <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item: any) => (
               <CategoryCard
                 name={item.name}
@@ -116,7 +116,7 @@ const ogDescription = config.home?.og_description || config.site.description
             ))}
           </div>
         ) : (
-          <div class="mt-10 py-24 text-center">
+          <div class="mt-12 py-24 text-center">
             <p class="text-lg text-muted">No showcase items configured. Add categories or galleries in the admin.</p>
           </div>
         )}

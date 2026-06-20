@@ -8,14 +8,18 @@ import { Section } from '../ui/Section'
 
 function FieldLabel({ children }: { children: string }) {
   return (
-    <label class="block text-sm font-medium text-body-muted mb-1.5">
+    <label class="text-sm font-medium text-ink block mb-1.5">
       {children}
     </label>
   )
 }
 
 function inputCls() {
-  return 'w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20'
+  return 'flex h-9.5 w-full rounded-sm border border-border bg-canvas px-3 py-1 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus disabled:cursor-not-allowed disabled:opacity-50'
+}
+
+function textareaCls() {
+  return 'flex min-h-[60px] w-full rounded-sm border border-border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus disabled:cursor-not-allowed disabled:opacity-50 resize-y'
 }
 
 function GalleryEditor({
@@ -117,73 +121,84 @@ function GalleryEditor({
   }
 
   return (
-    <div class="max-w-4xl">
-      <div class="mb-6">
+    <div class="max-w-4xl space-y-8">
+      <div>
         <button
           type="button"
           onClick={onBack}
-          class="text-sm text-muted hover:text-ink flex items-center gap-1 mb-3"
+          class="text-xs font-semibold text-muted hover:text-ink flex items-center gap-1.5 mb-4 transition-colors cursor-pointer"
         >
           <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Back to galleries
+          Back to Galleries
         </button>
-        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
-          gallery
-        </h2>
-        <p class="font-display font-display text-3xl sm:text-4xl text-ink">
-          {gallery.name}
-        </p>
+        <div class="space-y-1">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
+            Gallery Editor
+          </h2>
+          <h1 class="font-display text-3xl font-bold text-ink">
+            {gallery.name}
+          </h1>
+        </div>
       </div>
 
-      <div class="space-y-6">
-        <Section title="Details">
-          <div>
-            <FieldLabel>Name</FieldLabel>
-            <input
-              type="text"
-              value={name}
-              onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
-              class={inputCls()}
-            />
+      <div class="space-y-8">
+        <Section title="Details" description="Configure gallery identification, description, and display ordering.">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div>
+                <FieldLabel>Name</FieldLabel>
+                <input
+                  type="text"
+                  value={name}
+                  onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
+                  class={inputCls()}
+                />
+              </div>
+              <div>
+                <FieldLabel>Order Index</FieldLabel>
+                <input
+                  type="number"
+                  value={orderNum}
+                  onInput={(e) => setOrderNum(Number((e.currentTarget as HTMLInputElement).value))}
+                  class={inputCls()}
+                />
+              </div>
+            </div>
+            <div>
+              <FieldLabel>Description</FieldLabel>
+              <textarea
+                rows={4}
+                value={description}
+                onInput={(e) => setDescription((e.currentTarget as HTMLTextAreaElement).value)}
+                class={textareaCls()}
+              />
+            </div>
           </div>
-          <div>
-            <FieldLabel>Description</FieldLabel>
-            <textarea
-              rows={3}
-              value={description}
-              onInput={(e) => setDescription((e.currentTarget as HTMLTextAreaElement).value)}
-              class={inputCls()}
-            />
-          </div>
-          <div>
-            <FieldLabel>Order</FieldLabel>
-            <input
-              type="number"
-              value={orderNum}
-              onInput={(e) => setOrderNum(Number((e.currentTarget as HTMLInputElement).value))}
-              class={inputCls()}
-            />
-          </div>
-          <div class="flex gap-3">
+          <div class="flex pt-2">
             <Button variant="primary" onClick={saveMeta} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? 'Saving...' : 'Save details'}
+              {updateMutation.isPending ? 'Saving...' : 'Save Details'}
             </Button>
           </div>
         </Section>
 
         <Section title="Gallery Photos" description="Drag and drop to reorder photos. Click a photo to set it as the gallery cover.">
           {gallery.cover && (
-            <p class="text-sm text-muted mb-2">
-              Current Cover: <code class="font-mono text-ink">{gallery.cover}</code>
-            </p>
+            <div class="p-3 bg-canvas/30 rounded-sm border border-border text-xs text-ink flex items-center justify-between shadow-2xs mb-4">
+              <span class="text-muted">Current Cover Reference</span>
+              <code class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-surface border border-border text-primary">
+                {gallery.cover}
+              </code>
+            </div>
           )}
           {selectedPhotos.length === 0 ? (
-            <p class="text-muted">Add photos to the gallery first to set a cover.</p>
+            <div class="border border-dashed border-border rounded-sm p-12 text-center bg-surface/20">
+              <p class="text-sm text-muted">Add photos to the gallery first to set a cover.</p>
+            </div>
           ) : (
-            <div class="space-y-4">
-              <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            <div class="space-y-6">
+              <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3.5 p-3 border border-border rounded-sm bg-canvas/40 shadow-2xs">
                 {selectedPhotos.map((p, index) => {
                   const coverRef = `${p.category}/${p.filename}`
                   const isCover = gallery.cover === coverRef
@@ -200,11 +215,11 @@ function GalleryEditor({
                         if (isDragging) return
                         setCoverPhoto(p)
                       }}
-                      class={`relative rounded-xs overflow-hidden border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
+                      class={`relative aspect-[4/3] rounded-xs overflow-hidden border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
                         draggedIndex === index
                           ? 'opacity-40 scale-95 border-dashed border-primary'
                           : isCover
-                            ? 'border-primary'
+                            ? 'border-primary shadow-xs'
                             : 'border-transparent hover:border-border'
                       }`}
                     >
@@ -212,10 +227,10 @@ function GalleryEditor({
                         src={`/photos/thumbs/${p.category}/${thumbName}`}
                         alt={p.filename}
                         loading="lazy"
-                        class="w-full aspect-[4/3] object-cover pointer-events-none"
+                        class="w-full h-full object-cover pointer-events-none"
                       />
                       {isCover && (
-                        <span class="absolute top-1 right-1 text-xs bg-primary text-primary-text px-1.5 py-0.5 rounded-xs pointer-events-none">
+                        <span class="absolute top-1 right-1 text-[9px] font-semibold bg-primary text-primary-text px-1.5 py-0.5 rounded-xs pointer-events-none shadow-sm">
                           Cover
                         </span>
                       )}
@@ -223,32 +238,32 @@ function GalleryEditor({
                   )
                 })}
               </div>
-              <div class="flex gap-3">
+              <div class="flex">
                 <Button variant="primary" onClick={savePhotos} disabled={photosMutation.isPending}>
-                  {photosMutation.isPending ? 'Saving...' : 'Save photo order'}
+                  {photosMutation.isPending ? 'Saving...' : 'Save Photo Order'}
                 </Button>
               </div>
             </div>
           )}
         </Section>
 
-        <Section title="Photos" description="Select photos from your categories to include in this gallery.">
+        <Section title="Source Photos" description="Select photos from your categories to include in this gallery.">
           <div class="hs-accordion-group space-y-3">
             {categories.map((cat) => {
               const selectedInCat = selectedPhotos.filter((p) => p.category === cat.slug).length
               return (
-                <div key={cat.slug} class="hs-accordion border border-border-light rounded-md overflow-hidden" id={`hs-cat-${cat.slug}`}>
+                <div key={cat.slug} class="hs-accordion border border-border rounded-sm overflow-hidden bg-surface/30 shadow-2xs" id={`hs-cat-${cat.slug}`}>
                   <button
                     type="button"
-                    class="hs-accordion-toggle w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-border transition-colors disabled:opacity-50"
+                    class="hs-accordion-toggle w-full flex items-center justify-between px-4 py-3 bg-surface/70 hover:bg-surface transition-colors disabled:opacity-50 cursor-pointer"
                     aria-expanded="false"
                     aria-controls={`hs-cat-${cat.slug}-content`}
                   >
-                    <span class="text-sm font-medium text-ink">
+                    <span class="text-sm font-medium text-ink flex items-center gap-2">
                       {cat.slug}
                       {selectedInCat > 0 && (
-                        <span class="ml-2 text-xs bg-primary text-primary-text px-2 py-0.5 rounded-pill">
-                          {selectedInCat}
+                        <span class="text-[10px] font-semibold bg-primary text-primary-text px-2 py-0.5 rounded-sm shadow-2xs">
+                          {selectedInCat} selected
                         </span>
                       )}
                     </span>
@@ -264,11 +279,11 @@ function GalleryEditor({
                   </button>
                   <div
                     id={`hs-cat-${cat.slug}-content`}
-                    class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300"
+                    class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300 bg-canvas/20"
                     role="region"
                     aria-labelledby={`hs-cat-${cat.slug}`}
                   >
-                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 p-3">
+                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3.5 p-4">
                       {cat.photos.map((filename) => {
                         const selected = isPhotoSelected(cat.slug, filename)
                         const thumbName = filename.replace(/\.[^.]+$/, '.webp')
@@ -277,18 +292,18 @@ function GalleryEditor({
                             key={filename}
                             type="button"
                             onClick={() => togglePhoto(cat.slug, filename)}
-                            class={`relative rounded-xs overflow-hidden border-2 transition-colors ${
-                              selected ? 'border-primary' : 'border-transparent hover:border-border'
+                            class={`relative aspect-[4/3] rounded-xs overflow-hidden border-2 cursor-pointer transition-all ${
+                              selected ? 'border-primary shadow-xs' : 'border-transparent hover:border-border'
                             }`}
                           >
                             <img
                               src={`/photos/thumbs/${cat.slug}/${thumbName}`}
                               alt={filename}
                               loading="lazy"
-                              class="w-full aspect-[4/3] object-cover"
+                              class="w-full h-full object-cover"
                             />
                             {selected && (
-                              <span class="absolute top-1 right-1 size-5 bg-primary text-primary-text rounded-full flex items-center justify-center text-xs">
+                              <span class="absolute top-1 right-1 size-4 bg-primary text-primary-text rounded-full flex items-center justify-center text-[10px] shadow-xs font-bold">
                                 ✓
                               </span>
                             )}
@@ -301,9 +316,9 @@ function GalleryEditor({
               )
             })}
           </div>
-          <div class="flex gap-3 mt-4">
+          <div class="flex pt-2">
             <Button variant="primary" onClick={savePhotos} disabled={photosMutation.isPending}>
-              {photosMutation.isPending ? 'Saving...' : `Save photos (${selectedPhotos.length})`}
+              {photosMutation.isPending ? 'Saving...' : `Save Photos (${selectedPhotos.length})`}
             </Button>
           </div>
         </Section>
@@ -366,109 +381,141 @@ export function GalleriesPage() {
   }
 
   return (
-    <div class="max-w-4xl">
-      <div class="mb-6">
-        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
-          galleries
-        </h2>
-        <p class="text-base text-muted mt-2">
-          Curate photo collections that tell stories. Galleries pull photos from your categories without duplicating them.
-        </p>
-      </div>
-
-      <div class="mb-8">
-        {showCreate ? (
-          <Section title="New Gallery">
-            <div>
-              <FieldLabel>Title</FieldLabel>
-              <input
-                type="text"
-                value={newName}
-                onInput={(e) => setNewName((e.currentTarget as HTMLInputElement).value)}
-                placeholder="e.g. Golden Hour, Behind the Scenes"
-                class={inputCls()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Description</FieldLabel>
-              <textarea
-                rows={2}
-                value={newDescription}
-                onInput={(e) => setNewDescription((e.currentTarget as HTMLTextAreaElement).value)}
-                placeholder="What story does this gallery tell?"
-                class={inputCls()}
-              />
-            </div>
-            <div class="flex gap-3">
-              <Button
-                variant="primary"
-                onClick={() => createMutation.mutate()}
-                disabled={!newName.trim() || createMutation.isPending}
-              >
-                {createMutation.isPending ? 'Creating...' : 'Create gallery'}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowCreate(false)}>
-                Cancel
-              </Button>
-            </div>
-          </Section>
-        ) : (
+    <div class="max-w-4xl space-y-8">
+      <div class="flex items-center justify-between gap-4 border-b border-border pb-6">
+        <div class="space-y-1">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
+            Portfolio
+          </h2>
+          <h1 class="font-display text-3xl font-bold text-ink">
+            Galleries
+          </h1>
+          <p class="text-sm text-body-muted leading-relaxed">
+            Curate photo collections that tell stories. Galleries pull photos from your categories without duplicating files.
+          </p>
+        </div>
+        {!showCreate && (
           <Button variant="primary" onClick={() => setShowCreate(true)}>
-            New gallery
+            <svg class="size-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            New Gallery
           </Button>
         )}
       </div>
 
+      {showCreate && (
+        <Section title="New Gallery" description="Enter details to create a new curated photo collection.">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div>
+                <FieldLabel>Title</FieldLabel>
+                <input
+                  type="text"
+                  value={newName}
+                  onInput={(e) => setNewName((e.currentTarget as HTMLInputElement).value)}
+                  placeholder="e.g. Golden Hour, Behind the Scenes"
+                  class={inputCls()}
+                />
+              </div>
+            </div>
+            <div>
+              <FieldLabel>Description</FieldLabel>
+              <textarea
+                rows={3}
+                value={newDescription}
+                onInput={(e) => setNewDescription((e.currentTarget as HTMLTextAreaElement).value)}
+                placeholder="What story does this gallery tell?"
+                class={textareaCls()}
+              />
+            </div>
+          </div>
+          <div class="flex gap-3 pt-2">
+            <Button
+              variant="primary"
+              onClick={() => createMutation.mutate()}
+              disabled={!newName.trim() || createMutation.isPending}
+            >
+              {createMutation.isPending ? 'Creating...' : 'Create Gallery'}
+            </Button>
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>
+              Cancel
+            </Button>
+          </div>
+        </Section>
+      )}
+
       {galleriesQuery.isLoading ? (
-        <p class="text-muted">Loading galleries...</p>
+        <div class="flex items-center justify-center p-12">
+          <svg class="animate-spin h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+          </svg>
+          <span class="ml-3 text-sm text-muted">Loading galleries...</span>
+        </div>
       ) : galleries.length === 0 ? (
-        <div class="border border-border-light rounded-md p-12 text-center">
-          <p class="text-muted">
+        <div class="border border-dashed border-border rounded-sm p-12 text-center bg-surface/20">
+          <p class="text-sm text-muted">
             No galleries yet. Create one to start curating photo collections.
           </p>
         </div>
       ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {galleries.map((g) => (
             <div
               key={g.slug}
-              class="group border border-border-light rounded-md overflow-hidden bg-canvas hover:border-border transition-colors"
+              class="group border border-border rounded-sm overflow-hidden bg-surface hover:border-border-hover hover:shadow-sm transition-all duration-200 flex flex-col h-full"
             >
-              {g.cover && (() => {
+              {g.cover ? (() => {
                 const [cat, file] = g.cover.split('/')
                 const thumbName = file?.replace(/\.[^.]+$/, '.webp')
                 return (
-                  <div class="aspect-[16/10] bg-surface overflow-hidden">
+                  <div class="aspect-[16/10] bg-canvas overflow-hidden border-b border-border-light relative">
                     <img
                       src={`/photos/thumbs/${cat}/${thumbName}`}
                       alt={g.name}
                       loading="lazy"
-                      class="w-full h-full object-cover"
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+                    <span class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-[10px] text-white px-2 py-0.5 rounded-xs font-mono shadow-2xs">
+                      {g.photo_count} photo{g.photo_count !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 )
-              })()}
-              <div class="p-4">
-                <h3 class="font-display font-display text-xl text-ink">{g.name}</h3>
-                {g.description && (
-                  <p class="text-sm text-muted mt-1 line-clamp-2">{g.description}</p>
-                )}
-                <p class="text-xs text-muted mt-2">
-                  {g.photo_count} photo{g.photo_count !== 1 ? 's' : ''}
-                </p>
-                <div class="flex gap-2 mt-3">
+              })() : (
+                <div class="aspect-[16/10] bg-canvas flex items-center justify-center border-b border-border-light">
+                  <span class="text-xs text-muted">No cover image</span>
+                </div>
+              )}
+              <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div class="space-y-1.5">
+                  <h3 class="font-display text-xl font-semibold text-ink leading-tight">{g.name}</h3>
+                  {g.description && (
+                    <p class="text-sm text-muted line-clamp-2 leading-relaxed">{g.description}</p>
+                  )}
+                </div>
+                <div class="flex items-center gap-2 pt-4 border-t border-border-light/40">
                   <Button variant="secondary" size="sm" onClick={() => setEditingSlug(g.slug)}>
+                    <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
                     Edit
                   </Button>
                   <Button
-                    variant="danger"
+                    variant="ghost"
                     size="sm"
                     onClick={() => {
                       if (confirm(`Delete "${g.name}"? This cannot be undone.`)) {
                         deleteMutation.mutate(g.slug)
                       }
                     }}
+                    class="text-error hover:text-error hover:bg-error/10"
                   >
+                    <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
                     Delete
                   </Button>
                 </div>

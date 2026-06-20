@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '../../../lib/admin/api'
 import { useConfig } from '../../../lib/admin/store'
 import { Button } from '../ui/Button'
-import { Chip } from '../ui/Chip'
 import { Section } from '../ui/Section'
 
 type PhotoMeta = { title?: string; description?: string; hero_priority?: number }
@@ -20,14 +19,18 @@ function cleanMeta(meta: Record<string, unknown>): Record<string, unknown> {
 
 function FieldLabel({ children }: { children: string }) {
   return (
-    <label class="block text-sm font-medium text-body-muted mb-1.5">
+    <label class="text-sm font-medium text-ink block mb-1.5">
       {children}
     </label>
   )
 }
 
 function inputCls() {
-  return 'w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20'
+  return 'flex h-9.5 w-full rounded-sm border border-border bg-canvas px-3 py-1 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus disabled:cursor-not-allowed disabled:opacity-50'
+}
+
+function textareaCls() {
+  return 'flex min-h-[60px] w-full rounded-sm border border-border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus disabled:cursor-not-allowed disabled:opacity-50 resize-y'
 }
 
 export function CategoriesPage() {
@@ -74,14 +77,19 @@ export function CategoriesPage() {
 
   if (!categories || categories.length === 0) {
     return (
-      <div class="max-w-3xl">
-        <h2 class="font-display font-display text-3xl sm:text-4xl text-ink mb-2">
-          Categories
-        </h2>
-        <p class="text-base text-muted mb-6">
-          Manage photo categories and their _meta.yaml settings.
-        </p>
-        <div class="border border-border-light rounded-md p-12 text-center">
+      <div class="max-w-3xl space-y-6">
+        <div class="space-y-1">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
+            Photos
+          </h2>
+          <h1 class="font-display text-3xl font-bold text-ink">
+            Categories
+          </h1>
+          <p class="text-sm text-body-muted">
+            Manage photo categories and their settings.
+          </p>
+        </div>
+        <div class="border border-dashed border-border rounded-sm p-12 text-center bg-surface/30">
           <p class="text-muted">
             No categories found. Add photo folders to <code class="font-mono text-ink">photos/</code> and republish.
           </p>
@@ -115,18 +123,24 @@ export function CategoriesPage() {
   }
 
   return (
-    <div class="max-w-4xl">
-      <div class="mb-6">
-        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
-          photos
+    <div class="max-w-4xl space-y-8">
+      <div class="space-y-1">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
+          Photos
         </h2>
-        <p class="text-base text-muted mt-2">
+        <h1 class="font-display text-3xl font-bold text-ink">
+          Categories
+        </h1>
+        <p class="text-sm text-body-muted">
           Manage photo categories and their _meta.yaml settings.
         </p>
       </div>
-      <div class="flex flex-wrap gap-2 mb-8">
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-8">
         {categories.map((c) => {
           const coverFile = (c.meta?.cover as string) || c.photos[0]
+          const isActive = c.slug === selectedCategory
+          const thumbName = coverFile ? coverFile.replace(/\.[^.]+$/, '.webp') : ''
           return (
             <button
               key={c.slug}
@@ -136,279 +150,313 @@ export function CategoriesPage() {
                   flushSave().then(() => setSelectedCategory(c.slug))
                 }
               }}
-              class="group"
+              class={`flex flex-col items-stretch p-2.5 rounded-sm border text-left transition-all duration-150 cursor-pointer ${
+                isActive
+                  ? 'bg-surface border-primary ring-1 ring-primary text-ink shadow-xs'
+                  : 'bg-surface/50 border-border text-muted hover:border-border-hover hover:text-ink hover:bg-surface'
+              }`}
             >
-              <Chip active={c.slug === selectedCategory}>
-                {coverFile && (
+              <div class="aspect-[4/3] rounded-xs overflow-hidden bg-canvas mb-2 border border-border-light relative">
+                {coverFile ? (
                   <img
-                    src={`/photos/thumbs/${c.slug}/${coverFile.replace(/\.[^.]+$/, '.webp')}`}
+                    src={`/photos/thumbs/${c.slug}/${thumbName}`}
                     alt=""
                     loading="lazy"
                     onError={(e) => {
                       ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                     }}
-                    class="inline-block w-7 h-5 object-cover rounded-xs mr-2 align-middle bg-surface"
+                    class="w-full h-full object-cover"
                   />
+                ) : (
+                  <div class="w-full h-full flex items-center justify-center text-xs text-muted bg-canvas">
+                    No image
+                  </div>
                 )}
+                <div class="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-[10px] text-white px-1.5 py-0.5 rounded-xs font-mono">
+                  {c.photos.length}
+                </div>
+              </div>
+              <div class="truncate text-xs font-medium text-ink">
+                {c.meta?.name || c.slug}
+              </div>
+              <div class="text-[10px] text-muted truncate font-mono mt-0.5">
                 {c.slug}
-              </Chip>
+              </div>
             </button>
           )
         })}
       </div>
+
       {cat && (
         <>
-        <div class="space-y-6">
-          <Section title={cat.slug}>
-            <div>
-              <FieldLabel>Name</FieldLabel>
-              <input
-                type="text"
-                value={(localMeta.name as string) || ''}
-                onInput={(e) =>
-                  setMeta('name', (e.currentTarget as HTMLInputElement).value)
-                }
-                class={inputCls()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Description</FieldLabel>
-              <textarea
-                rows={2}
-                value={(localMeta.description as string) || ''}
-                onInput={(e) =>
-                  setMeta(
-                    'description',
-                    (e.currentTarget as HTMLTextAreaElement).value,
-                  )
-                }
-                class={inputCls()}
-              />
-            </div>
-            <div>
-              <FieldLabel>Cover</FieldLabel>
-              <select
-                value={(localMeta.cover as string) || cat.photos[0]}
-                onChange={(e) =>
-                  setMeta('cover', (e.currentTarget as HTMLSelectElement).value)
-                }
-                class={inputCls()}
-              >
-                {cat.photos.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <FieldLabel>Order</FieldLabel>
-              <input
-                type="number"
-                value={
-                  localMeta.order === undefined || localMeta.order === null
-                    ? ''
-                    : String(localMeta.order)
-                }
-                onInput={(e) => {
-                  const v = (e.currentTarget as HTMLInputElement).value
-                  setMeta('order', v === '' ? undefined : Number(v))
-                }}
-                class={inputCls()}
-              />
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-ink">
-                Offer Service
-              </span>
-              <label class="inline-flex items-center gap-3 cursor-pointer select-none">
-                <span class="relative inline-block w-10 h-[22px] flex-shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={localMeta.offer_service !== false}
-                    onChange={(e) =>
-                      setMeta(
-                        'offer_service',
-                        (e.currentTarget as HTMLInputElement).checked,
-                      )
-                    }
-                    class="sr-only peer"
-                  />
-                  <span class="absolute inset-0 bg-border rounded-pill peer-checked:bg-primary transition-colors" />
-                  <span class="absolute left-[3px] bottom-[3px] h-4 w-4 bg-canvas rounded-full transition-transform peer-checked:translate-x-[18px]" />
-                </span>
-              </label>
-            </div>
-          </Section>
-          <Section title="Photos">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-              {/* Left pane: compact grid of thumbnails */}
-              <div class="md:col-span-5 space-y-3">
-                <p class="text-xs font-mono uppercase tracking-wider text-muted">
-                  Select a photo to edit
-                </p>
-                <div class="grid grid-cols-4 gap-2 overflow-y-auto max-h-[550px] p-1.5 border border-border-light rounded-md bg-surface">
-                  {cat.photos.map((filename) => {
-                    const isSelected = selectedPhotoFilename === filename
-                    const isCover = ((localMeta.cover as string) || cat.photos[0]) === filename
-                    const thumbName = filename.replace(/\.[^.]+$/, '.webp')
-                    return (
-                      <button
-                        key={filename}
-                        type="button"
-                        onClick={() => setSelectedPhotoFilename(filename)}
-                        class={`relative aspect-square rounded-xs overflow-hidden border-2 transition-all ${
-                          isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-border'
-                        }`}
+          <div class="space-y-8">
+            <Section title={cat.slug} description="General metadata settings for this photo category.">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                  <div>
+                    <FieldLabel>Name</FieldLabel>
+                    <input
+                      type="text"
+                      value={(localMeta.name as string) || ''}
+                      onInput={(e) =>
+                        setMeta('name', (e.currentTarget as HTMLInputElement).value)
+                      }
+                      class={inputCls()}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Cover Photo</FieldLabel>
+                    <div class="relative">
+                      <select
+                        value={(localMeta.cover as string) || cat.photos[0]}
+                        onChange={(e) =>
+                          setMeta('cover', (e.currentTarget as HTMLSelectElement).value)
+                        }
+                        class={`${inputCls()} appearance-none pr-8`}
                       >
-                        <img
-                          src={`/photos/thumbs/${cat.slug}/${thumbName}`}
-                          alt={filename}
-                          loading="lazy"
-                          class="w-full h-full object-cover"
+                        {cat.photos.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                      <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted">
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <FieldLabel>Order Index</FieldLabel>
+                    <input
+                      type="number"
+                      value={
+                        localMeta.order === undefined || localMeta.order === null
+                          ? ''
+                          : String(localMeta.order)
+                      }
+                      onInput={(e) => {
+                        const v = (e.currentTarget as HTMLInputElement).value
+                        setMeta('order', v === '' ? undefined : Number(v))
+                      }}
+                      class={inputCls()}
+                    />
+                  </div>
+                  <div class="flex items-center justify-between py-2 border border-border rounded-sm p-4 bg-canvas/30 shadow-2xs">
+                    <div>
+                      <span class="text-sm font-medium text-ink block">Offer Service</span>
+                      <span class="text-xs text-muted">Show as a service card on home page</span>
+                    </div>
+                    <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+                      <span class="relative inline-block w-9 h-5 flex-shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={localMeta.offer_service !== false}
+                          onChange={(e) =>
+                            setMeta(
+                              'offer_service',
+                              (e.currentTarget as HTMLInputElement).checked,
+                            )
+                          }
+                          class="sr-only peer"
                         />
-                        {isCover && (
-                          <span class="absolute top-0.5 right-0.5 text-[10px] bg-primary text-primary-text px-1 py-0.2 rounded-xs">
-                            ★
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
+                        <span class="absolute inset-0 bg-border rounded-full peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-border-focus peer-focus-visible:ring-offset-2 transition-all duration-200" />
+                        <span class="absolute left-[2px] top-[2px] h-4 w-4 bg-canvas rounded-full shadow-xs transition-transform duration-200 peer-checked:translate-x-[16px]" />
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
+              <div>
+                <FieldLabel>Description</FieldLabel>
+                <textarea
+                  rows={2}
+                  value={(localMeta.description as string) || ''}
+                  onInput={(e) =>
+                    setMeta(
+                      'description',
+                      (e.currentTarget as HTMLTextAreaElement).value,
+                    )
+                  }
+                  class={textareaCls()}
+                />
+              </div>
+            </Section>
 
-              {/* Right pane: detail editor for the selected photo */}
-              <div class="md:col-span-7">
-                {selectedPhotoFilename ? (() => {
-                  const filename = selectedPhotoFilename
-                  const photoMeta =
-                    ((localMeta.photos as Record<string, PhotoMeta>) || {})[filename] || {}
-                  const isCover =
-                    ((localMeta.cover as string) || cat.photos[0]) === filename
-                  const heroPriority = photoMeta.hero_priority ?? 0
-                  return (
-                    <div class="border border-border-light rounded-md p-4 bg-canvas space-y-4">
-                      <div class="flex items-center justify-between border-b border-border-light pb-3 gap-2">
-                        <span class="text-sm font-mono text-ink truncate block flex-1" title={filename}>
-                          {filename}
-                        </span>
-                        {isCover ? (
-                          <span class="text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-xs bg-primary text-primary-text flex-shrink-0">
-                            ★ Cover
-                          </span>
-                        ) : (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => makeCover(filename)}
-                            class="flex-shrink-0"
-                          >
-                            Make cover
-                          </Button>
-                        )}
-                      </div>
-
-                      <div class="flex flex-col gap-4">
-                        <div class="w-full flex items-center justify-center bg-surface rounded-sm p-2 border border-border-light">
+            <Section title="Photos" description="Configure titles, descriptions, and homepage slideshow priorities for individual photos.">
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                {/* Left pane: compact grid of thumbnails */}
+                <div class="md:col-span-5 space-y-3">
+                  <p class="text-xs font-semibold uppercase tracking-wider text-muted font-mono">
+                    Select photo
+                  </p>
+                  <div class="grid grid-cols-4 gap-2 overflow-y-auto max-h-[500px] p-2.5 border border-border rounded-sm bg-canvas/50">
+                    {cat.photos.map((filename) => {
+                      const isSelected = selectedPhotoFilename === filename
+                      const isCover = ((localMeta.cover as string) || cat.photos[0]) === filename
+                      const thumbName = filename.replace(/\.[^.]+$/, '.webp')
+                      return (
+                        <button
+                          key={filename}
+                          type="button"
+                          onClick={() => setSelectedPhotoFilename(filename)}
+                          class={`relative aspect-square rounded-xs overflow-hidden border-2 cursor-pointer transition-all ${
+                            isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-border'
+                          }`}
+                        >
                           <img
-                            src={`/photos/thumbs/${cat.slug}/${filename.replace(/\.[^.]+$/, '.webp')}`}
+                            src={`/photos/thumbs/${cat.slug}/${thumbName}`}
                             alt={filename}
                             loading="lazy"
-                            onError={(e) => {
-                              ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                            }}
-                            class="max-h-64 object-contain rounded-xs bg-border-light"
+                            class="w-full h-full object-cover"
                           />
+                          {isCover && (
+                            <span class="absolute top-0.5 right-0.5 size-4 bg-primary text-primary-text rounded-full flex items-center justify-center text-[10px] shadow-xs">
+                              ★
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Right pane: detail editor for the selected photo */}
+                <div class="md:col-span-7">
+                  {selectedPhotoFilename ? (() => {
+                    const filename = selectedPhotoFilename
+                    const photoMeta =
+                      ((localMeta.photos as Record<string, PhotoMeta>) || {})[filename] || {}
+                    const isCover =
+                      ((localMeta.cover as string) || cat.photos[0]) === filename
+                    const heroPriority = photoMeta.hero_priority ?? 0
+                    return (
+                      <div class="border border-border rounded-sm p-5 bg-surface/30 shadow-2xs space-y-5">
+                        <div class="flex items-center justify-between border-b border-border-light pb-3 gap-4">
+                          <span class="text-xs font-mono font-medium text-ink truncate block flex-1" title={filename}>
+                            {filename}
+                          </span>
+                          {isCover ? (
+                            <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-sm bg-primary text-primary-text flex-shrink-0 shadow-2xs">
+                              ★ Cover Photo
+                            </span>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => makeCover(filename)}
+                              class="flex-shrink-0"
+                            >
+                              Set as Cover
+                            </Button>
+                          )}
                         </div>
 
-                        <div class="space-y-3">
-                          <div>
-                            <FieldLabel>Title</FieldLabel>
-                            <input
-                              type="text"
-                              value={photoMeta.title || ''}
-                              onInput={(e) =>
-                                setPhotoField(
-                                  filename,
-                                  'title',
-                                  (e.currentTarget as HTMLInputElement).value || undefined,
-                                )
-                              }
-                              class={inputCls()}
+                        <div class="space-y-5">
+                          <div class="w-full flex items-center justify-center bg-canvas/30 rounded-sm p-3 border border-border">
+                            <img
+                              src={`/photos/thumbs/${cat.slug}/${filename.replace(/\.[^.]+$/, '.webp')}`}
+                              alt={filename}
+                              loading="lazy"
+                              onError={(e) => {
+                                ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                              }}
+                              class="max-h-64 object-contain rounded-xs bg-border-light shadow-sm"
                             />
                           </div>
-                          <div>
-                            <FieldLabel>Description</FieldLabel>
-                            <textarea
-                              rows={2}
-                              value={photoMeta.description || ''}
-                              onInput={(e) =>
-                                setPhotoField(
-                                  filename,
-                                  'description',
-                                  (e.currentTarget as HTMLTextAreaElement).value || undefined,
-                                )
-                              }
-                              class={inputCls()}
-                            />
-                          </div>
-                          <div>
-                            <FieldLabel>Hero priority</FieldLabel>
-                            <div class="flex items-center gap-3">
+
+                          <div class="space-y-4">
+                            <div>
+                              <FieldLabel>Title</FieldLabel>
                               <input
-                                type="range"
-                                min={0}
-                                max={5}
-                                value={heroPriority}
+                                type="text"
+                                value={photoMeta.title || ''}
                                 onInput={(e) =>
                                   setPhotoField(
                                     filename,
-                                    'hero_priority',
-                                    Number((e.currentTarget as HTMLInputElement).value),
+                                    'title',
+                                    (e.currentTarget as HTMLInputElement).value || undefined,
                                   )
                                 }
-                                class="flex-1 accent-primary"
+                                class={inputCls()}
                               />
-                              <span class="text-sm text-body-muted w-8 text-center font-mono">
-                                {heroPriority}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setPhotoField(filename, 'hero_priority', 0)}
-                              >
-                                reset
-                              </Button>
                             </div>
-                            <p class="mt-1.5 text-xs text-body-muted/80">
-                              0 = Excluded, 1-5 = Priority level for homepage slideshow
-                            </p>
+                            <div>
+                              <FieldLabel>Description</FieldLabel>
+                              <textarea
+                                rows={2}
+                                value={photoMeta.description || ''}
+                                onInput={(e) =>
+                                  setPhotoField(
+                                    filename,
+                                    'description',
+                                    (e.currentTarget as HTMLTextAreaElement).value || undefined,
+                                  )
+                                }
+                                class={textareaCls()}
+                              />
+                            </div>
+                            <div>
+                              <FieldLabel>Homepage Slideshow Priority</FieldLabel>
+                              <div class="flex items-center gap-4 bg-canvas/50 border border-border rounded-sm p-3 shadow-2xs">
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={5}
+                                  value={heroPriority}
+                                  onInput={(e) =>
+                                    setPhotoField(
+                                      filename,
+                                      'hero_priority',
+                                      Number((e.currentTarget as HTMLInputElement).value),
+                                    )
+                                  }
+                                  class="flex-1 accent-primary cursor-pointer h-1.5 bg-border rounded-lg appearance-none"
+                                />
+                                <span class="text-sm font-mono font-medium text-ink w-8 text-center bg-canvas border border-border rounded-sm py-0.5 px-1 shadow-2xs">
+                                  {heroPriority}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setPhotoField(filename, 'hero_priority', 0)}
+                                >
+                                  Reset
+                                </Button>
+                              </div>
+                              <p class="mt-2 text-xs text-muted leading-relaxed">
+                                0 = Excluded from slideshow. 1-5 = Priority level for homepage hero slideshow (higher shows first).
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
+                    )
+                  })() : (
+                    <div class="border border-dashed border-border rounded-sm p-12 text-center bg-surface/20">
+                      <p class="text-sm text-muted">Select a photo from the grid to edit its details.</p>
                     </div>
-                  )
-                })() : (
-                  <div class="border border-border-light border-dashed rounded-md p-8 text-center bg-canvas">
-                    <p class="text-muted">Select a photo from the grid to edit its details.</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+            </Section>
+          </div>
+          <div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6">
+            <div class="flex items-center gap-2">
+              <Button
+                variant="primary"
+                onClick={saveAll}
+                disabled={saveMutation.isPending}
+              >
+                {saveMutation.isPending ? 'Saving…' : 'Save Category'}
+              </Button>
+              <span class="text-xs font-mono text-muted uppercase tracking-wider">
+                Writes to {cat.slug}/_meta.yaml
+              </span>
             </div>
-          </Section>
-        </div>
-          <div class="mt-8 flex flex-wrap items-center gap-3">
-            <Button
-              variant="primary"
-              onClick={saveAll}
-              disabled={saveMutation.isPending}
-            >
-              {saveMutation.isPending ? 'Saving…' : 'Save category'}
-            </Button>
-            <span class="text-xs font-mono uppercase tracking-wider text-muted">
-              Writes to {cat.slug}/_meta.yaml
-            </span>
           </div>
         </>
       )}

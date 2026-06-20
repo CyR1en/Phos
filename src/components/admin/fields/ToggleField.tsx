@@ -10,8 +10,8 @@ export function ToggleField({ path, label }: Props) {
   const { getValue, setValue, flushSave } = useConfig()
   const value = !!getValue(path)
   return (
-    <div class="flex items-center justify-between">
-      <span class="text-sm text-ink">{label}</span>
+    <div class="flex items-center justify-between py-2.5">
+      <span class="text-sm font-medium text-ink">{label}</span>
       <Toggle
         checked={value}
         onChange={(v) => {

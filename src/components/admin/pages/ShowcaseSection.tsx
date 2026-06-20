@@ -9,14 +9,14 @@ import { Button } from '../ui/Button'
 
 function FieldLabel({ children }: { children: string }) {
   return (
-    <label class="block text-sm font-medium text-body-muted mb-1.5">
+    <label class="text-sm font-medium text-ink block mb-1.5">
       {children}
     </label>
   )
 }
 
 function selectCls() {
-  return 'w-full px-3 py-2 bg-canvas border border-border rounded-xs text-base font-body focus:outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/20'
+  return 'flex h-9.5 w-full rounded-sm border border-border bg-canvas px-3 py-1 text-sm shadow-2xs transition-colors hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus cursor-pointer appearance-none pr-8 text-ink'
 }
 
 interface ShowcaseItem {
@@ -45,65 +45,83 @@ function ShowcaseItemEditor({
   const selected = options.find((o) => o.slug === item.slug)
 
   return (
-    <div class="border border-border-light rounded-md p-4 bg-canvas space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="text-sm font-mono text-muted">#{index + 1}</span>
+    <div class="border border-border rounded-sm p-5 bg-surface/30 shadow-2xs space-y-5 relative group/item">
+      <div class="flex items-center justify-between border-b border-border-light pb-3">
+        <span class="text-xs font-mono font-medium text-muted">Feature Item #{index + 1}</span>
         <Button variant="danger" size="sm" onClick={onRemove}>
+          <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
           Remove
         </Button>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <FieldLabel>Type</FieldLabel>
-          <select
-            value={item.type}
-            onChange={(e) => {
-              const newType = (e.currentTarget as HTMLSelectElement).value as 'category' | 'gallery'
-              onUpdate({ ...item, type: newType, slug: '' })
-            }}
-            class={selectCls()}
-          >
-            <option value="category">Category</option>
-            <option value="gallery">Gallery</option>
-          </select>
+          <div class="relative">
+            <select
+              value={item.type}
+              onChange={(e) => {
+                const newType = (e.currentTarget as HTMLSelectElement).value as 'category' | 'gallery'
+                onUpdate({ ...item, type: newType, slug: '' })
+              }}
+              class={selectCls()}
+            >
+              <option value="category">Category</option>
+              <option value="gallery">Gallery</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </div>
+          </div>
         </div>
         <div>
           <FieldLabel>{item.type === 'category' ? 'Category' : 'Gallery'}</FieldLabel>
-          <select
-            value={item.slug}
-            onChange={(e) => onUpdate({ ...item, slug: (e.currentTarget as HTMLSelectElement).value })}
-            class={selectCls()}
-          >
-            <option value="">Select {item.type}...</option>
-            {options.map((o) => (
-              <option key={o.slug} value={o.slug}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <div class="relative">
+            <select
+              value={item.slug}
+              onChange={(e) => onUpdate({ ...item, slug: (e.currentTarget as HTMLSelectElement).value })}
+              class={selectCls()}
+            >
+              <option value="">Select {item.type}...</option>
+              {options.map((o) => (
+                <option key={o.slug} value={o.slug}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
       <div>
-        <FieldLabel>Display title (optional)</FieldLabel>
+        <FieldLabel>Display Title (Optional)</FieldLabel>
         <input
           type="text"
           value={item.title}
           placeholder={selected?.name || ''}
           onInput={(e) => onUpdate({ ...item, title: (e.currentTarget as HTMLInputElement).value })}
-          class={selectCls()}
+          class="flex h-9.5 w-full rounded-sm border border-border bg-canvas px-3 py-1 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus"
         />
       </div>
 
       <div>
-        <FieldLabel>Display description (optional)</FieldLabel>
+        <FieldLabel>Display Description (Optional)</FieldLabel>
         <textarea
           rows={2}
           value={item.description}
           placeholder={selected ? `Original: ${(selected as any).description || '(none)'}` : ''}
           onInput={(e) => onUpdate({ ...item, description: (e.currentTarget as HTMLTextAreaElement).value })}
-          class={selectCls()}
+          class="flex min-h-[60px] w-full rounded-sm border border-border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus resize-y"
         />
       </div>
     </div>
@@ -111,7 +129,7 @@ function ShowcaseItemEditor({
 }
 
 export function ShowcaseSection() {
-  const { config, categories, getValue, setValue, pushToast } = useConfig()
+  const { config, categories, getValue, setValue } = useConfig()
 
   const galleriesQuery = useQuery({
     queryKey: ['galleries'],
@@ -147,20 +165,26 @@ export function ShowcaseSection() {
 
   return (
     <Section title="Showcase" description="Choose categories and galleries to feature on the home page.">
-      <ToggleField path="home.showcase.enabled" label="Enabled" />
-      <TextField path="home.showcase.heading" label="Section heading" />
+      <div class="space-y-4">
+        <ToggleField path="home.showcase.enabled" label="Enable Showcase Section" />
+        <TextField path="home.showcase.heading" label="Section Heading" />
+      </div>
 
-      <div class="border-t border-border pt-4 mt-4">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-sm font-medium text-ink font-mono uppercase tracking-wider">
-            Items
+      <div class="border-t border-border pt-6 mt-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-ink uppercase tracking-wider font-mono">
+            Featured Items
           </span>
           <Button variant="secondary" size="sm" onClick={addItem}>
-            + Add item
+            <svg class="size-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Item
           </Button>
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-4">
           {items.map((item, i) => (
             <ShowcaseItemEditor
               key={i}
@@ -174,9 +198,11 @@ export function ShowcaseSection() {
           ))}
 
           {items.length === 0 && (
-            <p class="text-sm text-muted italic py-4">
-              No items yet. Click + Add item to feature a category or gallery.
-            </p>
+            <div class="border border-dashed border-border rounded-sm p-8 text-center bg-surface/10">
+              <p class="text-sm text-muted italic">
+                No items yet. Click Add Item to feature a category or gallery.
+              </p>
+            </div>
           )}
         </div>
       </div>

@@ -3,13 +3,13 @@ import config from '@lib/config'
 ---
 
 <section data-animate class="animate-reveal bg-surface">
-  <div class="mx-auto max-w-7xl px-6 py-20 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-7xl px-6 py-16 lg:py-24 sm:px-6 lg:px-8">
     <div class="max-w-3xl" data-animate-header class="opacity-0">
       <p class="font-mono text-xs uppercase tracking-wider text-muted">Testimonials</p>
       <h2 class="mt-4 font-display text-3xl sm:text-4xl text-ink" data-config="home.testimonials.heading">{config.home.testimonials.heading}</h2>
     </div>
 
-    <div class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div class="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
       {config.home.testimonials.testimonials.map((t) => (
         <figure class="rounded-sm bg-canvas p-8 border border-border">
           <svg class="mb-6 h-6 w-6 text-accent" viewBox="0 0 24 24" fill="currentColor">

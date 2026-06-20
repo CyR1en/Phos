@@ -30,7 +30,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
 ---
 
 <BaseLayout title="All Photos" description="Browse all photos across every category" page="photo/all">
-  <section class="pt-12 pb-12">
+  <section class="pt-16 lg:pt-24 pb-8 lg:pb-12">
     <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 opacity-0" data-animate-header>
       <p class="font-mono text-xs uppercase tracking-wider text-muted">Browse</p>
       <h1 class="mt-4 font-display text-ink">All photos</h1>
@@ -38,8 +38,8 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
     </div>
   </section>
 
-  <section class="mx-auto pb-24 max-w-7xl px-6 sm:px-6 lg:px-8">
-    <div id="filters" class="mb-10 flex flex-wrap gap-2">
+  <section class="mx-auto pb-16 lg:pb-24 max-w-7xl px-6 sm:px-6 lg:px-8">
+    <div id="filters" class="mb-8 flex flex-wrap gap-2">
       <button class="filter-btn text-sm font-medium rounded-pill border border-primary bg-primary px-4 py-2 text-primary-text min-h-[36px] transition-colors" data-filter="all" aria-pressed="true">
         All
       </button>

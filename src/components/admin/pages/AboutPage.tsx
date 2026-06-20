@@ -11,7 +11,7 @@ export function AboutPage() {
           <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">about</h2>
           <p class="text-base text-muted mt-2">{config?.about?.page_description}</p>
       </div>
-      <div class="space-y-6">
+      <div class="space-y-8">
         <Section title="Open Graph">
           <TextField path="about.og_title" label="Title" />
           <TextField path="about.og_description" label="Description" />

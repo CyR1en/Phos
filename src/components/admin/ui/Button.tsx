@@ -11,22 +11,22 @@ interface Props extends Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> {
 }
 
 const base =
-  'inline-flex items-center justify-center font-body font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+  'inline-flex items-center justify-center font-body font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer'
 
 const sizes: Record<NonNullable<Props['size']>, string> = {
-  sm: 'text-sm px-3 py-1.5',
-  md: 'text-sm font-medium px-5 py-2.5',
+  sm: 'text-xs h-8 px-3 rounded-sm',
+  md: 'text-sm h-9.5 px-4 rounded-sm',
 }
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-primary text-primary-text rounded-pill hover:bg-primary-hover',
+    'bg-primary text-primary-text hover:bg-primary-hover shadow-xs active:scale-[0.98]',
   secondary:
-    'bg-surface text-ink rounded-sm hover:bg-border',
+    'bg-surface border border-border text-ink hover:bg-surface-hover hover:border-border-hover shadow-2xs active:scale-[0.98]',
   danger:
-    'bg-accent text-primary-text rounded-sm hover:opacity-90',
+    'bg-error text-primary-text hover:opacity-90 shadow-xs active:scale-[0.98]',
   ghost:
-    'bg-transparent text-ink rounded-sm underline-offset-2 hover:underline',
+    'bg-transparent text-muted hover:bg-surface hover:text-ink',
 }
 
 export function Button({

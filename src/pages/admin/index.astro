@@ -17,6 +17,14 @@ import '../../styles/global.css'
     />
     <script is:inline>
       (function() {
+        var stored = localStorage.getItem('theme');
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        if (stored === 'dark' || (stored !== 'light' && mq.matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+
         fetch('/site-config.json', { credentials: 'same-origin' })
           .then(function(r) { return r.ok ? r.json() : null })
           .then(function(cfg) {

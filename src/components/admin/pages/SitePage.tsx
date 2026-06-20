@@ -8,7 +8,6 @@ import { ToggleField } from '../fields/ToggleField'
 import { NumberField } from '../fields/NumberField'
 import { SelectField } from '../fields/SelectField'
 import { TextAreaField } from '../fields/TextAreaField'
-import { ObjectField } from '../fields/ObjectField'
 import { ThemePicker } from './ThemePicker'
 
 const PLATFORMS = [
@@ -91,71 +90,76 @@ export function SitePage() {
     setValue('site.social', social.filter((_, idx) => idx !== i))
     flushSave()
   }
-  const updateSocial = (i: number, key: 'platform' | 'url', v: string) => {
-    setValue(
-      'site.social',
-      social.map((s, idx) => (idx === i ? { ...s, [key]: v } : s)),
-    )
-  }
 
   return (
-    <div class="max-w-3xl">
-      <div class="mb-8">
-        <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">
-          site
+    <div class="max-w-3xl space-y-8">
+      <div class="space-y-1">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
+          Site Configuration
         </h2>
-        <p class="text-base text-muted mt-2">
-          {config?.site?.page_description}
+        <h1 class="font-display text-3xl font-bold text-ink">
+          General Settings
+        </h1>
+        <p class="text-sm text-body-muted leading-relaxed">
+          {config?.site?.page_description || 'Manage your website identity, theme, metadata, and social links.'}
         </p>
       </div>
-      <div class="space-y-6">
-        <Section title="Identity">
+
+      <div class="space-y-8">
+        <Section title="Identity" description="Configure your website title, description, logo, and active mode.">
           <TextField path="site.title" label="Title" />
           <TextAreaField
             path="site.description"
             label="Description"
             rows={2}
           />
-          <div class="border-t border-border pt-4 mt-4">
-            <h3 class="font-display font-display text-xl text-ink mb-1">Logo</h3>
-            <div class="mb-3 p-3 bg-surface rounded-sm border border-border-light text-base text-ink">
-              Current logo: <code class="font-mono text-accent">{logoStatus?.light ?? 'none'}</code>
+          <div class="border-t border-border pt-6 mt-6 space-y-4">
+            <h3 class="text-sm font-semibold text-ink uppercase tracking-wider font-mono">Logo</h3>
+            <div class="p-4 bg-canvas/30 rounded-sm border border-border text-sm text-ink flex items-center justify-between shadow-2xs">
+              <span class="text-muted">Current Logo File</span>
+              <code class="font-mono text-xs font-semibold px-2.5 py-1 rounded-sm bg-surface border border-border text-primary">
+                {logoStatus?.light ?? 'none'}
+              </code>
             </div>
-            <div>
+            <div class="space-y-2">
+              <label class="text-xs font-medium text-muted block">Upload New Logo SVG/PNG</label>
               <input
                 ref={lightInputRef}
                 type="file"
                 accept=".svg,.png,.jpg,.jpeg,.webp,.avif"
-                class="block w-full text-sm text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-xs file:border-0 file:text-sm file:font-mono file:bg-surface file:text-ink hover:file:bg-border"
+                class="block w-full text-sm text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-sm file:border file:border-border file:text-xs file:font-medium file:bg-surface file:text-ink hover:file:bg-surface-hover hover:file:border-border-hover file:transition-colors file:cursor-pointer"
               />
             </div>
-            <div class="flex items-center gap-3 mt-3">
-              <button
-                type="button"
+            <div class="flex items-center gap-3 pt-2">
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={uploadLogo}
                 disabled={logoUploading}
-                class="inline-flex items-center rounded-xs bg-primary px-4 py-1.5 text-sm font-medium text-primary-text hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {logoUploading ? 'Uploading...' : 'Upload logo'}
-              </button>
+              </Button>
               {logoStatus?.detected && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={removeLogo}
-                  class="text-error hover:text-error/80 transition-colors text-sm"
+                  class="text-error hover:text-error hover:bg-error/10"
                 >
-                  Remove
-                </button>
+                  Remove Logo
+                </Button>
               )}
             </div>
-            {logoError && <p class="text-base text-error mt-2">{logoError}</p>}
+            {logoError && <p class="text-sm text-error mt-2 font-medium">{logoError}</p>}
           </div>
-          <ToggleField path="site.toggle_demo" label="Toggle Demo" />
+          <ToggleField path="site.toggle_demo" label="Enable Demo Mode" />
         </Section>
-        <Section title="Theme">
+
+        <Section title="Theme" description="Select a predefined color theme for your portfolio. Changes apply in real-time.">
           <ThemePicker />
         </Section>
-        <Section title="Open Graph">
+
+        <Section title="Open Graph" description="Configure search engine and social media preview metadata.">
           <TextField path="site.og.image" label="OG Image URL" placeholder="/og.png" />
           <TextField path="site.og.imageAlt" label="OG Image Alt Text" placeholder="Description of the image" />
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -164,37 +168,47 @@ export function SitePage() {
           </div>
           <TextField path="site.og.locale" label="OG Locale" placeholder="en_US" />
         </Section>
-        <Section title="Social links">
-        <div class="space-y-3">
-          {social.map((s, i) => (
-            <div
-              key={i}
-              class="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2 sm:items-end border border-border-light rounded-sm p-3 bg-canvas"
-            >
-              <SelectField
-                path={`site.social.${i}.platform`}
-                label=""
-                options={PLATFORMS.map((p) => ({ value: p, label: p }))}
-              />
-              <TextField
-                path={`site.social.${i}.url`}
-                label=""
-                placeholder="https://..."
-              />
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => removeSocial(i)}
+
+        <Section title="Social Links" description="Manage platform profiles displayed in your website footer.">
+          <div class="space-y-4">
+            {social.map((s, i) => (
+              <div
+                key={i}
+                class="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-4 sm:items-end border border-border rounded-sm p-4 bg-canvas/20 shadow-2xs relative group/social"
               >
-                Remove
-              </Button>
-            </div>
-          ))}
-          <Button variant="secondary" size="sm" onClick={addSocial}>
-            + Add social link
-          </Button>
-        </div>
-      </Section>
+                <SelectField
+                  path={`site.social.${i}.platform`}
+                  label="Platform"
+                  options={PLATFORMS.map((p) => ({ value: p, label: p }))}
+                />
+                <TextField
+                  path={`site.social.${i}.url`}
+                  label="Profile URL"
+                  placeholder="https://..."
+                />
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => removeSocial(i)}
+                  class="mb-0.5 sm:mb-0"
+                >
+                  <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button variant="secondary" size="sm" onClick={addSocial}>
+              <svg class="size-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add social link
+            </Button>
+          </div>
+        </Section>
       </div>
     </div>
   )

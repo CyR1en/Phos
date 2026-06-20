@@ -58,7 +58,7 @@ const THEMES: ThemeDef[] = [
 
 function SwatchStrip({ colors, label }: { colors: string[]; label: string }) {
   return (
-    <div class="flex flex-1 overflow-hidden rounded-[3px]">
+    <div class="flex flex-1 overflow-hidden rounded-xs">
       {colors.map((c, i) => (
         <div
           key={i}
@@ -103,36 +103,36 @@ export function ThemePicker() {
             key={theme.id}
             onClick={() => handleSelect(theme.id)}
             class={[
-              'theme-card relative flex flex-col rounded-md border-2 bg-canvas text-left transition-all duration-200',
+              'relative flex flex-col rounded-sm border bg-surface text-left transition-all duration-200 cursor-pointer shadow-2xs',
               isActive
-                ? 'border-primary shadow-[0_0_0_1px_var(--primary)]'
-                : 'border-border-light hover:border-border-hover hover:-translate-y-0.5 hover:shadow-md',
+                ? 'border-primary ring-1 ring-primary'
+                : 'border-border hover:border-border-hover hover:shadow-xs',
             ].join(' ')}
             aria-pressed={isActive}
           >
             {/* Swatch previews */}
-            <div class="flex flex-col gap-[3px] p-3 pb-2">
-              <div class="flex h-9 rounded-[3px] overflow-hidden border border-black/5">
+            <div class="flex flex-col gap-1 p-3 pb-2">
+              <div class="flex h-9 rounded-xs overflow-hidden border border-black/5">
                 <SwatchStrip colors={theme.light} label="Light" />
               </div>
-              <div class="flex h-9 rounded-[3px] overflow-hidden border border-white/10">
+              <div class="flex h-9 rounded-xs overflow-hidden border border-white/10">
                 <SwatchStrip colors={theme.dark} label="Dark" />
               </div>
             </div>
 
             {/* Theme info */}
-            <div class="px-3 pb-3">
+            <div class="px-3 pb-3 pt-1">
               <div class="flex items-center justify-between">
-                <span class="font-display text-base font-medium text-ink">
+                <span class="font-display text-base font-semibold text-ink leading-none">
                   {theme.name}
                 </span>
                 {isActive && (
-                  <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-text">
+                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-text shadow-sm">
                     ✓
                   </span>
                 )}
               </div>
-              <p class="text-xs text-muted mt-0.5 leading-snug">
+              <p class="text-xs text-muted mt-1.5 leading-normal">
                 {theme.description}
               </p>
             </div>

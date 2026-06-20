@@ -11,7 +11,7 @@ const ogDescription = config.contact?.og_description
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription}>
-  <section class="contact-bleed flex flex-1 flex-col justify-center bg-surface">
+  <section class="contact-bleed flex flex-1 flex-col justify-center bg-surface py-16 lg:py-24">
     <div class="mx-auto w-full max-w-7xl px-6 lg:px-8">
       <div class="rounded-sm bg-canvas p-8 sm:p-12 border border-border">
         <div data-animate-header class="opacity-0">
@@ -23,7 +23,7 @@ const ogDescription = config.contact?.og_description
         </div>
 
         {hasSmtp ? (
-          <form id="contact-form" class="mt-10 grid gap-5 sm:grid-cols-2 sm:gap-6">
+          <form id="contact-form" class="mt-12 grid gap-4 sm:grid-cols-2 sm:gap-8">
             <div>
               <label for="name" class="block text-sm text-ink">Name</label>
               <input
@@ -107,7 +107,7 @@ const ogDescription = config.contact?.og_description
             })
           </script>
         ) : (
-          <div class="mt-10 rounded-sm border border-border p-6 text-sm text-body-muted">
+          <div class="mt-12 rounded-sm border border-border p-6 text-sm text-body-muted">
             Contact form is not configured yet. Configure SMTP settings in the admin dashboard to enable it.
             {email && (
               <p class="mt-2">
