@@ -198,7 +198,7 @@ function DashboardBody() {
       <ToastViewport />
       {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
         <div
-          class="fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-border shadow-2xl transition-all duration-300"
+          class="fixed bottom-0 inset-x-0 z-[70] bg-surface border-t border-border shadow-2xl transition-all duration-300"
           onMouseEnter={() => {
             if (countdown !== null) {
               hasInteracted.current = true

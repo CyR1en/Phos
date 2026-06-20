@@ -8,7 +8,7 @@ export function ToastViewport() {
   const visibleToasts = toasts.slice(-3)
 
   return (
-    <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full sm:w-80 pointer-events-none">
+    <div class="fixed bottom-4 right-4 z-[80] flex flex-col gap-2 max-w-sm w-full sm:w-80 pointer-events-none">
       {visibleToasts.map((t) => {
         let toastClasses = 'bg-surface text-ink border-border'
         let icon = null
