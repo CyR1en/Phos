@@ -47,7 +47,7 @@ function SortablePhotoItem({ id, photo, onRemove }: { id: string, photo: string,
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="relative group w-24 h-24 border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-surface)] cursor-grab"
+      className="relative group w-36 h-36 border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-surface)] cursor-grab"
       {...(attributes as any)}
       {...(listeners as any)}
     >
@@ -69,8 +69,8 @@ function SortablePhotoItem({ id, photo, onRemove }: { id: string, photo: string,
         <X size={12} />
       </button>
 
-      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
-        <GripVertical size={16} className="text-white drop-shadow" />
+      <div className="absolute top-2 left-2 bg-black/40 text-white p-1 rounded-sm opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <GripVertical size={16} />
       </div>
     </div>
   )
