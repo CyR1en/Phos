@@ -113,18 +113,6 @@
           "hero_priority": 2
         },
         {
-          "filename": "sample-03.jpg",
-          "title": "City Cruise",
-          "description": "Silver sports car in Hamburg",
-          "full": "/photos/full/cars/sample-03.jpg",
-          "thumb": "/photos/thumbs/cars/sample-03.webp",
-          "thumbMobile": "/photos/thumbs-mobile/cars/sample-03.webp",
-          "width": 4778,
-          "height": 7167,
-          "blur": "data:image/webp;base64,UklGRsAAAABXRUJQVlA4ILQAAACQBACdASoUAB4APxF8tFQsJ6SjKAqpgCIJYwC2yAzsJ9L5XFgxji3EP6mKhyAA/TliYmVFDhMP/YAYHGzhwAxbZpx7d4GtMjb1hAR9S3Lv5OW76l5iLayXMFbUzeDeII+TXvczrsmIOPw8VTMm0vQRgvVHQ3DNqc+s0n1eYLR9H1J1Z/58ZbI5qUY1erzs3rZ5IRac/+9/oJ3OVOZPQZDd21GRfg2mtC3cbCG0TPRo/cKkAAA=",
-          "hero_priority": 0
-        },
-        {
           "filename": "sample-02.jpg",
           "title": "Pagani Utopia",
           "description": "Exquisite hypercar detail shot",
@@ -134,6 +122,18 @@
           "width": 4000,
           "height": 6000,
           "blur": "data:image/webp;base64,UklGRp4AAABXRUJQVlA4IJIAAADQBACdASoUAB4APxF8tVOsJ6UiqAqpgCIJZgC2yAy69tvmzteaccwD0fQL31qO5gD+rRDUPbeoDRUeDaPdBFCqd21tGrow2taarGxHMs1AvkmHU4mUQcaIfalQEaN0TkpeEwafV4DwzMBu9WQhyXC6ux0cB8ZbRwHPbnilFRXZwyC94xNUU1WFw+guzd7NC7wAAA==",
+          "hero_priority": 0
+        },
+        {
+          "filename": "sample-03.jpg",
+          "title": "City Cruise",
+          "description": "Silver sports car in Hamburg",
+          "full": "/photos/full/cars/sample-03.jpg",
+          "thumb": "/photos/thumbs/cars/sample-03.webp",
+          "thumbMobile": "/photos/thumbs-mobile/cars/sample-03.webp",
+          "width": 4778,
+          "height": 7167,
+          "blur": "data:image/webp;base64,UklGRsAAAABXRUJQVlA4ILQAAACQBACdASoUAB4APxF8tFQsJ6SjKAqpgCIJYwC2yAzsJ9L5XFgxji3EP6mKhyAA/TliYmVFDhMP/YAYHGzhwAxbZpx7d4GtMjb1hAR9S3Lv5OW76l5iLayXMFbUzeDeII+TXvczrsmIOPw8VTMm0vQRgvVHQ3DNqc+s0n1eYLR9H1J1Z/58ZbI5qUY1erzs3rZ5IRac/+9/oJ3OVOZPQZDd21GRfg2mtC3cbCG0TPRo/cKkAAA=",
           "hero_priority": 0
         },
         {

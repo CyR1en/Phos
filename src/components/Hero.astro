@@ -86,7 +86,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       {heroPriority.map((_, i) => (
         <button
           type="button"
-          class={`relative cursor-pointer after:absolute after:-inset-3 after:content-[''] h-1.5 rounded-pill transition-all duration-500`}
+          class={`relative cursor-pointer after:absolute after:-inset-y-3 after:-inset-x-1 after:content-[''] h-1.5 rounded-pill transition-all duration-500`}
           class:list={[
             i === 0 ? 'w-8 bg-[var(--color-phos-dark-text)]' : 'w-1.5 bg-[var(--color-phos-dark-text)]/40 hover:bg-[var(--color-phos-dark-text)]/60',
           ]}
