@@ -1,0 +1,46 @@
+8b86153 feat: add dramatic framer-motion entrance animation to hero heading (...
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index ad11a2f..3bfd226 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+35 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index b93473d..ad11a2f 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+52 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index 6c0937f..b93473d 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+22 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index e86099a..6c0937f 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+304 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index 24336cc..e86099a 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+91 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index e7594e7..24336cc 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+27 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index d5632fd..e7594e7 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+45 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index 1c03529..d5632fd 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+17 lines omitted]
+diff --git a/src/components/Hero.astro b/src/components/Hero.astro
+  index b87026d..1c03529 100644
+  --- a/src/components/Hero.astro
+  +++ b/src/components/Hero.astro
+  [+52 lines omitted]
