@@ -162,7 +162,8 @@
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 [data-visible].animate-reveal,
-.animate-reveal[data-visible] {
+.animate-reveal[data-visible],
+[data-visible] .animate-reveal {
   opacity: 1;
   transform: translateY(0);
 }

@@ -4,27 +4,64 @@ import { api } from '../../../lib/admin/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '../../ui/dialog'
 import { Plus, X, GripVertical } from 'lucide-react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import manifest from '@content/categories.json'
 
 interface Props {
   path: string
   label: string
 }
 
+function isPortraitPhoto(photoPath: string): boolean {
+  const parts = photoPath.split('/')
+  if (parts.length !== 2) return false
+  const [catSlug, filename] = parts
+  const category = manifest.categories.find((c: any) => c.slug === catSlug)
+  if (!category) return false
+  const photo = category.photos.find((p: any) => p.filename === filename)
+  if (!photo) return false
+  return (photo.height || 0) > (photo.width || 0)
+}
+
 function SortablePhotoItem({ id, photo, onRemove }: { id: string, photo: string, onRemove: (p: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
+  const parts = photo.split('/')
+  const catSlug = parts[0]
+  const filename = parts[1]
+  const thumbUrl = catSlug && filename ? `/photos/thumbs/${catSlug}/${filename.replace(/\.[^.]+$/, '.webp')}` : ''
+
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md mb-2">
-      <div {...attributes} {...listeners} className="cursor-grab text-[var(--color-muted)] hover:text-[var(--color-ink)]">
-        <GripVertical size={18} />
-      </div>
-      <div className="flex-1 text-sm truncate">{photo}</div>
-      <button type="button" onClick={() => onRemove(photo)} className="text-[var(--color-error)] hover:text-[var(--color-error-bg)] p-1">
-        <X size={16} />
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className="relative group w-24 h-24 border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-surface)] cursor-grab"
+      {...(attributes as any)}
+      {...(listeners as any)}
+    >
+      {thumbUrl ? (
+        <img src={thumbUrl} alt={filename} className="w-full h-full object-cover select-none pointer-events-none" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-xs text-[var(--color-muted)] select-none pointer-events-none">No image</div>
+      )}
+      
+      <button 
+        type="button" 
+        onClick={(e) => {
+          e.stopPropagation()
+          onRemove(photo)
+        }} 
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors z-10"
+      >
+        <X size={12} />
       </button>
+
+      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+        <GripVertical size={16} className="text-white drop-shadow" />
+      </div>
     </div>
   )
 }
@@ -68,6 +105,10 @@ export function HeroPhotosField({ path, label }: Props) {
       setSelectedPhotos(selectedPhotos.filter(p => p !== photoPath))
     } else {
       if (selectedPhotos.length < 5) {
+        if (isPortraitPhoto(photoPath)) {
+          const confirmed = window.confirm("It's not recommended to set a portrait photo as a hero picture. Are you sure you want to add it?")
+          if (!confirmed) return
+        }
         setSelectedPhotos([...selectedPhotos, photoPath])
       }
     }
@@ -83,10 +124,12 @@ export function HeroPhotosField({ path, label }: Props) {
       <label className="block text-sm font-medium mb-2">{label} (Max 5)</label>
       
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={photos} strategy={verticalListSortingStrategy}>
-          {photos.map(photo => (
-            <SortablePhotoItem key={photo} id={photo} photo={photo} onRemove={handleRemove} />
-          ))}
+        <SortableContext items={photos} strategy={rectSortingStrategy}>
+          <div className="flex flex-wrap gap-3 mb-4">
+            {photos.map(photo => (
+              <SortablePhotoItem key={photo} id={photo} photo={photo} onRemove={handleRemove} />
+            ))}
+          </div>
         </SortableContext>
       </DndContext>
 
@@ -108,7 +151,7 @@ export function HeroPhotosField({ path, label }: Props) {
             </div>
             {categories.map(cat => (
               <div key={cat.slug} className="mb-6">
-                <h3 className="font-medium mb-3">{cat.meta?.name || cat.slug}</h3>
+                <h4 className="text-sm font-medium mb-2 text-[var(--color-muted)]">{cat.meta?.name || cat.slug}</h4>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                   {cat.photos.map((photo: string) => {
                     const photoPath = `${cat.slug}/${photo}`

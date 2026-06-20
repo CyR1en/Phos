@@ -356,6 +356,13 @@ createServer(async (req, res) => {
     writeFullConfig(merged)
     // Also write to public/ so the main site can fetch /site-config.json at runtime
     writeFileSync(join(ROOT, 'public', 'site-config.json'), JSON.stringify(merged, null, 2))
+
+    const oldPhotos = baseline?.home?.hero?.photos || []
+    const newPhotos = merged?.home?.hero?.photos || []
+    if (JSON.stringify(oldPhotos) !== JSON.stringify(newPhotos)) {
+      createTask('node', ['scripts/generate-content.mjs'], { cwd: ROOT }, 120000)
+    }
+
     return json(res, { ok: true })
   }
 

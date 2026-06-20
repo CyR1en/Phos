@@ -54,8 +54,14 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
   <div class="relative z-10 mx-auto w-full max-w-7xl px-6 pb-16 sm:px-6 lg:px-8 lg:pb-24">
     <div class="max-w-4xl">
       <p data-hero-photographer class="font-mono text-[13px] font-medium uppercase tracking-wider text-[var(--color-phos-dark-text)] opacity-0" style="text-shadow: 0 1px 8px rgba(0,0,0,0.65);" data-config="about.photographer.name">{config.about.photographer.name}</p>
-      <h1 data-hero-heading class="mt-4 font-display text-[var(--color-phos-dark-text)] opacity-0" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5);" data-config="home.hero.heading">
-        {config.home.hero.heading}
+      <h1 data-animate data-hero-heading class="mt-4 font-display text-[var(--color-phos-dark-text)]" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5);" data-config="home.hero.heading">
+        {
+          config.home.hero.heading.split(' ').map((word, i) => (
+            <span class="inline-block overflow-hidden pb-1 -mb-1">
+              <span class="inline-block animate-reveal" style={`transition-delay: ${i * 0.06 + 0.3}s`}>{word}&nbsp;</span>
+            </span>
+          ))
+        }
       </h1>
       <div data-hero-ctas class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-start">
         <a
@@ -132,30 +138,6 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
         { y: [15, 0], opacity: [0, 1] }, 
         { duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.1 }
       )
-    }
-
-    // 3. Split heading into words for a reveal effect
-    const heading = document.querySelector('[data-hero-heading]') as HTMLElement | null
-    if (heading && !heading.dataset.animated) {
-      heading.dataset.animated = 'true'
-      const text = heading.textContent?.trim() || ''
-      if (text) {
-        heading.innerHTML = text.split(/\s+/).map(word => {
-          return `<span class="inline-block overflow-hidden pb-1 -mb-1"><span class="inline-block hero-word translate-y-full opacity-0">${word}</span></span>`
-        }).join(' ')
-
-        heading.classList.remove('opacity-0')
-
-        const words = heading.querySelectorAll('.hero-word')
-        animate(words, 
-          { y: ['100%', '0%'], opacity: [0, 1] }, 
-          { 
-            duration: 1.2, 
-            ease: [0.16, 1, 0.3, 1],
-            delay: stagger(0.06, { startDelay: 0.3 }) 
-          }
-        )
-      }
     }
 
     // 4. CTA buttons stagger reveal
