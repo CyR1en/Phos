@@ -2,6 +2,16 @@ import { useState, useEffect } from 'preact/hooks'
 import { useConfig } from '../../../lib/admin/store'
 import { api } from '../../../lib/admin/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '../../ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '../../ui/alert-dialog'
 import { Plus, X, GripVertical } from 'lucide-react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
@@ -72,6 +82,8 @@ export function HeroPhotosField({ path, label }: Props) {
   const [categories, setCategories] = useState<any[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
+  const [pendingPortraitPhoto, setPendingPortraitPhoto] = useState<string | null>(null)
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -106,12 +118,26 @@ export function HeroPhotosField({ path, label }: Props) {
     } else {
       if (selectedPhotos.length < 5) {
         if (isPortraitPhoto(photoPath)) {
-          const confirmed = window.confirm("It's not recommended to set a portrait photo as a hero picture. Are you sure you want to add it?")
-          if (!confirmed) return
+          setPendingPortraitPhoto(photoPath)
+          setIsAlertOpen(true)
+        } else {
+          setSelectedPhotos([...selectedPhotos, photoPath])
         }
-        setSelectedPhotos([...selectedPhotos, photoPath])
       }
     }
+  }
+
+  const handleConfirmPortrait = () => {
+    if (pendingPortraitPhoto && selectedPhotos.length < 5) {
+      setSelectedPhotos([...selectedPhotos, pendingPortraitPhoto])
+    }
+    setPendingPortraitPhoto(null)
+    setIsAlertOpen(false)
+  }
+
+  const handleCancelPortrait = () => {
+    setPendingPortraitPhoto(null)
+    setIsAlertOpen(false)
   }
 
   const handleSaveSelection = () => {
@@ -184,6 +210,21 @@ export function HeroPhotosField({ path, label }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Portrait Photo Warning</AlertDialogTitle>
+            <AlertDialogDescription>
+              It's not recommended to set a portrait photo as a hero picture. Are you sure you want to add it?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelPortrait}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPortrait}>Add Photo</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
