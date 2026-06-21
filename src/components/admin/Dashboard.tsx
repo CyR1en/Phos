@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState, useCallback } from 'preact/hooks'
 import { AuthGate } from './AuthGate'
 import { Sidebar } from './Sidebar'
+import { useLocalStorageState } from '../../lib/admin/useLocalStorageState'
+import { PreviewPanel } from './PreviewPanel'
 import { SaveIndicator } from './SaveIndicator'
 import { ToastViewport } from './ui/Toast'
 import { Tooltip } from './ui/Tooltip'
@@ -60,6 +62,20 @@ function DashboardBody() {
   const intervalRef = useRef<ReturnType<typeof setInterval>>()
   const hasInteracted = useRef(false)
   const logRef = useRef<HTMLDivElement>(null)
+
+  const [sidebarWidth, setSidebarWidth] = useLocalStorageState('admin.sidebar.width', 256)
+  const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorageState('admin.sidebar.collapsed', false)
+  const [previewVisible, setPreviewVisible] = useLocalStorageState('admin.preview.visible', true)
+  const [previewWidth, setPreviewWidth] = useLocalStorageState('admin.preview.width', 480)
+
+  const handleSidebarResize = useCallback((newWidth: number) => {
+    if (newWidth <= 80) {
+      setSidebarCollapsed(true)
+    } else {
+      setSidebarWidth(newWidth)
+      setSidebarCollapsed(false)
+    }
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -125,10 +141,21 @@ function DashboardBody() {
   const showConfigButtons = currentPage !== 'categories'
 
   return (
-    <div class="min-h-screen bg-canvas flex">
-      <Sidebar />
-      <main class="flex-1 flex flex-col min-w-0 md:ml-64">
-        <header class="sticky top-0 z-40 h-16 border-b border-border box-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/60 text-ink">
+    <div
+      class="min-h-screen bg-canvas flex"
+      style={{
+        '--sidebar-width': `${sidebarCollapsed ? 56 : sidebarWidth}px`,
+        '--preview-width': `${previewVisible ? previewWidth : 0}px`,
+      } as any}
+    >
+      <Sidebar
+        width={sidebarWidth}
+        collapsed={sidebarCollapsed}
+        setWidth={handleSidebarResize}
+        setCollapsed={setSidebarCollapsed}
+      />
+      <main class="flex-1 flex flex-col min-w-0 overflow-auto md:ml-[var(--sidebar-width)] md:mr-[var(--preview-width)]">
+        <header class="fixed top-0 left-[var(--sidebar-width)] right-[var(--preview-width)] z-40 h-16 border-b border-border box-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/60 text-ink">
           <div class="h-full px-4 md:px-8 flex items-center justify-between md:justify-end gap-4">
             <button
               type="button"
@@ -177,6 +204,24 @@ function DashboardBody() {
                 </button>
               </Tooltip>
               <div class="w-px h-4 bg-border mx-1" />
+              <div class="hidden md:block">
+                <Tooltip text="Toggle preview">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewVisible(!previewVisible)}
+                    class={`flex h-8 w-8 items-center justify-center rounded-sm transition-colors cursor-pointer ${
+                      previewVisible ? 'text-ink bg-surface-hover' : 'text-muted hover:text-ink hover:bg-surface-hover'
+                    }`}
+                    aria-label="Toggle preview"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                      <line x1="8" y1="21" x2="16" y2="21" />
+                      <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                  </button>
+                </Tooltip>
+              </div>
               <ThemeToggle />
               <Tooltip text="Sign out">
                 <button
@@ -191,10 +236,16 @@ function DashboardBody() {
             </div>
           </div>
         </header>
-        <div class="flex-1 overflow-auto p-4 md:p-8 bg-canvas">
+        <div class="flex-1 pt-24 px-4 md:px-8 pb-4 md:pb-8 bg-canvas">
           <PageRouter />
         </div>
       </main>
+      <PreviewPanel
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        width={previewWidth}
+        onResize={setPreviewWidth}
+      />
       <ToastViewport />
       {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
         <div
@@ -267,9 +318,9 @@ function DashboardBody() {
 export function Dashboard() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider>
+      {(<ConfigProvider>
         <DashboardBody />
-      </ConfigProvider>
+      </ConfigProvider>) as any}
     </QueryClientProvider>
   )
 }

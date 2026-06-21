@@ -150,27 +150,27 @@ export function HeroPhotosField({ path, label }: Props) {
       <label className="block text-sm font-medium mb-2">{label} (Max 5)</label>
       
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={photos} strategy={rectSortingStrategy}>
-          <div className="flex flex-wrap gap-3 mb-4">
+        {(<SortableContext items={photos} strategy={rectSortingStrategy}>
+          {(<div className="flex flex-wrap gap-3 mb-4">
             {photos.map(photo => (
               <SortablePhotoItem key={photo} id={photo} photo={photo} onRemove={handleRemove} />
             ))}
-          </div>
-        </SortableContext>
+          </div>) as any}
+        </SortableContext>) as any}
       </DndContext>
 
       {photos.length === 0 && <div className="text-sm text-[var(--color-muted)] mb-2">No photos selected.</div>}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <button type="button" className="mt-2 flex items-center gap-2 text-sm bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-3 py-1.5 rounded-md transition-colors" disabled={photos.length >= 5}>
+          {(<button type="button" className="mt-2 flex items-center gap-2 text-sm bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-3 py-1.5 rounded-md transition-colors" disabled={photos.length >= 5}>
             <Plus size={16} /> Add Photo
-          </button>
+          </button>) as any}
         </DialogTrigger>
-        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Select Hero Photos</DialogTitle>
-          </DialogHeader>
+        {(<DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          {(<DialogHeader>
+            {(<DialogTitle>Select Hero Photos</DialogTitle>) as any}
+          </DialogHeader>) as any}
           <div className="flex-1 overflow-y-auto py-4">
             <div className="mb-4 text-sm text-[var(--color-muted)]">
               Selected: {selectedPhotos.length} / 5
@@ -202,28 +202,28 @@ export function HeroPhotosField({ path, label }: Props) {
               </div>
             ))}
           </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <button type="button" className="px-4 py-2 text-sm border border-[var(--color-border)] rounded-md hover:bg-[var(--color-surface)]">Cancel</button>
-            </DialogClose>
-            <button type="button" onClick={handleSaveSelection} className="px-4 py-2 text-sm bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-md hover:bg-[var(--color-primary-hover)]">Save Selection</button>
-          </DialogFooter>
-        </DialogContent>
+          {(<DialogFooter>
+            {(<DialogClose asChild>
+              {(<button type="button" className="px-4 py-2 text-sm border border-[var(--color-border)] rounded-md hover:bg-[var(--color-surface)]">Cancel</button>) as any}
+            </DialogClose>) as any}
+            {(<button type="button" onClick={handleSaveSelection} className="px-4 py-2 text-sm bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-md hover:bg-[var(--color-primary-hover)]">Save Selection</button>) as any}
+          </DialogFooter>) as any}
+        </DialogContent>) as any}
       </Dialog>
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Portrait Photo Warning</AlertDialogTitle>
-            <AlertDialogDescription>
+        {(<AlertDialogContent>
+          {(<AlertDialogHeader>
+            {(<AlertDialogTitle>Portrait Photo Warning</AlertDialogTitle>) as any}
+            {(<AlertDialogDescription>
               It's not recommended to set a portrait photo as a hero picture. Are you sure you want to add it?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelPortrait}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmPortrait}>Add Photo</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+            </AlertDialogDescription>) as any}
+          </AlertDialogHeader>) as any}
+          {(<AlertDialogFooter>
+            {(<AlertDialogCancel onClick={handleCancelPortrait}>Cancel</AlertDialogCancel>) as any}
+            {(<AlertDialogAction onClick={handleConfirmPortrait}>Add Photo</AlertDialogAction>) as any}
+          </AlertDialogFooter>) as any}
+        </AlertDialogContent>) as any}
       </AlertDialog>
     </div>
   )
