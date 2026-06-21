@@ -29,6 +29,12 @@ npm install && ADMIN_PASSWORD=admin npm run dev
 - **Contact form** — SMTP-powered, configurable from the admin dashboard
 - **Galleries** — DB-backed curated collections beyond folder-based categories
 
+## Images
+**Admin page** `/admin`
+<p align="center">
+  <img width=1080 src="assets/admin_page.png"/>
+</p>
+
 ## Docs
 
 - [Deployment](docs/deployment.md) — Docker, local dev, environment variables
