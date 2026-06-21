@@ -8,7 +8,12 @@ export function ToastViewport() {
   const visibleToasts = toasts.slice(-3)
 
   return (
-    <div class="fixed bottom-4 right-4 z-[80] flex flex-col gap-2 max-w-sm w-full sm:w-80 pointer-events-none">
+    <div
+      class="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-[calc(1rem+env(safe-area-inset-right,0px))] pb-[env(safe-area-inset-bottom,0px)] pr-[env(safe-area-inset-right,0px)] z-[80] flex flex-col gap-2 max-w-sm w-full sm:w-80 pointer-events-none"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {visibleToasts.map((t) => {
         let toastClasses = 'bg-surface text-ink border-border'
         let icon = null
@@ -42,18 +47,18 @@ export function ToastViewport() {
         return (
           <div
             key={t.id}
-            class={`pointer-events-auto px-4 py-3 rounded-sm border text-sm font-body shadow-lg flex items-start justify-between gap-3 transition-all duration-300 ${
+            class={`pointer-events-auto px-4 py-3 rounded-sm border text-sm font-body shadow-md flex items-start justify-between gap-3 transition-all duration-300 ${
               t.exiting ? 'animate-toast-out' : 'animate-toast-in'
             } ${toastClasses}`}
           >
             <div class="flex items-center gap-2.5 min-w-0">
               {icon}
-              <span class="font-medium truncate block">{t.message}</span>
+              <span class="font-medium line-clamp-3 break-words">{t.message}</span>
             </div>
             <button
               type="button"
               onClick={() => dismissToast(t.id)}
-              class="text-muted hover:text-ink flex-shrink-0 transition-colors p-0.5 rounded-xs hover:bg-surface-hover"
+              class="relative before:absolute before:inset-[-13px] text-muted hover:text-ink flex-shrink-0 transition-colors p-0.5 rounded-xs hover:bg-surface-hover"
               aria-label="Dismiss"
             >
               <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

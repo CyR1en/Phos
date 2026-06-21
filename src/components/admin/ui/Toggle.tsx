@@ -16,7 +16,7 @@ export function Toggle({ checked, onChange, label, id }: Props) {
           onChange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
           class="sr-only peer"
         />
-        <span class="absolute inset-0 bg-border rounded-full peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-border-focus peer-focus-visible:ring-offset-2 transition-all duration-200" />
+        <span class="absolute inset-0 bg-border rounded-full peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-border-focus peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface transition-all duration-200" />
         <span class="absolute left-[2px] top-[2px] h-4 w-4 bg-canvas rounded-full shadow-xs transition-transform duration-200 peer-checked:translate-x-[16px]" />
       </span>
       {label && <span class="text-sm font-medium text-ink">{label}</span>}

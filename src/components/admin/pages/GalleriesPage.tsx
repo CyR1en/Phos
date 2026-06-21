@@ -5,10 +5,20 @@ import { useConfig } from '../../../lib/admin/store'
 import type { Gallery, GalleryPhoto } from '../../../lib/admin/types'
 import { Button } from '../ui/Button'
 import { Section } from '../ui/Section'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '../../ui/alert-dialog'
 
-function FieldLabel({ children }: { children: string }) {
+function FieldLabel({ children, htmlFor }: { children: string; htmlFor?: string }) {
   return (
-    <label class="text-sm font-medium text-ink block mb-1.5">
+    <label for={htmlFor} class="text-sm font-medium text-ink block mb-1.5">
       {children}
     </label>
   )
@@ -39,6 +49,8 @@ function GalleryEditor({
   const [selectedPhotos, setSelectedPhotos] = useState<GalleryPhoto[]>(gallery.photos)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
 
   const handleDragStart = (e: DragEvent, index: number) => {
     setDraggedIndex(index)
@@ -58,6 +70,7 @@ function GalleryEditor({
       list.splice(index, 0, draggedItem)
       return list.map((p, idx) => ({ ...p, position: idx }))
     })
+    setIsDirty(true)
     setDraggedIndex(index)
   }
 
@@ -77,6 +90,7 @@ function GalleryEditor({
     mutationFn: (updates: Partial<Gallery>) => api.updateGallery(gallery.slug, updates),
     onSuccess: () => {
       pushToast('success', 'Gallery saved')
+      setIsDirty(false)
       queryClient.invalidateQueries({ queryKey: ['galleries'] })
     },
     onError: (e: unknown) => {
@@ -89,6 +103,7 @@ function GalleryEditor({
       api.setGalleryPhotos(gallery.slug, photos),
     onSuccess: () => {
       pushToast('success', 'Photos updated')
+      setIsDirty(false)
       queryClient.invalidateQueries({ queryKey: ['galleries'] })
     },
     onError: (e: unknown) => {
@@ -106,6 +121,7 @@ function GalleryEditor({
       }
       return [...prev, { category: cat, filename, position: prev.length }]
     })
+    setIsDirty(true)
   }
 
   const saveMeta = () => {
@@ -120,12 +136,31 @@ function GalleryEditor({
     updateMutation.mutate({ cover: `${photo.category}/${photo.filename}` })
   }
 
+  const movePhoto = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= selectedPhotos.length) return
+    setSelectedPhotos((prev) => {
+      const list = [...prev]
+      const [movedItem] = list.splice(fromIndex, 1)
+      list.splice(toIndex, 0, movedItem)
+      return list.map((p, idx) => ({ ...p, position: idx }))
+    })
+    setIsDirty(true)
+  }
+
+  const handleBack = () => {
+    if (isDirty) {
+      setIsAlertOpen(true)
+    } else {
+      onBack()
+    }
+  }
+
   return (
     <div class="max-w-4xl space-y-8">
       <div>
         <button
           type="button"
-          onClick={onBack}
+          onClick={handleBack}
           class="text-xs font-semibold text-muted hover:text-ink flex items-center gap-1.5 mb-4 transition-colors cursor-pointer"
         >
           <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -148,30 +183,42 @@ function GalleryEditor({
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-4">
               <div>
-                <FieldLabel>Name</FieldLabel>
+                <FieldLabel htmlFor="gallery-name">Name</FieldLabel>
                 <input
+                  id="gallery-name"
                   type="text"
                   value={name}
-                  onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
+                  onInput={(e) => {
+                    setName((e.currentTarget as HTMLInputElement).value)
+                    setIsDirty(true)
+                  }}
                   class={inputCls()}
                 />
               </div>
               <div>
-                <FieldLabel>Order Index</FieldLabel>
+                <FieldLabel htmlFor="gallery-order">Order Index</FieldLabel>
                 <input
+                  id="gallery-order"
                   type="number"
                   value={orderNum}
-                  onInput={(e) => setOrderNum(Number((e.currentTarget as HTMLInputElement).value))}
+                  onInput={(e) => {
+                    setOrderNum(Number((e.currentTarget as HTMLInputElement).value))
+                    setIsDirty(true)
+                  }}
                   class={inputCls()}
                 />
               </div>
             </div>
             <div>
-              <FieldLabel>Description</FieldLabel>
+              <FieldLabel htmlFor="gallery-description">Description</FieldLabel>
               <textarea
+                id="gallery-description"
                 rows={4}
                 value={description}
-                onInput={(e) => setDescription((e.currentTarget as HTMLTextAreaElement).value)}
+                onInput={(e) => {
+                  setDescription((e.currentTarget as HTMLTextAreaElement).value)
+                  setIsDirty(true)
+                }}
                 class={textareaCls()}
               />
             </div>
@@ -185,11 +232,13 @@ function GalleryEditor({
 
         <Section title="Gallery Photos" description="Drag and drop to reorder photos. Click a photo to set it as the gallery cover.">
           {gallery.cover && (
-            <div class="p-3 bg-canvas/30 rounded-sm border border-border text-xs text-ink flex items-center justify-between shadow-2xs mb-4">
+            <div class="p-3 bg-canvas/30 rounded-sm border border-border text-xs text-ink flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs mb-4">
               <span class="text-muted">Current Cover Reference</span>
-              <code class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-surface border border-border text-primary">
-                {gallery.cover}
-              </code>
+              <div class="overflow-x-auto max-w-full">
+                <code class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-surface border border-border text-primary block whitespace-nowrap">
+                  {gallery.cover}
+                </code>
+              </div>
             </div>
           )}
           {selectedPhotos.length === 0 ? (
@@ -215,7 +264,7 @@ function GalleryEditor({
                         if (isDragging) return
                         setCoverPhoto(p)
                       }}
-                      class={`relative aspect-[4/3] rounded-xs overflow-hidden border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
+                      class={`relative group/photo aspect-[4/3] rounded-xs overflow-hidden border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
                         draggedIndex === index
                           ? 'opacity-40 scale-95 border-dashed border-primary'
                           : isCover
@@ -229,8 +278,38 @@ function GalleryEditor({
                         loading="lazy"
                         class="w-full h-full object-cover pointer-events-none"
                       />
+                      <div class="absolute top-1 left-1 flex flex-col gap-1 opacity-0 group-hover/photo:opacity-100 focus-within:opacity-100 transition-opacity z-10">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            movePhoto(index, index - 1)
+                          }}
+                          disabled={index === 0}
+                          aria-label={`Move ${p.filename} up`}
+                          class="h-7 w-7 flex items-center justify-center bg-surface/80 rounded-xs hover:bg-surface disabled:opacity-30 border border-border text-ink transition-colors cursor-pointer"
+                        >
+                          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="18 15 12 9 6 15" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            movePhoto(index, index + 1)
+                          }}
+                          disabled={index === selectedPhotos.length - 1}
+                          aria-label={`Move ${p.filename} down`}
+                          class="h-7 w-7 flex items-center justify-center bg-surface/80 rounded-xs hover:bg-surface disabled:opacity-30 border border-border text-ink transition-colors cursor-pointer"
+                        >
+                          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+                      </div>
                       {isCover && (
-                        <span class="absolute top-1 right-1 text-[9px] font-semibold bg-primary text-primary-text px-1.5 py-0.5 rounded-xs pointer-events-none shadow-sm">
+                        <span class="absolute top-1 right-1 text-[11px] font-semibold bg-primary text-primary-text px-1.5 py-0.5 rounded-xs pointer-events-none shadow-sm">
                           Cover
                         </span>
                       )}
@@ -262,7 +341,7 @@ function GalleryEditor({
                     <span class="text-sm font-medium text-ink flex items-center gap-2">
                       {cat.slug}
                       {selectedInCat > 0 && (
-                        <span class="text-[10px] font-semibold bg-primary text-primary-text px-2 py-0.5 rounded-sm shadow-2xs">
+                        <span class="text-xs font-semibold bg-primary text-primary-text px-2 py-0.5 rounded-sm shadow-2xs tabular-nums">
                           {selectedInCat} selected
                         </span>
                       )}
@@ -293,7 +372,7 @@ function GalleryEditor({
                             type="button"
                             onClick={() => togglePhoto(cat.slug, filename)}
                             class={`relative aspect-[4/3] rounded-xs overflow-hidden border-2 cursor-pointer transition-all ${
-                              selected ? 'border-primary shadow-xs' : 'border-transparent hover:border-border'
+                              selected ? 'border-primary ring-1 ring-primary' : 'border-transparent hover:border-border'
                             }`}
                           >
                             <img
@@ -303,7 +382,7 @@ function GalleryEditor({
                               class="w-full h-full object-cover"
                             />
                             {selected && (
-                              <span class="absolute top-1 right-1 size-4 bg-primary text-primary-text rounded-full flex items-center justify-center text-[10px] shadow-xs font-bold">
+                              <span class="absolute top-1 right-1 size-4 bg-primary text-primary-text rounded-full flex items-center justify-center text-xs shadow-xs font-bold">
                                 ✓
                               </span>
                             )}
@@ -323,6 +402,21 @@ function GalleryEditor({
           </div>
         </Section>
       </div>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        {(<AlertDialogContent>
+          {(<AlertDialogHeader>
+            {(<AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>) as any}
+            {(<AlertDialogDescription>
+              You have unsaved changes to this gallery. Returning will lose them.
+            </AlertDialogDescription>) as any}
+          </AlertDialogHeader>) as any}
+          {(<AlertDialogFooter>
+            {(<AlertDialogCancel onClick={() => setIsAlertOpen(false)}>Cancel</AlertDialogCancel>) as any}
+            {(<AlertDialogAction onClick={() => { setIsDirty(false); setIsAlertOpen(false); onBack(); }}>Discard</AlertDialogAction>) as any}
+          </AlertDialogFooter>) as any}
+        </AlertDialogContent>) as any}
+      </AlertDialog>
     </div>
   )
 }
@@ -334,6 +428,39 @@ export function GalleriesPage() {
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [confirmDeleteGallery, setConfirmDeleteGallery] = useState<Gallery | null>(null)
+  const [pendingDeletes, setPendingDeletes] = useState<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  useEffect(() => {
+    return () => {
+      Object.values(pendingDeletes).forEach(clearTimeout)
+    }
+  }, [pendingDeletes])
+
+  const executeDelete = (g: Gallery) => {
+    setConfirmDeleteGallery(null)
+    const timer = setTimeout(() => {
+      deleteMutation.mutate(g.slug)
+      setPendingDeletes((prev) => {
+        const next = { ...prev }
+        delete next[g.slug]
+        return next
+      })
+    }, 5000)
+    setPendingDeletes((prev) => ({ ...prev, [g.slug]: timer }))
+  }
+
+  const handleUndo = (slug: string) => {
+    const timer = pendingDeletes[slug]
+    if (timer) {
+      clearTimeout(timer)
+      setPendingDeletes((prev) => {
+        const next = { ...prev }
+        delete next[slug]
+        return next
+      })
+    }
+  }
 
   const galleriesQuery = useQuery({
     queryKey: ['galleries'],
@@ -461,69 +588,109 @@ export function GalleriesPage() {
         </div>
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {galleries.map((g) => (
-            <div
-              key={g.slug}
-              class="group border border-border rounded-sm overflow-hidden bg-surface hover:border-border-hover hover:shadow-sm transition-all duration-200 flex flex-col h-full"
-            >
-              {g.cover ? (() => {
-                const [cat, file] = g.cover.split('/')
-                const thumbName = file?.replace(/\.[^.]+$/, '.webp')
-                return (
-                  <div class="aspect-[16/10] bg-canvas overflow-hidden border-b border-border-light relative">
-                    <img
-                      src={`/photos/thumbs/${cat}/${thumbName}`}
-                      alt={g.name}
-                      loading="lazy"
-                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <span class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-[10px] text-white px-2 py-0.5 rounded-xs font-mono shadow-2xs">
-                      {g.photo_count} photo{g.photo_count !== 1 ? 's' : ''}
-                    </span>
+          {galleries.map((g) => {
+            const isPendingDelete = !!pendingDeletes[g.slug]
+            if (isPendingDelete) {
+              return (
+                <div
+                  key={g.slug}
+                  class="border border-dashed border-border rounded-sm p-5 bg-surface/20 flex flex-col justify-center items-center gap-3 text-center h-full min-h-[220px]"
+                >
+                  <div class="space-y-1">
+                    <p class="text-sm font-semibold text-ink">"{g.name}" deleted</p>
+                    <p class="text-xs text-muted">You have 5 seconds to undo this action.</p>
                   </div>
-                )
-              })() : (
-                <div class="aspect-[16/10] bg-canvas flex items-center justify-center border-b border-border-light">
-                  <span class="text-xs text-muted">No cover image</span>
-                </div>
-              )}
-              <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
-                <div class="space-y-1.5">
-                  <h3 class="font-display text-xl font-semibold text-ink leading-tight">{g.name}</h3>
-                  {g.description && (
-                    <p class="text-sm text-muted line-clamp-2 leading-relaxed">{g.description}</p>
-                  )}
-                </div>
-                <div class="flex items-center gap-2 pt-4 border-t border-border-light/40">
-                  <Button variant="secondary" size="sm" onClick={() => setEditingSlug(g.slug)}>
-                    <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
-                    Edit
+                  <Button variant="secondary" size="sm" onClick={() => handleUndo(g.slug)}>
+                    Undo
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(`Delete "${g.name}"? This cannot be undone.`)) {
-                        deleteMutation.mutate(g.slug)
-                      }
-                    }}
-                    class="text-error hover:text-error hover:bg-error/10"
-                  >
-                    <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                    Delete
-                  </Button>
+                </div>
+              )
+            }
+            return (
+              <div
+                key={g.slug}
+                /* Elevation scale: cards=shadow-2xs, hover=shadow-sm, popovers=shadow-md, overlays=shadow-2xl */
+                class="group border border-border rounded-sm overflow-hidden bg-surface hover:border-border-hover hover:shadow-sm transition-all duration-200 flex flex-col h-full"
+              >
+                {g.cover ? (() => {
+                  const [cat, file] = g.cover.split('/')
+                  const thumbName = file?.replace(/\.[^.]+$/, '.webp')
+                  return (
+                    <div class="aspect-[16/10] bg-canvas overflow-hidden border-b border-border-light relative">
+                      <img
+                        src={`/photos/thumbs/${cat}/${thumbName}`}
+                        alt={g.name}
+                        loading="lazy"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <span class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-xs text-white px-2 py-0.5 rounded-xs font-mono shadow-2xs tabular-nums">
+                        {g.photo_count} photo{g.photo_count !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )
+                })() : (
+                  <div class="aspect-[16/10] bg-canvas flex items-center justify-center border-b border-border-light">
+                    <span class="text-xs text-muted">No cover image</span>
+                  </div>
+                )}
+                <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div class="space-y-1.5">
+                    <h3 class="font-display text-xl font-semibold text-ink leading-tight">{g.name}</h3>
+                    {g.description && (
+                      <p class="text-sm text-muted line-clamp-2 leading-relaxed">{g.description}</p>
+                    )}
+                  </div>
+                  <div class="flex items-center gap-2 pt-4 border-t border-border-light/40">
+                    <Button variant="secondary" size="sm" onClick={() => setEditingSlug(g.slug)}>
+                      <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmDeleteGallery(g)}
+                      class="text-error hover:text-error hover:bg-error/10"
+                    >
+                      <svg class="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
+
+      <AlertDialog open={!!confirmDeleteGallery} onOpenChange={(open) => { if (!open) setConfirmDeleteGallery(null); }}>
+        {(<AlertDialogContent>
+          {(<AlertDialogHeader>
+            {(<AlertDialogTitle>Delete gallery?</AlertDialogTitle>) as any}
+            {(<AlertDialogDescription>
+              This will permanently delete '{confirmDeleteGallery?.name}'. This action cannot be undone.
+            </AlertDialogDescription>) as any}
+          </AlertDialogHeader>) as any}
+          {(<AlertDialogFooter>
+            {(<AlertDialogCancel onClick={() => setConfirmDeleteGallery(null)}>Cancel</AlertDialogCancel>) as any}
+            {(<AlertDialogAction
+              onClick={() => {
+                if (confirmDeleteGallery) {
+                  executeDelete(confirmDeleteGallery)
+                }
+              }}
+              className="bg-error text-error-text hover:bg-error/90"
+            >
+              Delete
+            </AlertDialogAction>) as any}
+          </AlertDialogFooter>) as any}
+        </AlertDialogContent>) as any}
+      </AlertDialog>
     </div>
   )
 }

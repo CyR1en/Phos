@@ -4,6 +4,16 @@ import { api, ApiError } from '../../../lib/admin/api'
 import { useConfig } from '../../../lib/admin/store'
 import { Button } from '../ui/Button'
 import { Section } from '../ui/Section'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '../../ui/alert-dialog'
 
 type PhotoMeta = { title?: string; description?: string; hero_priority?: number }
 
@@ -17,9 +27,9 @@ function cleanMeta(meta: Record<string, unknown>): Record<string, unknown> {
   return out
 }
 
-function FieldLabel({ children }: { children: string }) {
+function FieldLabel({ children, htmlFor }: { children: string; htmlFor?: string }) {
   return (
-    <label class="text-sm font-medium text-ink block mb-1.5">
+    <label for={htmlFor} class="text-sm font-medium text-ink block mb-1.5">
       {children}
     </label>
   )
@@ -44,12 +54,16 @@ export function CategoriesPage() {
   const queryClient = useQueryClient()
   const [localMeta, setLocalMeta] = useState<Record<string, unknown>>({})
   const [selectedPhotoFilename, setSelectedPhotoFilename] = useState<string | null>(null)
+  const [isMetaDirty, setIsMetaDirty] = useState(false)
+  const [pendingCategorySlug, setPendingCategorySlug] = useState<string | null>(null)
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
 
   const cat = (categories ?? []).find((c) => c.slug === selectedCategory)
 
   useEffect(() => {
     if (cat) {
       setLocalMeta(JSON.parse(JSON.stringify(cat.meta || {})))
+      setIsMetaDirty(false)
     }
   }, [selectedCategory, cat?.slug])
 
@@ -68,6 +82,7 @@ export function CategoriesPage() {
       api.putCategory(slug, cleanMeta(meta)),
     onSuccess: () => {
       pushToast('success', 'Category saved')
+      setIsMetaDirty(false)
       queryClient.invalidateQueries({ queryKey: ['categories'] })
     },
     onError: (e: unknown) => {
@@ -100,6 +115,7 @@ export function CategoriesPage() {
 
   const setMeta = (key: string, value: unknown) => {
     setLocalMeta((m) => ({ ...m, [key]: value }))
+    setIsMetaDirty(true)
   }
 
   const setPhotoField = (filename: string, key: keyof PhotoMeta, value: unknown) => {
@@ -112,6 +128,7 @@ export function CategoriesPage() {
       }
       return { ...m, photos }
     })
+    setIsMetaDirty(true)
   }
 
   const makeCover = (filename: string) => setMeta('cover', filename)
@@ -120,6 +137,20 @@ export function CategoriesPage() {
     if (!cat) return
     await flushSave()
     saveMutation.mutate({ slug: cat.slug, meta: localMeta })
+  }
+
+  const handleConfirmSwitch = () => {
+    if (pendingCategorySlug) {
+      setSelectedCategory(pendingCategorySlug)
+      setIsMetaDirty(false)
+    }
+    setPendingCategorySlug(null)
+    setIsAlertOpen(false)
+  }
+
+  const handleCancelSwitch = () => {
+    setPendingCategorySlug(null)
+    setIsAlertOpen(false)
   }
 
   return (
@@ -147,7 +178,12 @@ export function CategoriesPage() {
               type="button"
               onClick={() => {
                 if (selectedCategory !== c.slug) {
-                  flushSave().then(() => setSelectedCategory(c.slug))
+                  if (isMetaDirty) {
+                    setPendingCategorySlug(c.slug)
+                    setIsAlertOpen(true)
+                  } else {
+                    flushSave().then(() => setSelectedCategory(c.slug))
+                  }
                 }
               }}
               class={`flex flex-col items-stretch p-2.5 rounded-sm border text-left transition-all duration-150 cursor-pointer ${
@@ -172,14 +208,14 @@ export function CategoriesPage() {
                     No image
                   </div>
                 )}
-                <div class="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-[10px] text-white px-1.5 py-0.5 rounded-xs font-mono">
+                <div class="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-xs text-white px-1.5 py-0.5 rounded-xs font-mono tabular-nums">
                   {c.photos.length}
                 </div>
               </div>
               <div class="truncate text-xs font-medium text-ink">
                 {c.meta?.name || c.slug}
               </div>
-              <div class="text-[10px] text-muted truncate font-mono mt-0.5">
+              <div class="text-xs text-muted truncate font-mono mt-0.5">
                 {c.slug}
               </div>
             </button>
@@ -194,8 +230,9 @@ export function CategoriesPage() {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-4">
                   <div>
-                    <FieldLabel>Name</FieldLabel>
+                    <FieldLabel htmlFor="category-name">Name</FieldLabel>
                     <input
+                      id="category-name"
                       type="text"
                       value={(localMeta.name as string) || ''}
                       onInput={(e) =>
@@ -205,9 +242,10 @@ export function CategoriesPage() {
                     />
                   </div>
                   <div>
-                    <FieldLabel>Cover Photo</FieldLabel>
+                    <FieldLabel htmlFor="category-cover">Cover Photo</FieldLabel>
                     <div class="relative">
                       <select
+                        id="category-cover"
                         value={(localMeta.cover as string) || cat.photos[0]}
                         onChange={(e) =>
                           setMeta('cover', (e.currentTarget as HTMLSelectElement).value)
@@ -230,8 +268,9 @@ export function CategoriesPage() {
                 </div>
                 <div class="space-y-4">
                   <div>
-                    <FieldLabel>Order Index</FieldLabel>
+                    <FieldLabel htmlFor="category-order">Order Index</FieldLabel>
                     <input
+                      id="category-order"
                       type="number"
                       value={
                         localMeta.order === undefined || localMeta.order === null
@@ -247,12 +286,13 @@ export function CategoriesPage() {
                   </div>
                   <div class="flex items-center justify-between py-2 border border-border rounded-sm p-4 bg-canvas/30 shadow-2xs">
                     <div>
-                      <span class="text-sm font-medium text-ink block">Offer Service</span>
+                      <label for="category-offer-service" class="text-sm font-medium text-ink block cursor-pointer">Offer Service</label>
                       <span class="text-xs text-muted">Show as a service card on home page</span>
                     </div>
                     <label class="inline-flex items-center gap-3 cursor-pointer select-none">
                       <span class="relative inline-block w-9 h-5 flex-shrink-0">
                         <input
+                          id="category-offer-service"
                           type="checkbox"
                           checked={localMeta.offer_service !== false}
                           onChange={(e) =>
@@ -271,8 +311,9 @@ export function CategoriesPage() {
                 </div>
               </div>
               <div>
-                <FieldLabel>Description</FieldLabel>
+                <FieldLabel htmlFor="category-description">Description</FieldLabel>
                 <textarea
+                  id="category-description"
                   rows={2}
                   value={(localMeta.description as string) || ''}
                   onInput={(e) =>
@@ -304,7 +345,7 @@ export function CategoriesPage() {
                           type="button"
                           onClick={() => setSelectedPhotoFilename(filename)}
                           class={`relative aspect-square rounded-xs overflow-hidden border-2 cursor-pointer transition-all ${
-                            isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-border'
+                            isSelected ? 'border-primary ring-1 ring-primary' : 'border-transparent hover:border-border'
                           }`}
                         >
                           <img
@@ -314,7 +355,7 @@ export function CategoriesPage() {
                             class="w-full h-full object-cover"
                           />
                           {isCover && (
-                            <span class="absolute top-0.5 right-0.5 size-4 bg-primary text-primary-text rounded-full flex items-center justify-center text-[10px] shadow-xs">
+                            <span class="absolute top-0.5 right-0.5 size-4 bg-primary text-primary-text rounded-full flex items-center justify-center text-xs shadow-xs">
                               ★
                             </span>
                           )}
@@ -339,10 +380,10 @@ export function CategoriesPage() {
                           <span class="text-xs font-mono font-medium text-ink truncate block flex-1" title={filename}>
                             {filename}
                           </span>
-                          {isCover ? (
-                            <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-sm bg-primary text-primary-text flex-shrink-0 shadow-2xs">
-                              ★ Cover Photo
-                            </span>
+                           {isCover ? (
+                             <span class="text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm bg-primary text-primary-text flex-shrink-0 shadow-2xs">
+                               ★ Cover Photo
+                             </span>
                           ) : (
                             <Button
                               variant="secondary"
@@ -370,8 +411,9 @@ export function CategoriesPage() {
 
                           <div class="space-y-4">
                             <div>
-                              <FieldLabel>Title</FieldLabel>
+                              <FieldLabel htmlFor="photo-title">Title</FieldLabel>
                               <input
+                                id="photo-title"
                                 type="text"
                                 value={photoMeta.title || ''}
                                 onInput={(e) =>
@@ -385,8 +427,9 @@ export function CategoriesPage() {
                               />
                             </div>
                             <div>
-                              <FieldLabel>Description</FieldLabel>
+                              <FieldLabel htmlFor="photo-description">Description</FieldLabel>
                               <textarea
+                                id="photo-description"
                                 rows={2}
                                 value={photoMeta.description || ''}
                                 onInput={(e) =>
@@ -428,6 +471,21 @@ export function CategoriesPage() {
           </div>
         </>
       )}
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        {(<AlertDialogContent>
+          {(<AlertDialogHeader>
+            {(<AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>) as any}
+            {(<AlertDialogDescription>
+              You have unsaved changes to this category. Switching categories will lose them.
+            </AlertDialogDescription>) as any}
+          </AlertDialogHeader>) as any}
+          {(<AlertDialogFooter>
+            {(<AlertDialogCancel onClick={handleCancelSwitch}>Cancel</AlertDialogCancel>) as any}
+            {(<AlertDialogAction onClick={handleConfirmSwitch}>Discard</AlertDialogAction>) as any}
+          </AlertDialogFooter>) as any}
+        </AlertDialogContent>) as any}
+      </AlertDialog>
     </div>
   )
 }

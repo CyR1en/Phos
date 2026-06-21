@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useRef, useState, useCallback } from 'preact/hooks'
+import { lazy, Suspense } from 'preact/compat'
 import { AuthGate } from './AuthGate'
 import { Sidebar } from './Sidebar'
 import { useLocalStorageState } from '../../lib/admin/useLocalStorageState'
@@ -10,14 +11,16 @@ import { Tooltip } from './ui/Tooltip'
 import { ThemeToggle } from './ui/ThemeToggle'
 import { SaveIcon, RepublishPhotosIcon, RepublishSiteIcon, SignOutIcon, SpinnerIcon } from './ui/Icons'
 import { ConfigProvider, useConfig } from '../../lib/admin/store'
-import { SitePage } from './pages/SitePage'
-import { HomePage } from './pages/HomePage'
-import { AboutPage } from './pages/AboutPage'
-import { ContactPage } from './pages/ContactPage'
-import { NotFoundPage } from './pages/NotFoundPage'
-import { CategoriesPage } from './pages/CategoriesPage'
-import { GalleriesPage } from './pages/GalleriesPage'
-import { PluginsPage } from './pages/PluginsPage'
+import { ErrorBoundary } from './ErrorBoundary'
+
+const SitePage = lazy(() => import('./pages/SitePage').then(m => ({ default: m.SitePage })))
+const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
+const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })))
+const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
+const GalleriesPage = lazy(() => import('./pages/GalleriesPage').then(m => ({ default: m.GalleriesPage })))
+const PluginsPage = lazy(() => import('./pages/PluginsPage').then(m => ({ default: m.PluginsPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,26 +33,32 @@ const queryClient = new QueryClient({
 
 function PageRouter() {
   const { currentPage } = useConfig()
-  switch (currentPage) {
-    case 'site':
-      return <SitePage />
-    case 'home':
-      return <HomePage />
-    case 'about':
-      return <AboutPage />
-    case 'contact':
-      return <ContactPage />
-    case 'notFound':
-      return <NotFoundPage />
-    case 'categories':
-      return <CategoriesPage />
-    case 'galleries':
-      return <GalleriesPage />
-    case 'plugins':
-      return <PluginsPage />
-    default:
-      return <SitePage />
-  }
+  return (
+    <Suspense fallback={<div class="p-8 text-muted">Loading...</div>}>
+      {(() => {
+        switch (currentPage) {
+          case 'site':
+            return <SitePage />
+          case 'home':
+            return <HomePage />
+          case 'about':
+            return <AboutPage />
+          case 'contact':
+            return <ContactPage />
+          case 'notFound':
+            return <NotFoundPage />
+          case 'categories':
+            return <CategoriesPage />
+          case 'galleries':
+            return <GalleriesPage />
+          case 'plugins':
+            return <PluginsPage />
+          default:
+            return <SitePage />
+        }
+      })()}
+    </Suspense>
+  )
 }
 
 const BUILD_LOG_ENABLED = import.meta.env.PUBLIC_ADMIN_BUILD_LOG !== 'false'
@@ -62,14 +71,21 @@ function DashboardBody() {
   const intervalRef = useRef<ReturnType<typeof setInterval>>()
   const hasInteracted = useRef(false)
   const logRef = useRef<HTMLDivElement>(null)
+  const mainRef = useRef<HTMLElement>(null)
 
   const [sidebarWidth, setSidebarWidth] = useLocalStorageState('admin.sidebar.width', 256)
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorageState('admin.sidebar.collapsed', false)
   const [previewVisible, setPreviewVisible] = useLocalStorageState('admin.preview.visible', true)
   const [previewWidth, setPreviewWidth] = useLocalStorageState('admin.preview.width', 480)
 
+  useEffect(() => {
+    if (!sidebarCollapsed && sidebarWidth <= 200) {
+      setSidebarWidth(256)
+    }
+  }, [])
+
   const handleSidebarResize = useCallback((newWidth: number) => {
-    if (newWidth <= 80) {
+    if (newWidth <= 200) {
       setSidebarCollapsed(true)
     } else {
       setSidebarWidth(newWidth)
@@ -130,6 +146,7 @@ function DashboardBody() {
     if (win.HSStaticMethods?.autoInit) {
       requestAnimationFrame(() => win.HSStaticMethods.autoInit())
     }
+    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [currentPage])
 
   if (!token) return <AuthGate />
@@ -154,27 +171,32 @@ function DashboardBody() {
         setWidth={handleSidebarResize}
         setCollapsed={setSidebarCollapsed}
       />
-      <main class="flex-1 flex flex-col min-w-0 overflow-auto md:ml-[var(--sidebar-width)] md:mr-[var(--preview-width)]">
-        <header class="fixed top-0 left-[var(--sidebar-width)] right-[var(--preview-width)] z-40 h-16 border-b border-border box-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/60 text-ink">
+      <main ref={mainRef} id="admin-main" class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden md:ml-[var(--sidebar-width)] md:mr-[var(--preview-width)]">
+        <header class="fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 md:right-[var(--preview-width)] z-40 h-[calc(4rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] border-b border-border box-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/60 text-ink">
           <div class="h-full px-4 md:px-8 flex items-center justify-between md:justify-end gap-4">
             <button
               type="button"
               data-hs-overlay="#admin-sidebar"
-              class="md:hidden flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
+              class="md:hidden flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               aria-label="Open menu"
             >
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12h18M3 6h18M3 18h18" />
               </svg>
             </button>
-            <div class="flex items-center gap-1 sm:gap-2">
+            <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto max-w-full scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <style>{`
+                .scrollbar-hide::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
               <SaveIndicator />
               {showConfigButtons ? (
                 <Tooltip text="Save changes" shortcut="⌘S">
                   <button
                     type="button"
                     onClick={() => flushSave()}
-                    class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
+                    class="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                     aria-label="Save"
                   >
                     <SaveIcon />
@@ -186,7 +208,7 @@ function DashboardBody() {
                   type="button"
                   onClick={onRegenerate}
                   disabled={running}
-                  class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                   aria-label="Republish photos"
                 >
                   {running ? <SpinnerIcon /> : <RepublishPhotosIcon />}
@@ -197,7 +219,7 @@ function DashboardBody() {
                   type="button"
                   onClick={onRepublish}
                   disabled={running}
-                  class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                   aria-label="Republish site"
                 >
                   {running ? <SpinnerIcon /> : <RepublishSiteIcon />}
@@ -209,7 +231,7 @@ function DashboardBody() {
                   <button
                     type="button"
                     onClick={() => setPreviewVisible(!previewVisible)}
-                    class={`flex h-8 w-8 items-center justify-center rounded-sm transition-colors cursor-pointer ${
+                    class={`flex h-11 w-11 items-center justify-center rounded-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
                       previewVisible ? 'text-ink bg-surface-hover' : 'text-muted hover:text-ink hover:bg-surface-hover'
                     }`}
                     aria-label="Toggle preview"
@@ -227,7 +249,7 @@ function DashboardBody() {
                 <button
                   type="button"
                   onClick={signOut}
-                  class="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
+                  class="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                   aria-label="Sign out"
                 >
                   <SignOutIcon />
@@ -236,7 +258,7 @@ function DashboardBody() {
             </div>
           </div>
         </header>
-        <div class="flex-1 pt-24 px-4 md:px-8 pb-4 md:pb-8 bg-canvas">
+        <div class="flex-1 pt-[calc(6rem+env(safe-area-inset-top,0px))] px-4 md:px-8 pb-4 md:pb-8 bg-canvas">
           <PageRouter />
         </div>
       </main>
@@ -245,12 +267,23 @@ function DashboardBody() {
         onClose={() => setPreviewVisible(false)}
         width={previewWidth}
         onResize={setPreviewWidth}
+        sidebarWidth={sidebarWidth}
+        sidebarCollapsed={sidebarCollapsed}
       />
       <ToastViewport />
-      {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
+       {BUILD_LOG_ENABLED && buildStatus !== 'idle' && (
         <div
-          class="fixed bottom-0 inset-x-0 z-[70] bg-surface border-t border-border shadow-2xl transition-all duration-300"
+          class="fixed bottom-0 inset-x-0 z-[70] bg-surface border-t border-border shadow-2xl transition-all duration-300 pb-[env(safe-area-inset-bottom,0px)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          tabIndex={0}
           onMouseEnter={() => {
+            if (countdown !== null) {
+              hasInteracted.current = true
+              clearTimeout(autoCloseRef.current)
+              clearInterval(intervalRef.current)
+              setCountdown(null)
+            }
+          }}
+          onFocus={() => {
             if (countdown !== null) {
               hasInteracted.current = true
               clearTimeout(autoCloseRef.current)
@@ -279,7 +312,7 @@ function DashboardBody() {
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               )}
-              <span class="text-sm font-medium text-ink">
+              <span class="text-sm font-medium text-ink" role="status" aria-live="polite">
                 {buildStatus === 'running' && 'Building...'}
                 {buildStatus === 'done' && 'Build complete'}
                 {buildStatus === 'error' && 'Build failed'}
@@ -294,7 +327,7 @@ function DashboardBody() {
               <button
                 type="button"
                 onClick={clearBuildStatus}
-                class="text-muted hover:text-ink transition-colors p-1 rounded-xs hover:bg-surface-hover"
+                class="text-muted hover:text-ink transition-colors h-11 w-11 flex items-center justify-center rounded-xs hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                 aria-label="Close build log"
               >
                 <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -319,7 +352,9 @@ export function Dashboard() {
   return (
     <QueryClientProvider client={queryClient}>
       {(<ConfigProvider>
-        <DashboardBody />
+        <ErrorBoundary>
+          <DashboardBody />
+        </ErrorBoundary>
       </ConfigProvider>) as any}
     </QueryClientProvider>
   )

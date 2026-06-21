@@ -17,6 +17,7 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
   const value = (getValue(path) as string | undefined) ?? ''
   const wordCount = countWords(value)
   const isOverLimit = maxWords ? wordCount > maxWords : false
+  const inputId = path.replace(/\./g, '-')
 
   useEffect(() => {
     if (maxWords && setError) {
@@ -31,10 +32,11 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
 
   return (
     <div class="space-y-1.5">
-      <label class="text-sm font-medium text-ink block">
+      <label for={inputId} class="text-sm font-medium text-ink block">
         {label}
       </label>
       <textarea
+        id={inputId}
         rows={rows}
         value={value}
         onInput={(e) => {
@@ -46,7 +48,9 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
             flushSave()?.catch(() => {})
           }
         }}
-        class={`flex min-h-[60px] w-full rounded-sm border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 resize-y ${
+        aria-invalid={isOverLimit}
+        aria-describedby={maxWords ? `${inputId}-help` : undefined}
+        class={`flex min-h-[60px] w-full rounded-sm border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y ${
           isOverLimit
             ? 'border-error focus-visible:ring-error focus-visible:border-error'
             : 'border-border focus-visible:ring-border-focus focus-visible:border-border-focus'
@@ -54,7 +58,11 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
       />
       {maxWords && (
         <div class="flex justify-end">
-          <p class={`text-xs ${isOverLimit ? 'text-error font-semibold' : 'text-muted'}`}>
+          <p
+            id={`${inputId}-help`}
+            class={`text-xs ${isOverLimit ? 'text-error font-semibold' : 'text-muted'}`}
+            role={isOverLimit ? "alert" : undefined}
+          >
             {wordCount} / {maxWords} words
           </p>
         </div>

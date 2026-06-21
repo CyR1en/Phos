@@ -22,7 +22,7 @@ export function Section({ title, description, children, class: cls, bare, footer
         {(title || description) && (
           <div class="flex flex-col space-y-1.5 mb-6">
             {title && (
-              <h3 class="font-display text-xl font-semibold leading-none tracking-tight text-ink">
+              <h3 class="font-display text-xl font-semibold leading-tight tracking-tight text-ink">
                 {title}
               </h3>
             )}

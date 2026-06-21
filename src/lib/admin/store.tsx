@@ -306,7 +306,10 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   }
 
   const pollTask = async (taskId: string) => {
-    while (true) {
+    let attempts = 0
+    const maxAttempts = 600 // 5 minutes at 500ms intervals
+    while (attempts < maxAttempts) {
+      attempts++
       await new Promise((r) => setTimeout(r, 500))
       try {
         const { status, lines, error } = await api.getTaskStatus(taskId)
@@ -324,6 +327,10 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
         throw e
       }
     }
+    // Timeout reached
+    setBuildStatus('error')
+    setBuildLog((prev) => [...prev, 'Build timed out after 5 minutes'])
+    throw new Error('Build timed out — please try again')
   }
 
   const republish = async () => {

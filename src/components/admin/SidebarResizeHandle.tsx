@@ -4,11 +4,20 @@ interface SidebarResizeHandleProps {
   onResize: (width: number) => void
   minWidth: number
   maxWidth: number
+  width?: number
 }
 
-export function SidebarResizeHandle({ onResize, minWidth, maxWidth }: SidebarResizeHandleProps) {
+export function SidebarResizeHandle({ onResize, minWidth, maxWidth, width: propWidth }: SidebarResizeHandleProps) {
   const isDragging = useRef(false)
   const handleRef = useRef<HTMLDivElement>(null)
+
+  const getCurrentWidth = () => {
+    if (propWidth !== undefined) return propWidth
+    if (handleRef.current?.parentElement) {
+      return handleRef.current.parentElement.getBoundingClientRect().width
+    }
+    return minWidth
+  }
 
   const handlePointerDown = (e: PointerEvent) => {
     e.preventDefault()
@@ -44,14 +53,43 @@ export function SidebarResizeHandle({ onResize, minWidth, maxWidth }: SidebarRes
     window.addEventListener('pointercancel', handlePointerEnd)
   }
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const currentWidth = getCurrentWidth()
+    let newWidth = currentWidth
+    if (e.key === 'ArrowLeft') {
+      newWidth = Math.max(minWidth, currentWidth - 8)
+      e.preventDefault()
+    } else if (e.key === 'ArrowRight') {
+      newWidth = Math.min(maxWidth, currentWidth + 8)
+      e.preventDefault()
+    } else if (e.key === 'Home') {
+      newWidth = minWidth
+      e.preventDefault()
+    } else if (e.key === 'End') {
+      newWidth = maxWidth
+      e.preventDefault()
+    }
+    if (newWidth !== currentWidth) {
+      onResize(newWidth)
+    }
+  }
+
   return (
     <div
       ref={handleRef}
       onPointerDown={handlePointerDown}
-      className="absolute top-0 right-[-4px] bottom-0 w-[8px] cursor-ew-resize group z-50 select-none"
+      onKeyDown={handleKeyDown}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      aria-valuenow={getCurrentWidth()}
+      aria-valuemin={minWidth}
+      aria-valuemax={maxWidth}
+      tabIndex={0}
+      className="absolute top-0 right-[-4px] bottom-0 w-[8px] cursor-ew-resize group z-50 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       style={{ touchAction: 'none' }}
     >
-      <div className="absolute top-0 bottom-0 left-[3px] w-[2px] bg-border group-hover:bg-primary transition-colors duration-150" />
+      <div className="absolute top-0 bottom-0 left-[3px] w-[2px] bg-border group-hover:bg-primary group-focus-visible:bg-primary transition-colors duration-150" />
     </div>
   )
 }

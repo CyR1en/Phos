@@ -15,7 +15,7 @@ export function ArrayField({ path, label }: Props) {
   const arr = getValue(path) as unknown[] | undefined
   if (!Array.isArray(arr)) return null
 
-  const isStringArray = arr.every((x) => typeof x === 'string') || (arr.length === 0 && typeof arr[0] === 'string')
+  const isStringArray = arr.length === 0 || arr.every((x) => typeof x === 'string')
   const isObjectArray = arr.length > 0 && typeof arr[0] === 'object'
 
   const removeAt = (i: number) => {
@@ -50,82 +50,86 @@ export function ArrayField({ path, label }: Props) {
         </Button>
       </div>
       <div class="space-y-4">
-        {arr.map((item, i) => (
-          <div
-            key={i}
-            class="border border-border rounded-sm p-5 bg-surface/30 shadow-2xs relative group/item"
-          >
-            <div class="flex items-center justify-between border-b border-border-light pb-3 mb-4">
-              <span class="text-xs font-mono font-medium text-muted">
-                Item #{i + 1}
-              </span>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => removeAt(i)}
-                class="opacity-90 group-hover/item:opacity-100 transition-opacity"
-              >
-                <svg class="size-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                Remove
-              </Button>
-            </div>
-            {typeof item === 'string' ? (
-              <TextAreaField
-                path={`${path}.${i}`}
-                label=""
-                rows={2}
-              />
-            ) : isObjectArray && item && typeof item === 'object' ? (
-              <div class="space-y-4">
-                {Object.entries(item as Record<string, unknown>).map(
-                  ([k, v]) => {
-                    const subPath = `${path}.${i}.${k}`
-                    const subLabel = k
-                      .replace(/_/g, ' ')
-                      .replace(/\b\w/g, (c) => c.toUpperCase())
-                    if (k.startsWith('toggle_') || typeof v === 'boolean') {
-                      return (
-                        <ToggleField
-                          key={subPath}
-                          path={subPath}
-                          label={subLabel}
-                        />
-                      )
-                    }
-                    if (typeof v === 'number') {
-                      return (
-                        <NumberField
-                          key={subPath}
-                          path={subPath}
-                          label={subLabel}
-                        />
-                      )
-                    }
-                    if (typeof v === 'string' && (v.length > 80 || v.includes('\n'))) {
-                      return (
-                        <TextAreaField
-                          key={subPath}
-                          path={subPath}
-                          label={subLabel}
-                        />
-                      )
-                    }
-                    return (
-                      <TextField
-                        key={subPath}
-                        path={subPath}
-                        label={subLabel}
-                      />
-                    )
-                  },
-                )}
+        {arr.map((item, i) => {
+          const itemObj = item as any
+          const stableKey = `${path}-${i}-${(itemObj?.id || itemObj?.slug || itemObj?.platform || (itemObj ? JSON.stringify(itemObj).slice(0, 20) : '') || i)}`
+          return (
+            <div
+              key={stableKey}
+              class="border border-border rounded-sm p-5 bg-surface/30 shadow-2xs relative group/item"
+            >
+              <div class="flex items-center justify-between border-b border-border-light pb-3 mb-4">
+                <span class="text-xs font-mono font-medium text-muted">
+                  Item #{i + 1}
+                </span>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => removeAt(i)}
+                  class="opacity-90 group-hover/item:opacity-100 transition-opacity"
+                >
+                  <svg class="size-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  Remove
+                </Button>
               </div>
-            ) : null}
-          </div>
-        ))}
+              {typeof item === 'string' ? (
+                <TextAreaField
+                  path={`${path}.${i}`}
+                  label=""
+                  rows={2}
+                />
+              ) : isObjectArray && item && typeof item === 'object' ? (
+                <div class="space-y-4">
+                  {Object.entries(item as Record<string, unknown>).map(
+                    ([k, v]) => {
+                      const subPath = `${path}.${i}.${k}`
+                      const subLabel = k
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (c) => c.toUpperCase())
+                      if (k.startsWith('toggle_') || typeof v === 'boolean') {
+                        return (
+                          <ToggleField
+                            key={subPath}
+                            path={subPath}
+                            label={subLabel}
+                          />
+                        )
+                      }
+                      if (typeof v === 'number') {
+                        return (
+                          <NumberField
+                            key={subPath}
+                            path={subPath}
+                            label={subLabel}
+                          />
+                        )
+                      }
+                      if (typeof v === 'string' && (v.length > 80 || v.includes('\n'))) {
+                        return (
+                          <TextAreaField
+                            key={subPath}
+                            path={subPath}
+                            label={subLabel}
+                          />
+                        )
+                      }
+                      return (
+                        <TextField
+                          key={subPath}
+                          path={subPath}
+                          label={subLabel}
+                        />
+                      )
+                    },
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
         {arr.length === 0 && (
           <div class="border border-dashed border-border rounded-sm p-8 text-center bg-surface/10">
             <p class="text-sm text-muted italic">

@@ -9,7 +9,8 @@
   --color-phos-base: #ECEFF4;
   --color-phos-surface: #FFFFFF;
   --color-phos-overlay: #E5E9F0;
-  --color-phos-muted: #81A1C1;
+  --color-phos-muted: #7d7891;
+  --color-phos-error: #d4453a;
   --color-phos-subtle: #5E81AC;
   --color-phos-text: #2E3440;
   --color-phos-accent: #5E81AC;
@@ -26,7 +27,8 @@
   --color-phos-dark-base: #2E3440;
   --color-phos-dark-surface: #3B4252;
   --color-phos-dark-overlay: #434C5E;
-  --color-phos-dark-muted: #4C566A;
+  --color-phos-dark-muted: #8b87a8;
+  --color-phos-dark-error: #e06c75;
   --color-phos-dark-subtle: #81A1C1;
   --color-phos-dark-text: #ECEFF4;
   --color-phos-dark-accent: #88C0D0;

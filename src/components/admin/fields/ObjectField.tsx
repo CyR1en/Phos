@@ -16,6 +16,7 @@ function prettify(key: string): string {
   return key
     .replace(/^toggle_/, '')
     .replace(/_/g, ' ')
+    .replace(/\bog\b/g, 'OG')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }

@@ -91,6 +91,9 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
   const sidebarRef = useRef<HTMLElement>(null)
   const [minWidth, setMinWidth] = useState(160)
 
+  const isCollapsed = collapsed && !isOpen
+  const isMobileOverlay = isOpen && typeof window !== 'undefined' && window.innerWidth < 768
+
   const closeOverlay = () => {
     const win = window as any
     if (win.HSOverlay?.close) {
@@ -167,18 +170,19 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
         type="button"
         onClick={onClick}
         data-measure="nav-item"
-        class={`w-full flex items-center ${collapsed ? 'justify-center px-2' : 'px-3'} py-2 text-sm font-medium rounded-sm transition-all duration-150 ${
+        aria-current={active ? 'page' : undefined}
+        class={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-3'} py-2 text-sm font-medium rounded-sm transition-all duration-150 ${
           active
             ? 'bg-surface text-ink shadow-2xs font-semibold'
             : 'text-body-muted hover:bg-surface/40 hover:text-ink'
         }`}
       >
-        {getIcon(id, collapsed)}
-        {!collapsed && label}
+        {getIcon(id, isCollapsed)}
+        {!isCollapsed && label}
       </button>
     )
 
-    if (collapsed) {
+    if (isCollapsed) {
       return (
         <Tooltip text={label} key={id}>
           {buttonEl}
@@ -194,27 +198,28 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
       <aside
         id="admin-sidebar"
         data-hs-overlay-options='{"backdrop": false}'
-        class="hs-overlay hs-overlay-open:translate-x-0 hs-overlay-open:flex hidden fixed inset-y-0 left-0 z-[60] w-64 md:w-[var(--sidebar-width)] h-full md:flex md:translate-x-0 -translate-x-full bg-canvas border-r border-border flex flex-col transition-transform duration-200"
-        role="dialog"
+        class="hs-overlay hs-overlay-open:translate-x-0 hs-overlay-open:flex hidden fixed inset-y-0 left-0 z-[60] w-72 md:w-[var(--sidebar-width)] h-full md:flex md:translate-x-0 -translate-x-full bg-canvas border-r border-border flex flex-col transition-transform duration-200 pl-[env(safe-area-inset-left,0px)]"
+        role={isMobileOverlay ? 'dialog' : undefined}
+        aria-modal={isMobileOverlay ? 'true' : undefined}
         tabindex={-1}
         aria-label="Admin navigation"
         ref={sidebarRef}
       >
-        <div class={`h-16 ${collapsed ? 'px-2 justify-center' : 'px-6 justify-between'} border-b border-border box-border flex items-center gap-2 bg-canvas-alt/20`}>
-          {!collapsed && (
+        <div class={`h-16 ${isCollapsed ? 'px-2 justify-center' : 'px-6 justify-between'} border-b border-border box-border flex items-center gap-2 bg-canvas-alt/20`}>
+          {!isCollapsed && (
             <div class="flex items-center gap-2.5">
               <img src="/logo.svg" alt="Phos Logo" class="h-6 w-auto dark:invert" />
               <div>
-                <h1 class="font-display font-semibold text-base text-ink leading-tight">
+                <p class="font-display font-semibold text-base text-ink leading-tight">
                   Phos Admin
-                </h1>
+                </p>
               </div>
             </div>
           )}
           <button
             type="button"
             data-hs-overlay="#admin-sidebar"
-            class="md:hidden flex h-8 w-8 items-center justify-center rounded-sm text-ink hover:bg-surface transition-colors"
+            class="md:hidden flex h-11 w-11 items-center justify-center rounded-sm text-ink hover:bg-surface transition-colors"
             aria-label="Close menu"
           >
             <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -248,11 +253,11 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
             )}
           </button>
         </div>
-        <div class="flex-1 overflow-y-auto">
-          <nav class="px-3 py-4 space-y-6">
+        <div class="flex-1 overflow-y-auto overflow-x-hidden">
+          <nav class={`py-4 space-y-6 ${isCollapsed ? 'px-2' : 'px-3'}`}>
             <div class="space-y-1">
-              {!collapsed && (
-                <p class="px-3 text-[10px] font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
+              {!isCollapsed && (
+                <p class="px-3 text-xs font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
                   Pages
                 </p>
               )}
@@ -263,8 +268,8 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
             </div>
 
             <div class="space-y-1">
-              {!collapsed && (
-                <p class="px-3 text-[10px] font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
+              {!isCollapsed && (
+                <p class="px-3 text-xs font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
                   Content
                 </p>
               )}
@@ -274,8 +279,8 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
 
             {hasPlugins && (
               <div class="space-y-1">
-                {!collapsed && (
-                  <p class="px-3 text-[10px] font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
+                {!isCollapsed && (
+                  <p class="px-3 text-xs font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
                     Extensions
                   </p>
                 )}
@@ -284,8 +289,8 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
             )}
           </nav>
         </div>
-        <div class={`mt-auto border-t border-border p-4 bg-surface/10 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`} data-measure="nav-item">
-          {collapsed ? (
+        <div class={`mt-auto border-t border-border p-4 bg-surface/10 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`} data-measure="nav-item">
+          {isCollapsed ? (
             <div class="flex items-center justify-center">
               <span class="size-2 rounded-full bg-success animate-pulse" title="System Active" />
             </div>
@@ -303,7 +308,7 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
         {/* Sidebar Resize Handle */}
         {!collapsed && (
           <div className="hidden md:block">
-            <SidebarResizeHandle onResize={setWidth} minWidth={0} maxWidth={256} />
+            <SidebarResizeHandle onResize={setWidth} minWidth={200} maxWidth={256} />
           </div>
         )}
       </aside>

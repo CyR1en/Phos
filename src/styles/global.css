@@ -2,6 +2,8 @@
 @import "./themes/rose-pine.css";
 @import "./themes/modern-elegant.css";
 @import "./themes/noir.css";
+@import "./themes/bone.css";
+@import "./themes/slate.css";
 @import "./themes/nord.css";
 @import "./themes/solarized.css";
 @import "./themes/everforest.css";
@@ -30,10 +32,21 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Z-INDEX SCALE
+   30  Preview panel (fixed right)
+   40  Header toolbar / mobile sidebar backdrop
+   50  Resize handles (sidebar + preview)
+   60  Sidebar (admin navigation)
+   70  Build log overlay
+   80  Toast notifications
+   90  AlertDialog (Radix — above toasts)
+   100 Tooltip (portal — above everything)
+ */
+
 @theme {
-  --font-display: 'Cormorant Garamond', Georgia, ui-serif, serif;
+  --font-display: 'Playfair Display', Georgia, ui-serif, serif;
   --font-body: 'DM Sans', Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: ui-monospace, monospace;
 
   --color-primary: var(--color-phos-accent);
   --color-primary-hover: var(--color-phos-accent-600);
@@ -59,7 +72,7 @@
   --color-body-muted: var(--color-phos-subtle);
   --color-success: var(--color-phos-pine);
   --color-success-bg: var(--color-phos-foam);
-  --color-error: var(--color-phos-accent);
+  --color-error: var(--color-phos-error);
   --color-error-bg: var(--color-phos-accent-100);
   --color-info: var(--color-phos-iris);
   --color-info-bg: var(--color-phos-highlight-low);
@@ -121,7 +134,7 @@
     --color-body-muted: var(--color-phos-dark-subtle);
     --color-success: var(--color-phos-dark-pine);
     --color-success-bg: var(--color-phos-dark-highlight-low);
-    --color-error: var(--color-phos-dark-accent);
+    --color-error: var(--color-phos-dark-error);
     --color-error-bg: var(--color-phos-accent-900);
     --color-info: var(--color-phos-dark-iris);
     --color-info-bg: var(--color-phos-dark-highlight-low);
@@ -250,4 +263,32 @@
 
 .animate-toast-out {
   animation: toastSlideOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ATMOSPHERE — Subtle film grain on the public site body */
+@layer base {
+  .grain-bg {
+    position: relative;
+    isolation: isolate;
+  }
+  .grain-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
 }

@@ -11,10 +11,11 @@ interface Props extends Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'size'> {
 }
 
 const base =
-  'inline-flex items-center justify-center font-body font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer'
+  'inline-flex items-center justify-center font-body font-medium transition-[background-color,color,border-color,box-shadow,transform,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer'
 
 const sizes: Record<NonNullable<Props['size']>, string> = {
-  sm: 'text-xs h-8 px-3 rounded-sm',
+  // sm variant uses vertical hit-area expansion to meet 44px tap target requirements while staying compact
+  sm: 'text-xs h-8 px-3 rounded-sm relative before:absolute before:inset-y-[-6px] before:inset-x-0',
   md: 'text-sm h-9.5 px-4 rounded-sm',
 }
 

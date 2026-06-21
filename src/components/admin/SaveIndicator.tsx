@@ -16,13 +16,15 @@ export function SaveIndicator() {
     saveStatus === 'saving'
       ? 'text-info'
       : saveStatus === 'saved'
-        ? 'text-primary'
+        ? 'text-success'
         : saveStatus === 'error'
           ? 'text-error'
           : 'text-muted'
   return (
     <span
       class={`text-xs font-mono uppercase tracking-wider ${color} transition-colors`}
+      role="status"
+      aria-live="polite"
     >
       {label}
     </span>

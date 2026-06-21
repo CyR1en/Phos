@@ -8,7 +8,8 @@ export function NotFoundPage() {
   return (
     <div class="max-w-3xl">
       <div class="mb-8">
-          <h2 class="text-xs font-mono uppercase tracking-wider text-accent mb-2">notFound</h2>
+          <p class="text-xs font-mono uppercase tracking-wider text-accent mb-2">notFound</p>
+          <h1 class="font-display text-3xl font-bold text-ink">404 Page</h1>
           <p class="text-base text-muted mt-2">{config?.notFound?.page_description}</p>
       </div>
       <div class="space-y-6">

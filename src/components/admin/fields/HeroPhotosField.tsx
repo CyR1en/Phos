@@ -12,7 +12,38 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '../../ui/alert-dialog'
-import { Plus, X, GripVertical } from 'lucide-react'
+function PlusIcon({ size = 24, class: cls, className, ...props }: { size?: number, class?: string, className?: string } & any) {
+  const finalClass = cls || className
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={finalClass} className={finalClass} {...props}>
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </svg>
+  )
+}
+
+function XIcon({ size = 24, class: cls, className, ...props }: { size?: number, class?: string, className?: string } & any) {
+  const finalClass = cls || className
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={finalClass} className={finalClass} {...props}>
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+  )
+}
+
+function GripVerticalIcon({ size = 24, class: cls, className, ...props }: { size?: number, class?: string, className?: string } & any) {
+  const finalClass = cls || className
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={finalClass} className={finalClass} {...props}>
+      <circle cx="9" cy="12" r="1" fill="currentColor" />
+      <circle cx="9" cy="5" r="1" fill="currentColor" />
+      <circle cx="9" cy="19" r="1" fill="currentColor" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" />
+      <circle cx="15" cy="5" r="1" fill="currentColor" />
+      <circle cx="15" cy="19" r="1" fill="currentColor" />
+    </svg>
+  )
+}
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -47,7 +78,7 @@ function SortablePhotoItem({ id, photo, onRemove }: { id: string, photo: string,
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="relative group w-36 h-36 border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-surface)] cursor-grab"
+      className="relative group w-36 h-36 border border-[var(--color-border)] rounded-sm overflow-hidden bg-[var(--color-surface)] cursor-grab"
       {...(attributes as any)}
       {...(listeners as any)}
     >
@@ -66,11 +97,11 @@ function SortablePhotoItem({ id, photo, onRemove }: { id: string, photo: string,
         onPointerDown={(e) => e.stopPropagation()}
         className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors z-10"
       >
-        <X size={12} />
+        <XIcon size={12} />
       </button>
 
       <div className="absolute top-2 left-2 bg-black/40 text-white p-1 rounded-sm opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <GripVertical size={16} />
+        <GripVerticalIcon size={16} />
       </div>
     </div>
   )
@@ -163,8 +194,8 @@ export function HeroPhotosField({ path, label }: Props) {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          {(<button type="button" className="mt-2 flex items-center gap-2 text-sm bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-3 py-1.5 rounded-md transition-colors" disabled={photos.length >= 5}>
-            <Plus size={16} /> Add Photo
+          {(<button type="button" className="mt-2 flex items-center gap-2 text-sm bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-3 py-1.5 rounded-sm transition-colors" disabled={photos.length >= 5}>
+            <PlusIcon size={16} /> Add Photo
           </button>) as any}
         </DialogTrigger>
         {(<DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
@@ -187,12 +218,12 @@ export function HeroPhotosField({ path, label }: Props) {
                       <div 
                         key={photoPath} 
                         onClick={() => !isDisabled && togglePhotoSelection(photoPath)}
-                        className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 transition-all ${isSelected ? 'border-[var(--color-focus-ring)]' : 'border-transparent hover:border-[var(--color-border)]'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`relative aspect-square rounded-sm overflow-hidden cursor-pointer border-2 transition-all ${isSelected ? 'border-primary ring-1 ring-primary' : 'border-transparent hover:border-[var(--color-border)]'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <img src={`/photos/thumbs/${cat.slug}/${photo.replace(/\.[^.]+$/, ".webp")}`} alt={photo} className="w-full h-full object-cover" loading="lazy" />
                         {isSelected && (
-                          <div className="absolute top-1 right-1 bg-[var(--color-focus-ring)] text-white rounded-full p-0.5">
-                            <X size={12} className="rotate-45" />
+                          <div className="absolute top-1 right-1 bg-primary text-white rounded-full p-0.5">
+                            <XIcon size={12} className="rotate-45" />
                           </div>
                         )}
                       </div>
@@ -204,9 +235,9 @@ export function HeroPhotosField({ path, label }: Props) {
           </div>
           {(<DialogFooter>
             {(<DialogClose asChild>
-              {(<button type="button" className="px-4 py-2 text-sm border border-[var(--color-border)] rounded-md hover:bg-[var(--color-surface)]">Cancel</button>) as any}
+              {(<button type="button" className="px-4 py-2 text-sm border border-[var(--color-border)] rounded-sm hover:bg-[var(--color-surface)]">Cancel</button>) as any}
             </DialogClose>) as any}
-            {(<button type="button" onClick={handleSaveSelection} className="px-4 py-2 text-sm bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-md hover:bg-[var(--color-primary-hover)]">Save Selection</button>) as any}
+            {(<button type="button" onClick={handleSaveSelection} className="px-4 py-2 text-sm bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-sm hover:bg-[var(--color-primary-hover)]">Save Selection</button>) as any}
           </DialogFooter>) as any}
         </DialogContent>) as any}
       </Dialog>

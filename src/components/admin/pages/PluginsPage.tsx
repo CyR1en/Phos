@@ -12,9 +12,9 @@ function prettify(key: string): string {
 
 const SKIP_KEYS = new Set(['page_description'])
 
-function FieldLabel({ children }: { children: string }) {
+function FieldLabel({ children, htmlFor }: { children: string; htmlFor?: string }) {
   return (
-    <label class="text-sm font-medium text-ink block mb-1.5">
+    <label for={htmlFor} class="text-sm font-medium text-ink block mb-1.5">
       {children}
     </label>
   )
@@ -44,6 +44,7 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
         if (SKIP_KEYS.has(key)) return null
         const fieldPath = key
         const label = prettify(key)
+        const fieldId = `plugin-${name}-${key}`
 
         if (Array.isArray(value)) {
           return (
@@ -69,8 +70,9 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
           const checked = !!getPluginValue(name, fieldPath)
           return (
             <div key={fieldPath} class="flex items-center justify-between py-2.5">
-              <span class="text-sm font-medium text-ink">{label}</span>
+              <label for={fieldId} class="text-sm font-medium text-ink cursor-pointer">{label}</label>
               <Toggle
+                id={fieldId}
                 checked={checked}
                 onChange={(e) => {
                   setPluginValue(name, fieldPath, e)
@@ -82,8 +84,9 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
         if (typeof value === 'number') {
           return (
             <div key={fieldPath} class="space-y-1.5">
-              <FieldLabel>{label}</FieldLabel>
+              <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
               <input
+                id={fieldId}
                 type="number"
                 value={
                   getPluginValue(name, fieldPath) === undefined ||
@@ -105,8 +108,9 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
           if (useTextarea) {
             return (
               <div key={fieldPath} class="space-y-1.5">
-                <FieldLabel>{label}</FieldLabel>
+                <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
                 <textarea
+                  id={fieldId}
                   rows={Math.min(value.split('\n').length + 1, 8)}
                   value={(getPluginValue(name, fieldPath) as string) ?? ''}
                   onInput={(e) =>
@@ -125,8 +129,9 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
         if (typeof value === 'string') {
           return (
             <div key={fieldPath} class="space-y-1.5">
-              <FieldLabel>{label}</FieldLabel>
+              <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
               <input
+                id={fieldId}
                 type="text"
                 value={(getPluginValue(name, fieldPath) as string) ?? ''}
                 onInput={(e) =>

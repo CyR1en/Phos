@@ -34,6 +34,20 @@ const THEMES: ThemeDef[] = [
     dark: ['#0a0a0a', '#141414', '#dc2626', '#7c3aed', '#f5f0eb'],
   },
   {
+    id: 'theme-bone',
+    name: 'Bone',
+    description: 'Warm editorial — aged paper, sienna, darkroom sepia',
+    light: ['#faf6ed', '#ede6d8', '#a0522d', '#8b6f47', '#2a2520'],
+    dark: ['#1a1612', '#252118', '#c47852', '#c4a87a', '#f0e8d8'],
+  },
+  {
+    id: 'theme-slate',
+    name: 'Slate',
+    description: 'Cool workspace — blue-gray, warm amber, Lightroom',
+    light: ['#f0f2f5', '#e2e6ec', '#d4a84b', '#6a5a9a', '#1a1d2b'],
+    dark: ['#1a1d2b', '#232636', '#e0b04a', '#8a7aba', '#e8eaf0'],
+  },
+  {
     id: 'theme-nord',
     name: 'Nord',
     description: 'Arctic cool blues — crisp, calm',
@@ -82,15 +96,11 @@ export function ThemePicker() {
     setSelected(theme)
   }, [config])
 
-  // Sync data-theme on mount and when selection changes
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', selected)
-  }, [selected])
-
   const handleSelect = (themeId: string) => {
     setSelected(themeId)
     setValue('site.theme', themeId)
     flushSave()
+    document.documentElement.setAttribute('data-theme', themeId)
   }
 
   return (
@@ -127,7 +137,7 @@ export function ThemePicker() {
                   {theme.name}
                 </span>
                 {isActive && (
-                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-text shadow-sm">
+                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-text shadow-sm">
                     ✓
                   </span>
                 )}

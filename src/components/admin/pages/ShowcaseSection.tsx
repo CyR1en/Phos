@@ -7,9 +7,9 @@ import { TextField } from '../fields/TextField'
 import { Section } from '../ui/Section'
 import { Button } from '../ui/Button'
 
-function FieldLabel({ children }: { children: string }) {
+function FieldLabel({ children, htmlFor }: { children: string; htmlFor?: string }) {
   return (
-    <label class="text-sm font-medium text-ink block mb-1.5">
+    <label for={htmlFor} class="text-sm font-medium text-ink block mb-1.5">
       {children}
     </label>
   )
@@ -59,9 +59,10 @@ function ShowcaseItemEditor({
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <FieldLabel>Type</FieldLabel>
+          <FieldLabel htmlFor={`showcase-type-${index}`}>Type</FieldLabel>
           <div class="relative">
             <select
+              id={`showcase-type-${index}`}
               value={item.type}
               onChange={(e) => {
                 const newType = (e.currentTarget as HTMLSelectElement).value as 'category' | 'gallery'
@@ -80,9 +81,10 @@ function ShowcaseItemEditor({
           </div>
         </div>
         <div>
-          <FieldLabel>{item.type === 'category' ? 'Category' : 'Gallery'}</FieldLabel>
+          <FieldLabel htmlFor={`showcase-slug-${index}`}>{item.type === 'category' ? 'Category' : 'Gallery'}</FieldLabel>
           <div class="relative">
             <select
+              id={`showcase-slug-${index}`}
               value={item.slug}
               onChange={(e) => onUpdate({ ...item, slug: (e.currentTarget as HTMLSelectElement).value })}
               class={selectCls()}
@@ -104,8 +106,9 @@ function ShowcaseItemEditor({
       </div>
 
       <div>
-        <FieldLabel>Display Title (Optional)</FieldLabel>
+        <FieldLabel htmlFor={`showcase-title-${index}`}>Display Title (Optional)</FieldLabel>
         <input
+          id={`showcase-title-${index}`}
           type="text"
           value={item.title}
           placeholder={selected?.name || ''}
@@ -115,8 +118,9 @@ function ShowcaseItemEditor({
       </div>
 
       <div>
-        <FieldLabel>Display Description (Optional)</FieldLabel>
+        <FieldLabel htmlFor={`showcase-desc-${index}`}>Display Description (Optional)</FieldLabel>
         <textarea
+          id={`showcase-desc-${index}`}
           rows={2}
           value={item.description}
           placeholder={selected ? `Original: ${(selected as any).description || '(none)'}` : ''}
@@ -187,7 +191,7 @@ export function ShowcaseSection() {
         <div class="space-y-4">
           {items.map((item, i) => (
             <ShowcaseItemEditor
-              key={i}
+              key={`showcase-${i}-${item?.type || item?.slug || i}`}
               item={item}
               index={i}
               categories={categoryOptions}

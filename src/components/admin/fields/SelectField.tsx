@@ -10,21 +10,23 @@ interface Props {
 export function SelectField({ path, label, options }: Props) {
   const { getValue, setValue, flushSave } = useConfig()
   const value = (getValue(path) as string | undefined) ?? ''
+  const inputId = path.replace(/\./g, '-')
   return (
     <div class="space-y-1.5">
       {label && (
-        <label class="text-sm font-medium text-ink block">
+        <label for={inputId} class="text-sm font-medium text-ink block">
           {label}
         </label>
       )}
       <div class="relative">
         <select
+          id={inputId}
           value={value}
           onChange={(e) => {
             setValue(path, (e.currentTarget as HTMLSelectElement).value)
             flushSave()
           }}
-          class="flex h-9.5 w-full rounded-sm border border-border bg-canvas px-3 py-1 text-sm shadow-2xs transition-colors hover:border-border-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:border-border-focus cursor-pointer appearance-none pr-8 text-ink"
+          class="flex h-9.5 w-full rounded-sm border border-border bg-canvas px-3 py-1 text-sm shadow-2xs transition-colors hover:border-border-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:border-border-focus cursor-pointer appearance-none pr-8 text-ink"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>
@@ -56,13 +58,15 @@ export function RangeField({
   const { getValue, setValue, flushSave } = useConfig()
   const v = getValue(path)
   const value = typeof v === 'number' ? v : 0
+  const inputId = path.replace(/\./g, '-')
   return (
     <div class="space-y-1.5">
-      <label class="text-sm font-medium text-ink block">
+      <label for={inputId} class="text-sm font-medium text-ink block">
         {label}
       </label>
       <div class="flex items-center gap-4 bg-surface border border-border rounded-sm p-3 shadow-2xs">
         <input
+          id={inputId}
           type="range"
           min={min}
           max={max}
@@ -76,7 +80,7 @@ export function RangeField({
           onBlur={() => flushSave()}
           class="flex-1 accent-primary cursor-pointer h-1.5 bg-border rounded-lg appearance-none"
         />
-        <span class="text-sm font-mono font-medium text-ink w-8 text-center bg-canvas border border-border rounded-sm py-0.5 px-1 shadow-2xs">
+        <span class="text-sm font-mono font-medium text-ink w-8 text-center bg-canvas border border-border rounded-sm py-0.5 px-1 shadow-2xs tabular-nums">
           {value}
         </span>
         <Button

@@ -94,9 +94,9 @@ export function SitePage() {
   return (
     <div class="max-w-3xl space-y-8">
       <div class="space-y-1">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
+        <p class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
           Site Configuration
-        </h2>
+        </p>
         <h1 class="font-display text-3xl font-bold text-ink">
           General Settings
         </h1>
@@ -115,11 +115,13 @@ export function SitePage() {
           />
           <div class="border-t border-border pt-6 mt-6 space-y-4">
             <h3 class="text-sm font-semibold text-ink uppercase tracking-wider font-mono">Logo</h3>
-            <div class="p-4 bg-canvas/30 rounded-sm border border-border text-sm text-ink flex items-center justify-between shadow-2xs">
+            <div class="p-4 bg-canvas/30 rounded-sm border border-border text-sm text-ink flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
               <span class="text-muted">Current Logo File</span>
-              <code class="font-mono text-xs font-semibold px-2.5 py-1 rounded-sm bg-surface border border-border text-primary">
-                {logoStatus?.light ?? 'none'}
-              </code>
+              <div class="overflow-x-auto max-w-full">
+                <code class="font-mono text-xs font-semibold px-2.5 py-1 rounded-sm bg-surface border border-border text-primary block whitespace-nowrap">
+                  {logoStatus?.light ?? 'none'}
+                </code>
+              </div>
             </div>
             <div class="space-y-2">
               <label class="text-xs font-medium text-muted block">Upload New Logo SVG/PNG</label>
@@ -173,7 +175,7 @@ export function SitePage() {
           <div class="space-y-4">
             {social.map((s, i) => (
               <div
-                key={i}
+                key={`social-${i}-${s?.platform || s?.url || i}`}
                 class="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-4 sm:items-end border border-border rounded-sm p-4 bg-canvas/20 shadow-2xs relative group/social"
               >
                 <SelectField

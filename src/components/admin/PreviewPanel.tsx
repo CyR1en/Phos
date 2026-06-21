@@ -10,14 +10,26 @@ const PAGE_TO_PUBLIC_ROUTE: Record<string, string> = {
   galleries: '/galleries/',
 }
 
+const CONTENT_MIN = 480
+const CONTAINER_PADDING = 64 // md:px-8 * 2
+
 interface PreviewPanelProps {
   visible: boolean
   onClose: () => void
   width: number
   onResize: (width: number) => void
+  sidebarWidth: number
+  sidebarCollapsed: boolean
 }
 
-export function PreviewPanel({ visible, onClose, width, onResize }: PreviewPanelProps) {
+export function PreviewPanel({
+  visible,
+  onClose,
+  width,
+  onResize,
+  sidebarWidth,
+  sidebarCollapsed,
+}: PreviewPanelProps) {
   const { currentPage, saveStatus, buildStatus } = useConfig()
   const [lastUrl, setLastUrl] = useLocalStorageState('admin.preview.lastUrl', '/')
   const [currentUrl, setCurrentUrl] = useState(lastUrl)
@@ -28,6 +40,9 @@ export function PreviewPanel({ visible, onClose, width, onResize }: PreviewPanel
   const isDragging = useRef(false)
   const prevSaveStatus = useRef(saveStatus)
   const prevBuildStatus = useRef(buildStatus)
+
+  const effectiveSidebar = sidebarCollapsed ? 56 : sidebarWidth
+  const maxPreviewWidth = window.innerWidth - effectiveSidebar - CONTAINER_PADDING - CONTENT_MIN
 
   // Mirror the admin's theme (.dark class + data-theme attribute) onto the iframe's <html>.
   // Same-origin, so the iframe's contentDocument is accessible. Safe to call when the iframe
@@ -169,8 +184,8 @@ export function PreviewPanel({ visible, onClose, width, onResize }: PreviewPanel
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
       if (!isDragging.current) return
-      // Preview panel is on the right, so its width is window.innerWidth - mouseX
-      const newWidth = Math.max(320, Math.min(800, window.innerWidth - moveEvent.clientX))
+      const minPreview = Math.min(320, maxPreviewWidth) // handle stays grabbable; clamps to 0 if no room
+      const newWidth = Math.max(minPreview, Math.min(maxPreviewWidth, window.innerWidth - moveEvent.clientX))
       onResize(newWidth)
     }
 
@@ -192,18 +207,46 @@ export function PreviewPanel({ visible, onClose, width, onResize }: PreviewPanel
     window.addEventListener('pointercancel', handlePointerEnd)
   }
 
+  const handlePreviewKeyDown = (e: KeyboardEvent) => {
+    let newWidth = width
+    if (e.key === 'ArrowLeft') {
+      newWidth = Math.min(maxPreviewWidth, width + 8)
+      e.preventDefault()
+    } else if (e.key === 'ArrowRight') {
+      newWidth = Math.max(320, width - 8)
+      e.preventDefault()
+    } else if (e.key === 'Home') {
+      newWidth = 320
+      e.preventDefault()
+    } else if (e.key === 'End') {
+      newWidth = maxPreviewWidth
+      e.preventDefault()
+    }
+    if (newWidth !== width) {
+      onResize(newWidth)
+    }
+  }
+
   return (
     <div
-      className="fixed top-0 right-0 bottom-0 border-l border-border bg-surface flex flex-col z-30"
+      className="hidden md:flex fixed top-0 right-0 bottom-0 border-l border-border bg-surface flex-col z-30 pr-[env(safe-area-inset-right,0px)]"
       style={{ width: `${width}px` }}
     >
       {/* Resize Handle on Left Edge */}
       <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize preview panel"
+        aria-valuenow={width}
+        aria-valuemin={320}
+        aria-valuemax={maxPreviewWidth}
+        tabIndex={0}
         onPointerDown={handleMouseDown}
-        className="absolute top-0 left-[-4px] bottom-0 w-[8px] cursor-ew-resize group z-50 select-none"
+        onKeyDown={handlePreviewKeyDown}
+        className="absolute top-0 left-[-4px] bottom-0 w-[8px] cursor-ew-resize group z-50 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         style={{ touchAction: 'none' }}
       >
-        <div className="absolute top-0 bottom-0 left-[3px] w-[2px] bg-border group-hover:bg-primary transition-colors duration-150" />
+        <div className="absolute top-0 bottom-0 left-[3px] w-[2px] bg-border group-hover:bg-primary group-focus-visible:bg-primary transition-colors duration-150" />
       </div>
 
       {/* Panel Header */}
@@ -233,8 +276,8 @@ export function PreviewPanel({ visible, onClose, width, onResize }: PreviewPanel
         <div className="flex items-center gap-1">
           <button
             onClick={handleRefresh}
-            className="p-1.5 rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
-            title="Refresh Preview"
+            className="relative before:absolute before:inset-[-6px] p-1.5 rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
+            aria-label="Refresh preview"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.72 2.78L21 8" />
@@ -243,8 +286,8 @@ export function PreviewPanel({ visible, onClose, width, onResize }: PreviewPanel
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
-            title="Close Preview"
+            className="relative before:absolute before:inset-[-6px] p-1.5 rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors"
+            aria-label="Close preview"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -261,6 +304,8 @@ export function PreviewPanel({ visible, onClose, width, onResize }: PreviewPanel
           src={currentUrl}
           onLoad={handleIframeLoad}
           className="w-full h-full border-none"
+          title="Live site preview"
+          aria-label="Live site preview"
         />
       </div>
     </div>
