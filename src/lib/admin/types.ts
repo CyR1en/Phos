@@ -18,6 +18,7 @@ export interface SiteConfig {
     page_description: string
     og_title: string
     og_description: string
+    layout?: string[]
     hero: {
       heading: string
       subheading: string
@@ -52,6 +53,11 @@ export interface SiteConfig {
       heading: string
       body: string
       button: string
+    }
+    immersiveGallery?: {
+      enabled: boolean
+      text: string
+      photos: string[]
     }
   }
   about: {

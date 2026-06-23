@@ -95,9 +95,28 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
   const isMobileOverlay = isOpen && typeof window !== 'undefined' && window.innerWidth < 768
 
   const closeOverlay = () => {
-    const win = window as any
-    if (win.HSOverlay?.close) {
-      win.HSOverlay.close('#admin-sidebar')
+    const sidebar = document.getElementById('admin-sidebar')
+    if (!sidebar) return
+
+    // If it's already closed, just ensure React state is synced
+    if (!sidebar.classList.contains('open')) {
+      setIsOpen(false)
+      return
+    }
+
+    // The most reliable way to close a Preline overlay and trigger its cleanup
+    // (including removing its injected backdrop and firing events) is to click
+    // its own close button.
+    const closeBtn = sidebar.querySelector('button[data-hs-overlay="#admin-sidebar"]') as HTMLButtonElement
+    if (closeBtn) {
+      closeBtn.click()
+    } else {
+      // Fallback: manually clean up DOM and backdrops
+      sidebar.classList.remove('open', 'opened')
+      sidebar.classList.add('hidden')
+      const prelineBackdrop = document.getElementById('admin-sidebar-backdrop')
+      if (prelineBackdrop) prelineBackdrop.remove()
+      setIsOpen(false)
     }
   }
 

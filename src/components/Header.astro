@@ -102,20 +102,26 @@ function isActive(path: string) {
 </div>
 
 <script>
-  const mobileNav = document.getElementById('mobile-nav')
+  function setupMobileNav() {
+    const mobileNav = document.getElementById('mobile-nav')
+    if (!mobileNav) return
 
-  function onOpen() {
-    document.body.classList.add('mobile-nav-open')
-    window.__lenis?.stop()
+    function onOpen() {
+      document.body.classList.add('mobile-nav-open')
+      window.__lenis?.stop()
+    }
+
+    function onClose() {
+      document.body.classList.remove('mobile-nav-open')
+      window.__lenis?.start()
+    }
+
+    mobileNav.addEventListener('open.hs.overlay', onOpen)
+    mobileNav.addEventListener('close.hs.overlay', onClose)
   }
 
-  function onClose() {
-    document.body.classList.remove('mobile-nav-open')
-    window.__lenis?.start()
-  }
-
-  mobileNav?.addEventListener('open.hs.overlay', onOpen)
-  mobileNav?.addEventListener('close.hs.overlay', onClose)
+  setupMobileNav()
+  document.addEventListener('astro:after-swap', setupMobileNav)
 
   document.addEventListener('astro:before-swap', () => {
     const HSOverlay = (window as any).HSOverlay
@@ -123,6 +129,7 @@ function isActive(path: string) {
       const instance = HSOverlay.getInstance('#mobile-nav')
       if (instance?.isOpened()) instance.close()
     }
-    onClose()
+    document.body.classList.remove('mobile-nav-open')
+    window.__lenis?.start()
   })
 </script>
