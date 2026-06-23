@@ -1,6 +1,6 @@
 {
   "site": {
-    "theme": "theme-rose-pine",
+    "theme": "theme-slate",
     "page_description": "",
     "title": "",
     "description": "",
@@ -18,22 +18,33 @@
     "page_description": "Immersive photo-first hero with bottom gradient overlay (overlay_opacity), plus services, portfolio, testimonials, and CTA sections",
     "og_title": "",
     "og_description": "",
+    "layout": [
+      "subheading",
+      "showcase",
+      "immersiveGallery",
+      "services",
+      "testimonials",
+      "cta"
+    ],
     "hero": {
       "heading": "Light through the lens",
-      "subheading": "Portfolio",
+      "subheading": "",
       "cta1": "View portfolio",
       "cta2": "Get in touch",
       "slideshow_interval": 6000,
       "overlay_opacity": 0.85,
-      "photos": []
+      "photos": [
+        "wedding/sample-04.jpg",
+        "wedding/sample-06.jpg"
+      ]
     },
     "services": {
-      "enabled": true,
+      "enabled": false,
       "heading": "Services",
       "subheading": ""
     },
     "showcase": {
-      "enabled": true,
+      "enabled": false,
       "heading": "Showcase",
       "items": []
     },
@@ -63,6 +74,18 @@
       "heading": "Let's work together",
       "body": "",
       "button": "Get in touch"
+    },
+    "immersiveGallery": {
+      "enabled": true,
+      "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      "photos": [
+        "wedding/sample-01.jpg",
+        "wedding/sample-02.jpg",
+        "wedding/sample-03.jpg",
+        "wedding/sample-04.jpg",
+        "wedding/sample-05.jpg",
+        "wedding/sample-06.jpg"
+      ]
     }
   },
   "about": {

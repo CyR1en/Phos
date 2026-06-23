@@ -5,6 +5,7 @@ import Services from '@components/Services.astro'
 import Testimonials from '@components/Testimonials.astro'
 import CTA from '@components/CTA.astro'
 import CategoryCard from '@components/CategoryCard.astro'
+import ImmersiveScrollGallery from '@components/ui/immersive-scroll-gallery'
 import manifest from '@lib/categories'
 import config from '@lib/config'
 
@@ -30,118 +31,145 @@ const jsonLd = {
 const ogImage = config.site?.og?.image || (heroPriority.length > 0 ? heroPriority[0].full : undefined)
 const ogTitle = config.home?.og_title || config.site.title
 const ogDescription = config.home?.og_description || config.site.description
+const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase", "testimonials", "cta"]
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription} image={ogImage}>
   <Hero heroPriority={heroPriority} />
 
-  {config.home.hero.subheading && (
-    <section data-animate class="animate-reveal py-16 lg:py-24">
-      <div class="mx-auto max-w-2xl px-6 text-center">
-        <p class="text-lg md:text-xl text-muted leading-relaxed" data-config="home.hero.subheading">{config.home.hero.subheading}</p>
-      </div>
-    </section>
-  )}
-
-  {config.home.services.enabled !== false && (
-    <div data-animate class="animate-reveal">
-      <Services />
-    </div>
-  )}
-
-  {config.home.showcase?.enabled !== false && (() => {
-    const showcase = config.home.showcase || { heading: 'Showcase', items: [] }
-    const items = (showcase.items || []).map((item: any) => {
-      if (item.type === 'gallery') {
-        const gal = galleries.find((g: any) => g.slug === item.slug)
-        if (!gal) return null
-        return {
-          name: gal.name,
-          slug: gal.slug,
-          description: gal.description,
-          cover: gal.cover,
-          coverWidth: null,
-          coverHeight: null,
-          photoCount: gal.photoCount,
-          blur: gal.coverBlur,
-          link: `/galleries/${gal.slug}/`,
-          displayTitle: item.title || undefined,
-          displayDescription: item.description !== undefined ? item.description : undefined,
-        }
-      }
-      const cat = categories.find((c: any) => c.slug === item.slug)
-      if (!cat) return null
-      return {
-        name: cat.name,
-        slug: cat.slug,
-        description: cat.description,
-        cover: cat.cover,
-        coverWidth: cat.coverWidth,
-        coverHeight: cat.coverHeight,
-        photoCount: cat.photoCount,
-        blur: cat.coverBlur,
-        link: `/photos/all/?cat=${cat.slug}`,
-        displayTitle: item.title || undefined,
-        displayDescription: item.description !== undefined ? item.description : undefined,
-      }
-    }).filter(Boolean)
-
-    return (
-    <section id="showcase" data-animate class="animate-reveal py-16 lg:py-24">
-      <div class="mx-auto max-w-7xl px-6 lg:px-8">
-        <div class="flex flex-wrap items-end justify-between gap-8">
-          <div data-animate-header class="opacity-0">
-            <p class="font-mono text-xs uppercase tracking-wider text-muted">Showcase</p>
-            <h2 class="mt-4 font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
+  {(config.home.layout || defaultLayout).map((sectionName: string) => {
+    if (sectionName === 'subheading' && config.home.hero.subheading) {
+      return (
+        <section data-animate class="animate-reveal py-16 lg:py-24">
+          <div class="mx-auto max-w-2xl px-6 text-center">
+            <p class="text-lg md:text-xl text-muted leading-relaxed" data-config="home.hero.subheading">{config.home.hero.subheading}</p>
           </div>
-          <a href="/photos/all/" class="text-sm font-medium text-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
+        </section>
+      )
+    }
+
+    if (sectionName === 'services' && config.home.services.enabled !== false) {
+      return (
+        <div data-animate class="animate-reveal">
+          <Services />
         </div>
+      )
+    }
 
-        {items.length > 0 ? (
-          <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((item: any) => (
-              <CategoryCard
-                name={item.name}
-                slug={item.slug}
-                description={item.description}
-                cover={item.cover}
-                coverWidth={item.coverWidth}
-                coverHeight={item.coverHeight}
-                photoCount={item.photoCount}
-                blur={item.blur}
-                link={item.link}
-                displayTitle={item.displayTitle}
-                displayDescription={item.displayDescription}
-              />
-            ))}
-          </div>
-        ) : (
-          <div class="mt-12 py-24 text-center">
-            <p class="text-lg text-muted">No showcase items configured. Add categories or galleries in the admin.</p>
-          </div>
-        )}
-      </div>
-    </section>
-    )
-  })()}
+    if (sectionName === 'immersiveGallery' && config.home.immersiveGallery?.enabled) {
+      return (
+        <div class="relative h-[300vh]">
+          <ImmersiveScrollGallery
+            client:only="preact"
+            images={config.home.immersiveGallery.photos}
+            text={config.home.immersiveGallery.text}
+          />
+        </div>
+      )
+    }
 
-  {config.home.testimonials.enabled !== false && (
-    <div data-animate class="animate-reveal">
-      <Testimonials />
-    </div>
-  )}
+    if (sectionName === 'showcase' && config.home.showcase?.enabled !== false) {
+      return (() => {
+        const showcase = config.home.showcase || { heading: 'Showcase', items: [] }
+        const items = (showcase.items || []).map((item: any) => {
+          if (item.type === 'gallery') {
+            const gal = galleries.find((g: any) => g.slug === item.slug)
+            if (!gal) return null
+            return {
+              name: gal.name,
+              slug: gal.slug,
+              description: gal.description,
+              cover: gal.cover,
+              coverWidth: null,
+              coverHeight: null,
+              photoCount: gal.photoCount,
+              blur: gal.coverBlur,
+              link: `/galleries/${gal.slug}/`,
+              displayTitle: item.title || undefined,
+              displayDescription: item.description !== undefined ? item.description : undefined,
+            }
+          }
+          const cat = categories.find((c: any) => c.slug === item.slug)
+          if (!cat) return null
+          return {
+            name: cat.name,
+            slug: cat.slug,
+            description: cat.description,
+            cover: cat.cover,
+            coverWidth: cat.coverWidth,
+            coverHeight: cat.coverHeight,
+            photoCount: cat.photoCount,
+            blur: cat.coverBlur,
+            link: `/photos/all/?cat=${cat.slug}`,
+            displayTitle: item.title || undefined,
+            displayDescription: item.description !== undefined ? item.description : undefined,
+          }
+        }).filter(Boolean)
 
-  {config.home.cta.enabled !== false && (
-    <div data-animate class="animate-reveal">
-      <CTA
-        heading={config.home.cta.heading}
-        body={config.home.cta.body}
-        buttonText={config.home.cta.button}
-        configPrefix="home.cta"
-        configButtonKey="button"
-      />
-    </div>
-  )}
+        return (
+          <section id="showcase" data-animate class="animate-reveal py-16 lg:py-24">
+            <div class="mx-auto max-w-7xl px-6 lg:px-8">
+              <div class="flex flex-wrap items-end justify-between gap-8">
+                <div data-animate-header class="opacity-0">
+                  <p class="font-mono text-xs uppercase tracking-wider text-muted">Showcase</p>
+                  <h2 class="mt-4 font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
+                </div>
+                <a href="/photos/all/" class="text-sm font-medium text-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
+              </div>
+
+              {items.length > 0 ? (
+                <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {items.map((item: any) => (
+                    <CategoryCard
+                      name={item.name}
+                      slug={item.slug}
+                      description={item.description}
+                      cover={item.cover}
+                      coverWidth={item.coverWidth}
+                      coverHeight={item.coverHeight}
+                      photoCount={item.photoCount}
+                      blur={item.blur}
+                      link={item.link}
+                      displayTitle={item.displayTitle}
+                      displayDescription={item.displayDescription}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div class="mt-12 py-24 text-center">
+                  <p class="text-lg text-muted">No showcase items configured. Add categories or galleries in the admin.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        )
+      })()
+    }
+
+    if (sectionName === 'testimonials' && config.home.testimonials.enabled !== false) {
+      return (
+        <div data-animate class="animate-reveal">
+          <Testimonials />
+        </div>
+      )
+    }
+
+    if (sectionName === 'cta' && config.home.cta.enabled !== false) {
+      return (
+        <div data-animate class="animate-reveal">
+          <CTA
+            heading={config.home.cta.heading}
+            body={config.home.cta.body}
+            buttonText={config.home.cta.button}
+            configPrefix="home.cta"
+            configButtonKey="button"
+          />
+        </div>
+      )
+    }
+
+    return null
+  })}
 
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 </BaseLayout>

@@ -238,5 +238,32 @@
       ]
     }
   ],
-  "heroPriority": []
+  "heroPriority": [
+    {
+      "full": "/photos/full/wedding/sample-04.jpg",
+      "thumb": "/photos/thumbs/wedding/sample-04.webp",
+      "thumbMobile": "/photos/thumbs-mobile/wedding/sample-04.webp",
+      "title": "Sample 04",
+      "description": "",
+      "blur": "data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAACwAwCdASoUAA0APxFysFAsJqSisAgBgCIJZQAAW9p2siXpUREQAAD+ozLtj2/04wN6cG2r3OGC8PRI1LvBGucgBilsU1cPd/VIO7Lz03C+oKBF1rriegAA",
+      "width": 6016,
+      "height": 4016,
+      "category": "wedding",
+      "categoryName": "Wedding Photography",
+      "hero_priority": 2
+    },
+    {
+      "full": "/photos/full/wedding/sample-06.jpg",
+      "thumb": "/photos/thumbs/wedding/sample-06.webp",
+      "thumbMobile": "/photos/thumbs-mobile/wedding/sample-06.webp",
+      "title": "Sample 06",
+      "description": "",
+      "blur": "data:image/webp;base64,UklGRpYAAABXRUJQVlA4IIoAAADwAwCdASoUAA0APxFysFAsJqSisAgBgCIJZACdMoAC21xeGIh2r5rAAPuZrWIzJ3UG46OMjBgjY2EBULEeOO+K0HlwOSx6imyWt/S/f8mECG604GH8vE+494yIZUpYZCcxjSC0IicT21wrGwudMGQ+qAMOKb0JTQWF8VJJQAoJhYQDNwUdNNGoAAA=",
+      "width": 6016,
+      "height": 4016,
+      "category": "wedding",
+      "categoryName": "Wedding Photography",
+      "hero_priority": 1
+    }
+  ]
 }

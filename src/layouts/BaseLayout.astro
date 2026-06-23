@@ -182,7 +182,12 @@ const imageMimeType = (url: string | undefined) => {
 
     <script>
       import 'preline';
-      window.HSStaticMethods?.autoInit();
+      if (window.HSStaticMethods) {
+        window.HSStaticMethods.autoInit();
+      }
+      document.addEventListener('astro:page-load', () => {
+        window.HSStaticMethods?.autoInit();
+      });
     </script>
   </body>
 </html>

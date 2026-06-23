@@ -26,7 +26,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 {first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
 <section class="relative flex min-h-[88vh] items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval}>
   {heroPriority.length > 0 ? (
-    <div class="absolute inset-0 z-0 hero-parallax pointer-events-none" id="hero-bg">
+    <div class="absolute inset-0 z-0 hero-parallax pointer-events-none will-change-transform" id="hero-bg">
       {heroPriority.map((photo, i) => (
         <div
           class="absolute inset-0 bg-cover bg-center"
@@ -258,7 +258,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
           }
 
           const y = lenis.animatedScroll * 0.4
-          if (Math.abs(y - lastY) < 1) return
+          if (Math.abs(y - lastY) < 0.1) return
           lastY = y
           heroBg.style.transform = `translate3d(0, ${y}px, 0)`
         }

@@ -16,48 +16,60 @@
 </button>
 
 <script>
-  const btn = document.getElementById('theme-toggle')!
-  const sun = document.getElementById('sun-icon')!
-  const moon = document.getElementById('moon-icon')!
-  const auto = document.getElementById('auto-icon')!
-  const states = ['light', 'dark', 'auto'] as const
-  const mq = window.matchMedia('(prefers-color-scheme: dark)')
+  let mqBound = false
 
-  type ThemeMode = 'light' | 'dark' | 'auto'
+  function setupThemeToggle() {
+    const btn = document.getElementById('theme-toggle')
+    const sun = document.getElementById('sun-icon')
+    const moon = document.getElementById('moon-icon')
+    const auto = document.getElementById('auto-icon')
+    if (!btn || !sun || !moon || !auto) return
 
-  function updateIcons(mode: ThemeMode) {
-    sun.classList.toggle('hidden', mode !== 'light')
-    moon.classList.toggle('hidden', mode !== 'dark')
-    auto.classList.toggle('hidden', mode !== 'auto')
-  }
+    const states = ['light', 'dark', 'auto'] as const
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
 
-  function applyTheme(mode: ThemeMode) {
-    if (mode === 'auto') {
-      document.documentElement.classList.toggle('dark', mq.matches)
-    } else {
-      document.documentElement.classList.toggle('dark', mode === 'dark')
+    type ThemeMode = 'light' | 'dark' | 'auto'
+
+    function updateIcons(mode: ThemeMode) {
+      sun!.classList.toggle('hidden', mode !== 'light')
+      moon!.classList.toggle('hidden', mode !== 'dark')
+      auto!.classList.toggle('hidden', mode !== 'auto')
     }
-    updateIcons(mode)
+
+    function applyTheme(mode: ThemeMode) {
+      if (mode === 'auto') {
+        document.documentElement.classList.toggle('dark', mq.matches)
+      } else {
+        document.documentElement.classList.toggle('dark', mode === 'dark')
+      }
+      updateIcons(mode)
+    }
+
+    function getMode(): ThemeMode {
+      return (localStorage.getItem('theme') as ThemeMode) || 'auto'
+    }
+
+    function setMode(mode: ThemeMode) {
+      localStorage.setItem('theme', mode)
+      applyTheme(mode)
+    }
+
+    if (!mqBound) {
+      mq.addEventListener('change', function () {
+        if (getMode() === 'auto') applyTheme('auto')
+      })
+      mqBound = true
+    }
+
+    applyTheme(getMode())
+
+    btn.addEventListener('click', function () {
+      const current = getMode()
+      const next = states[(states.indexOf(current) + 1) % states.length]
+      setMode(next)
+    })
   }
 
-  function getMode(): ThemeMode {
-    return (localStorage.getItem('theme') as ThemeMode) || 'auto'
-  }
-
-  function setMode(mode: ThemeMode) {
-    localStorage.setItem('theme', mode)
-    applyTheme(mode)
-  }
-
-  mq.addEventListener('change', function () {
-    if (getMode() === 'auto') applyTheme('auto')
-  })
-
-  applyTheme(getMode())
-
-  btn.addEventListener('click', function () {
-    const current = getMode()
-    const next = states[(states.indexOf(current) + 1) % states.length]
-    setMode(next)
-  })
+  setupThemeToggle()
+  document.addEventListener('astro:after-swap', setupThemeToggle)
 </script>

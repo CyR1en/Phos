@@ -50,6 +50,7 @@ import { CSS } from '@dnd-kit/utilities'
 import manifest from '@content/categories.json'
 
 interface Props {
+  limit?: number
   path: string
   label: string
 }
@@ -107,7 +108,7 @@ function SortablePhotoItem({ id, photo, onRemove }: { id: string, photo: string,
   )
 }
 
-export function HeroPhotosField({ path, label }: Props) {
+export function HeroPhotosField({ path, label, limit }: Props) {
   const { getValue, setValue } = useConfig()
   const photos = (getValue(path) as string[]) || []
   const [categories, setCategories] = useState<any[]>([])
@@ -147,7 +148,7 @@ export function HeroPhotosField({ path, label }: Props) {
     if (selectedPhotos.includes(photoPath)) {
       setSelectedPhotos(selectedPhotos.filter(p => p !== photoPath))
     } else {
-      if (selectedPhotos.length < 5) {
+      if (selectedPhotos.length < (limit || 5)) {
         if (isPortraitPhoto(photoPath)) {
           setPendingPortraitPhoto(photoPath)
           setIsAlertOpen(true)
@@ -159,7 +160,7 @@ export function HeroPhotosField({ path, label }: Props) {
   }
 
   const handleConfirmPortrait = () => {
-    if (pendingPortraitPhoto && selectedPhotos.length < 5) {
+    if (pendingPortraitPhoto && selectedPhotos.length < (limit || 5)) {
       setSelectedPhotos([...selectedPhotos, pendingPortraitPhoto])
     }
     setPendingPortraitPhoto(null)

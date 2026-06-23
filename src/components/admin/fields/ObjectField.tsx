@@ -21,7 +21,7 @@ function prettify(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-const SKIP_KEYS = new Set(['page_description', 'og_title', 'og_description', 'showcase'])
+const SKIP_KEYS = new Set(['page_description', 'og_title', 'og_description', 'showcase', 'layout'])
 
 export function ObjectField({ path }: Props) {
   const { getValue } = useConfig()
@@ -36,6 +36,12 @@ export function ObjectField({ path }: Props) {
         const label = prettify(key)
 
         if (fieldPath === 'home.hero.photos') {
+          return <HeroPhotosField key={fieldPath} path={fieldPath} label={label} limit={5} />
+        }
+        if (fieldPath === 'home.immersiveGallery.photos') {
+          return <HeroPhotosField key={fieldPath} path={fieldPath} label={label} limit={7} />
+        }
+        if (false) {
           return <HeroPhotosField key={fieldPath} path={fieldPath} label={label} />
         }
         if (Array.isArray(value)) {
