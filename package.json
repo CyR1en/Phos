@@ -1,7 +1,7 @@
 {
   "name": "phos",
   "type": "module",
-  "version": "1.8.11",
+  "version": "1.8.12",
   "private": true,
   "scripts": {
     "dev": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && (node admin/server.mjs &) && astro dev",
