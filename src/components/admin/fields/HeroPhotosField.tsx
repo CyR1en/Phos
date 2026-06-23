@@ -179,7 +179,7 @@ export function HeroPhotosField({ path, label, limit }: Props) {
 
   return (
     <div className="mb-6">
-      <label className="block text-sm font-medium mb-2">{label} (Max 5)</label>
+      <label className="block text-sm font-medium mb-2">{label} (Max {limit || 5})</label>
       
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         {(<SortableContext items={photos} strategy={rectSortingStrategy}>
@@ -195,17 +195,17 @@ export function HeroPhotosField({ path, label, limit }: Props) {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          {(<button type="button" className="mt-2 flex items-center gap-2 text-sm bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-3 py-1.5 rounded-sm transition-colors" disabled={photos.length >= 5}>
+          {(<button type="button" className="mt-2 flex items-center gap-2 text-sm bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] px-3 py-1.5 rounded-sm transition-colors" disabled={photos.length >= (limit || 5)}>
             <PlusIcon size={16} /> Add Photo
           </button>) as any}
         </DialogTrigger>
         {(<DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
           {(<DialogHeader>
-            {(<DialogTitle>Select Hero Photos</DialogTitle>) as any}
+            {(<DialogTitle>Select {label}</DialogTitle>) as any}
           </DialogHeader>) as any}
           <div className="flex-1 overflow-y-auto py-4">
             <div className="mb-4 text-sm text-[var(--color-muted)]">
-              Selected: {selectedPhotos.length} / 5
+              Selected: {selectedPhotos.length} / {limit || 5}
             </div>
             {categories.map(cat => (
               <div key={cat.slug} className="mb-6">
@@ -214,7 +214,7 @@ export function HeroPhotosField({ path, label, limit }: Props) {
                   {cat.photos.map((photo: string) => {
                     const photoPath = `${cat.slug}/${photo}`
                     const isSelected = selectedPhotos.includes(photoPath)
-                    const isDisabled = !isSelected && selectedPhotos.length >= 5
+                    const isDisabled = !isSelected && selectedPhotos.length >= (limit || 5)
                     return (
                       <div 
                         key={photoPath} 
