@@ -1,3 +1,17 @@
+export interface PhotoPosition {
+  x: number   // vw, can be negative (off-screen left)
+  y: number   // vh, can be negative (off-screen top)
+  w: number   // vw, width
+  h: number   // vh, height
+  z: number   // unitless integer, stacking order
+  br?: number // px, border-radius of the photo frame (0 = sharp corners)
+}
+
+export interface PositionConfig {
+  mobile: PhotoPosition
+  desktop: PhotoPosition
+}
+
 export interface SiteConfig {
   site: {
     theme: string
@@ -57,7 +71,13 @@ export interface SiteConfig {
     immersiveGallery?: {
       enabled: boolean
       text: string
-      photos: string[]
+      // Photos and positions are tracked per-device so mobile and desktop can
+      // be curated independently. Positions are parallel to the matching
+      // *Photos array; null = use hardcoded DEFAULT_POSITIONS.
+      mobilePhotos: string[]
+      mobilePositions?: PhotoPosition[] | null
+      desktopPhotos: string[]
+      desktopPositions?: PhotoPosition[] | null
     }
   }
   about: {

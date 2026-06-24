@@ -4,12 +4,31 @@ import * as React from "react";
 import { useRef } from "react";
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView } from "framer-motion";
 import { cn } from "@lib/utils";
+import type { PhotoPosition } from "@lib/admin/types";
 
 // Types
 interface iImmersiveScrollGalleryProps {
-	images?: string[];
+	mobilePhotos?: string[];
+	mobilePositions?: PhotoPosition[] | null;
+	desktopPhotos?: string[];
+	desktopPositions?: PhotoPosition[] | null;
 	text?: string;
 	className?: string;
+}
+
+// Responsive hook — inline styles can't use Tailwind's md: media queries, so we
+// switch between mobile/desktop positions at the JS level. Re-renders on 768px cross.
+function useMediaQuery(query: string): boolean {
+	const [matches, setMatches] = React.useState(() =>
+		typeof window !== "undefined" ? window.matchMedia(query).matches : false
+	);
+	React.useEffect(() => {
+		const mql = window.matchMedia(query);
+		const handler = () => setMatches(mql.matches);
+		mql.addEventListener("change", handler);
+		return () => mql.removeEventListener("change", handler);
+	}, [query]);
+	return matches;
 }
 
 type StarLayerProps = {
@@ -90,21 +109,34 @@ function ProgressiveImage({ src, thumb, alt, className, style }: any) {
 // Horizontally expanded to ~94vw to match the nav bar width, while keeping the vertical height constrained.
 // z-indexes are assigned so the center cluster (top-center, top-left, top-right) sits on top of the side wings.
 const IMAGE_STYLES = [
-	"w-[30vw] h-[22.5vh] top-[4vh] -left-[1.5vw] z-30",      // 0: top-center
-	"w-[42vw] h-[27vh] -top-[23vh] left-[5vw] z-20",          // 1: top-left wing
-	"w-[24vw] h-[49.5vh] -top-[9.5vh] -left-[32vw] z-10",    // 2: far-left wing
-	"w-[30vw] h-[22.5vh] top-[4vh] left-[32vw] z-30",         // 3: top-right
-	"w-[24vw] h-[27vh] top-[31vh] left-[5vw] z-20",           // 4: bottom-left
-	"w-[36vw] h-[22.5vh] top-[28.75vh] -left-[29vw] z-10",    // 5: far-right wing
-	"w-[18vw] h-[13.5vh] top-[24.25vh] left-[29vw] z-40",     // 6: tiny center accent
+	"w-[44vw] h-[22vh] top-[-28vh] left-[-22vw] z-20 md:w-[30vw] md:h-[22.5vh] md:top-[4vh] md:-left-[1.5vw] md:z-30",      // 0: upper-left
+	"w-[40vw] h-[20vh] top-[-16vh] left-[20vw] z-10 md:w-[42vw] md:h-[27vh] md:-top-[23vh] md:left-[5vw] md:z-20",          // 1: upper-right
+	"w-[46vw] h-[24vh] top-[-6vh] left-[-26vw] z-30 md:w-[24vw] md:h-[49.5vh] md:-top-[9.5vh] md:-left-[32vw] md:z-10",    // 2: mid-left
+	"w-[42vw] h-[22vh] top-[6vh] left-[22vw] z-20 md:w-[30vw] md:h-[22.5vh] md:top-[4vh] md:left-[32vw] md:z-30",         // 3: center-right
+	"w-[44vw] h-[22vh] top-[16vh] left-[-20vw] z-10 md:w-[24vw] md:h-[27vh] md:top-[31vh] md:left-[5vw] md:z-20",           // 4: lower-left
+	"w-[40vw] h-[20vh] top-[28vh] left-[18vw] z-30 md:w-[36vw] md:h-[22.5vh] md:top-[28.75vh] md:-left-[29vw] md:z-10",    // 5: bottom-right
+	"hidden md:block md:w-[18vw] md:h-[13.5vh] md:top-[24.25vh] md:left-[29vw] md:z-40",     // 6: tiny center accent
 ];
 
 export default function ImmersiveScrollGallery({
-	images = [],
+	mobilePhotos = [],
+	mobilePositions = null,
+	desktopPhotos = [],
+	desktopPositions = null,
 	text = "",
 	className = "",
 }: iImmersiveScrollGalleryProps) {
 	const container = useRef<HTMLDivElement | null>(null);
+
+	// Switch between mobile/desktop photos + positions at the JS level (inline
+	// styles can't use Tailwind's md: prefix). Falls back to IMAGE_STYLES
+	// (CSS-driven) when positions is null/absent, so existing behavior is
+	// unchanged. Conditional rendering (vs. rendering both with hidden/md:block)
+	// avoids initializing double the framer-motion springs.
+	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const photos = isDesktop ? desktopPhotos : mobilePhotos;
+	const positions = isDesktop ? desktopPositions : mobilePositions;
+	const hasPositions = positions != null && positions.length > 0;
 
 	const { scrollYProgress } = useScroll({
 		target: container,
@@ -133,7 +165,7 @@ export default function ImmersiveScrollGallery({
 	const opacitySection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0, 1, 1]);
 	const scaleSection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0.8, 1, 1]);
 
-	const pictures = images.map((src, index) => {
+	const pictures = photos.map((src: string, index: number) => {
 		return {
 			src: `/photos/full/${src}`, // Prepend path
 			thumb: `/photos/thumbs/${src.replace(/\.[^.]+$/, ".webp")}`,
@@ -223,31 +255,83 @@ export default function ImmersiveScrollGallery({
 				) as any}
 				</motion.div>
 
-				{/* Zooming Images */}
+			{/* Zooming Images — scaled down + offset down to center vertically and clear the nav bar */}
+			<div className="absolute inset-0 origin-center scale-[0.9] translate-y-[2vh] will-change-transform pointer-events-none">
 				{pictures.map(({ src, thumb, scale }, index) => {
+					// When positions are configured, use inline styles (JS-driven
+					// responsive switch). Otherwise fall back to the hardcoded
+					// IMAGE_STYLES Tailwind classes (CSS-driven md: prefix).
+					// `pos` is already the active device's PhotoPosition (mobile or
+					// desktop selected above via useMediaQuery), so read fields directly.
+					const pos = hasPositions ? positions![index] : null;
+					const zIndex = pos ? pos.z : undefined;
+					// Per-photo border radius (px). Falls back to the CSS class
+					// (`rounded-lg`) when unset so the original look is preserved.
+					const br = pos && typeof pos.br === "number" ? pos.br : null;
+					const posStyle = pos
+						? {
+								width: `${pos.w}vw`,
+								height: `${pos.h}vh`,
+								top: `${pos.y}vh`,
+								left: `${pos.x}vw`,
+								zIndex,
+							} as React.CSSProperties
+						: undefined;
+					// Skip rendering on mobile if the position has zero size
+					// (matches the original `hidden md:block` for index 6).
+					const skipOnMobile = pos && !isDesktop && pos.w === 0 && pos.h === 0;
+					if (skipOnMobile) return null;
+
+					// Extract z-index classes from IMAGE_STYLES fallback if pos is not defined
+					const fallbackZIndexMatch = !pos ? IMAGE_STYLES[index % IMAGE_STYLES.length].match(/z-(\d+)|md:z-(\d+)/g) : null;
+					let fallbackZIndex = undefined;
+					if (fallbackZIndexMatch) {
+						// Simple heuristic to get the right z-index from the string based on desktop/mobile
+						const mobileMatch = IMAGE_STYLES[index % IMAGE_STYLES.length].match(/(?:^|\s)z-(\d+)/);
+						const desktopMatch = IMAGE_STYLES[index % IMAGE_STYLES.length].match(/md:z-(\d+)/);
+						fallbackZIndex = isDesktop 
+							? (desktopMatch ? parseInt(desktopMatch[1]) : (mobileMatch ? parseInt(mobileMatch[1]) : undefined))
+							: (mobileMatch ? parseInt(mobileMatch[1]) : undefined);
+					}
+					
+					const resolvedZIndex = zIndex !== undefined ? zIndex : fallbackZIndex;
+
+					// When a custom border-radius is set, drop the `rounded-lg`
+					// class (it would override the inline style) and apply via style.
+					const imgClassName = br !== null
+						? "object-cover w-full h-full will-change-transform"
+						: "object-cover w-full h-full rounded-lg will-change-transform";
+					const imgStyle = br !== null
+						? { transform: "translateZ(0)", borderRadius: `${br}px` }
+						: { transform: "translateZ(0)" };
+
 					return (
 						<motion.div
 							key={index}
-							style={{ scale, opacity: opacityImage } as any}
+							style={{ scale, opacity: opacityImage, zIndex: resolvedZIndex } as any}
 							className="absolute flex items-center justify-center w-full h-full top-0 will-change-transform pointer-events-none"
 						>
 							{(
-								<div className={`relative ${IMAGE_STYLES[index % IMAGE_STYLES.length]}`}>
+								<div
+									className={pos ? "relative" : `relative ${IMAGE_STYLES[index % IMAGE_STYLES.length]}`}
+									style={posStyle as any}
+								>
 									<ProgressiveImage
 										src={src}
 										thumb={thumb}
 										alt={`Zoom image ${index + 1}`}
 										// Removed shadow-xl because scaling a box-shadow causes severe browser jank
-										className="object-cover w-full h-full rounded-lg will-change-transform"
-										style={{ transform: "translateZ(0)" }}
+										className={imgClassName}
+										style={imgStyle}
 									/>
 								</div>
 							) as any}
 						</motion.div>
 					) as any;
 				})}
+			</div>
 
-				{/* Content Section */}
+			{/* Content Section */}
 				<motion.div
 					style={{
 						opacity: opacitySection2,

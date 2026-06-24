@@ -4,6 +4,7 @@ RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
+RUN npm install -g npm@latest
 RUN mkdir -p plugins
 
 COPY package.json package-lock.json* ./

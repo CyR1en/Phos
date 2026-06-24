@@ -61,7 +61,10 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
         <div class="relative h-[300vh]">
           <ImmersiveScrollGallery
             client:only="preact"
-            images={config.home.immersiveGallery.photos}
+            mobilePhotos={config.home.immersiveGallery.mobilePhotos}
+            mobilePositions={config.home.immersiveGallery.mobilePositions}
+            desktopPhotos={config.home.immersiveGallery.desktopPhotos}
+            desktopPositions={config.home.immersiveGallery.desktopPositions}
             text={config.home.immersiveGallery.text}
           />
         </div>
