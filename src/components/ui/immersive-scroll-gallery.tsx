@@ -59,6 +59,30 @@ function StarLayer({ count, size, transition, className }: StarLayerProps) {
 	) as any;
 }
 
+function ProgressiveImage({ src, thumb, alt, className, style }: any) {
+	const [isLoaded, setIsLoaded] = React.useState(false);
+
+	return (
+		<>
+			<img
+				src={thumb}
+				alt={alt}
+				className={cn(className, isLoaded ? "opacity-0" : "opacity-100", "absolute inset-0 transition-opacity duration-1000")}
+				style={style}
+			/>
+			<img
+				src={src}
+				alt={alt}
+				onLoad={() => setIsLoaded(true)}
+				className={cn(className, isLoaded ? "opacity-100" : "opacity-0", "absolute inset-0 transition-opacity duration-1000")}
+				style={style}
+				loading="lazy"
+				decoding="async"
+			/>
+		</>
+	);
+}
+
 // Horizontally expanded to ~94vw to match the nav bar width, while keeping the vertical height constrained.
 // z-indexes are assigned so the center cluster (top-center, top-left, top-right) sits on top of the side wings.
 const IMAGE_STYLES = [
@@ -107,6 +131,7 @@ export default function ImmersiveScrollGallery({
 	const pictures = images.map((src, index) => {
 		return {
 			src: `/photos/full/${src}`, // Prepend path
+			thumb: `/photos/thumbs/${src.replace(/\.[^.]+$/, ".webp")}`,
 			scale: [scale4, scale5, scale6, scale5, scale6, scale8, scale9][
 				index % 7
 			],
@@ -162,7 +187,7 @@ export default function ImmersiveScrollGallery({
 				</motion.div>
 
 				{/* Zooming Images */}
-				{pictures.map(({ src, scale }, index) => {
+				{pictures.map(({ src, thumb, scale }, index) => {
 					return (
 						<motion.div
 							key={index}
@@ -171,8 +196,9 @@ export default function ImmersiveScrollGallery({
 						>
 							{(
 								<div className={`relative ${IMAGE_STYLES[index % IMAGE_STYLES.length]}`}>
-									<img
+									<ProgressiveImage
 										src={src}
+										thumb={thumb}
 										alt={`Zoom image ${index + 1}`}
 										// Removed shadow-xl because scaling a box-shadow causes severe browser jank
 										className="object-cover w-full h-full rounded-lg will-change-transform"
