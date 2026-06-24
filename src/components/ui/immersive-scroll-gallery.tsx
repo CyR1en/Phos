@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRef } from "react";
-import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView } from "framer-motion";
 import { cn } from "@lib/utils";
 
 // Types
@@ -19,23 +19,27 @@ type StarLayerProps = {
 	className?: string;
 };
 
-// Helper to generate stars via box-shadow
+// Helper to generate stars via box-shadow.
+// Memoized at module scope so repeated renders with the same count reuse the
+// same string instead of recomputing + triggering a re-render.
+const starCache = new Map<number, string>();
 function generateStars(count: number) {
+	const cached = starCache.get(count);
+	if (cached) return cached;
 	const shadows: string[] = [];
 	for (let i = 0; i < count; i++) {
 		const x = Math.floor(Math.random() * 4000) - 2000;
 		const y = Math.floor(Math.random() * 4000) - 2000;
 		shadows.push(`${x}px ${y}px currentColor`);
 	}
-	return shadows.join(", ");
+	const value = shadows.join(", ");
+	starCache.set(count, value);
+	return value;
 }
 
 function StarLayer({ count, size, transition, className }: StarLayerProps) {
-	const [boxShadow, setBoxShadow] = React.useState<string>("");
-
-	React.useEffect(() => {
-		setBoxShadow(generateStars(count));
-	}, [count]);
+	// Compute once per (count) — no setState, no effect, no re-render.
+	const boxShadow = generateStars(count);
 
 	return (
 		<motion.div
@@ -102,17 +106,16 @@ export default function ImmersiveScrollGallery({
 }: iImmersiveScrollGalleryProps) {
 	const container = useRef<HTMLDivElement | null>(null);
 
-	const { scrollYProgress: scrollYProgressRaw } = useScroll({
+	const { scrollYProgress } = useScroll({
 		target: container,
 		offset: ["start start", "end end"],
 	});
 
-	// Apply spring physics to smooth out the scroll progress (fixes stuttering from mouse wheels)
-	const scrollYProgress = useSpring(scrollYProgressRaw, {
-		stiffness: 100,
-		damping: 30,
-		restDelta: 0.001
-	});
+	// NOTE: We intentionally do NOT wrap scrollYProgress in useSpring here.
+	// SmoothScroll.astro already runs Lenis (lerp 0.15) which smooths the
+	// native scroll position. Stacking a second spring on top caused the zoom
+	// to lag behind the wheel input, producing the "stutter then start" feel
+	// on entry. Lenis alone gives a smooth, responsive progress curve.
 
 	// Delayed start (0.1) so the section can fully enter the viewport before scaling begins
 	const scale4 = useTransform(scrollYProgress, [0.1, 1], [1, 4]);
@@ -121,8 +124,10 @@ export default function ImmersiveScrollGallery({
 	const scale8 = useTransform(scrollYProgress, [0.1, 1], [1, 8]);
 	const scale9 = useTransform(scrollYProgress, [0.1, 1], [1, 9]);
 
-	// Fade images completely to 0 so they disappear behind the text
-	const opacityImage = useTransform(scrollYProgress, [0.1, 0.8], [1, 0]);
+	// Fade images out by 0.8 and KEEP them at 0 through the end of the scroll
+	// so the paragraph + stars stand alone. The explicit hold-at-0 stop at
+	// progress 1 prevents any fade-back-in from scroll overshoot/extrapolation.
+	const opacityImage = useTransform(scrollYProgress, [0.1, 0.8, 1], [1, 0, 0]);
 
 	// Explicitly keep text opacity at 1 from 0.8 to 1.0 so it doesn't fade out
 	const opacitySection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0, 1, 1]);
@@ -138,52 +143,84 @@ export default function ImmersiveScrollGallery({
 		};
 	});
 
+	// Only run the star animations + mouse parallax while the section is on
+	// screen. While off-screen the infinite y-loop animations and the mousemove
+	// listener would otherwise burn CPU/GPU budget the browser needs for smooth
+	// compositing when the section eventually enters the viewport.
+	const stickyRef = useRef<HTMLDivElement | null>(null);
+	const inView = useInView(stickyRef, { amount: "some", once: false });
+
 	// Mouse parallax for stars
 	const offsetX = useMotionValue(0);
 	const offsetY = useMotionValue(0);
 	const springX = useSpring(offsetX, { stiffness: 50, damping: 20 });
 	const springY = useSpring(offsetY, { stiffness: 50, damping: 20 });
 
+	// rAF-throttled parallax: coalesce bursts of mousemove events into one
+	// motion-value update per frame instead of updating on every event.
+	const rafId = React.useRef<number | null>(null);
+	const lastEvent = React.useRef<{ x: number; y: number } | null>(null);
 	const handleMouseMove = React.useCallback(
 		(e: any) => {
-			const centerX = window.innerWidth / 2;
-			const centerY = window.innerHeight / 2;
-			offsetX.set(-(e.clientX - centerX) * 0.05);
-			offsetY.set(-(e.clientY - centerY) * 0.05);
+			lastEvent.current = { x: e.clientX, y: e.clientY };
+			if (rafId.current != null) return;
+			rafId.current = requestAnimationFrame(() => {
+				rafId.current = null;
+				const ev = lastEvent.current;
+				if (!ev) return;
+				const centerX = window.innerWidth / 2;
+				const centerY = window.innerHeight / 2;
+				offsetX.set(-(ev.x - centerX) * 0.05);
+				offsetY.set(-(ev.y - centerY) * 0.05);
+			});
 		},
 		[offsetX, offsetY]
 	);
 
+	React.useEffect(() => {
+		return () => {
+			if (rafId.current != null) cancelAnimationFrame(rafId.current);
+		};
+	}, []);
+
 	return (
 		<div ref={container} className={`absolute inset-0 ${className}`}>
-			<div className="sticky top-0 h-[100vh] overflow-hidden" onMouseMove={handleMouseMove}>
+			<div
+				ref={stickyRef}
+				className="sticky top-0 h-[100vh] overflow-hidden"
+				onMouseMove={inView ? handleMouseMove : undefined}
+			>
 
 				{/* Stars Background (Fades in with the text) */}
 				<motion.div
 					style={{ opacity: opacitySection2, x: springX, y: springY } as any}
 					className="absolute inset-0 pointer-events-none text-ink/50 dark:text-ink/30"
 				>
-					{(
-						<StarLayer
-							count={300}
-							size={2}
-							transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
-						/>
-					) as any}
-					{(
-						<StarLayer
-							count={150}
-							size={3}
-							transition={{ repeat: Infinity, duration: 90, ease: "linear" }}
-						/>
-					) as any}
-					{(
-						<StarLayer
-							count={50}
-							size={4}
-							transition={{ repeat: Infinity, duration: 120, ease: "linear" }}
-						/>
-					) as any}
+				{inView && (
+					<>
+						{(
+							<StarLayer
+								count={300}
+								size={2}
+								transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+							/>
+						) as any}
+						{(
+							<StarLayer
+								count={150}
+								size={3}
+								transition={{ repeat: Infinity, duration: 90, ease: "linear" }}
+							/>
+						) as any}
+						{(
+							<StarLayer
+								count={50}
+								size={4}
+								transition={{ repeat: Infinity, duration: 120, ease: "linear" }}
+							/>
+						) as any}
+					</>
+				) as any}
 				</motion.div>
 
 				{/* Zooming Images */}
