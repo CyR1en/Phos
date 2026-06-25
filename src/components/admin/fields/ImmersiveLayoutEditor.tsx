@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
-import { Rnd } from 'react-rnd'
 import { useConfig } from '../../../lib/admin/store'
-import { DEFAULT_POSITIONS } from '../../../lib/immersive-defaults'
 import type { PhotoPosition } from '../../../lib/admin/types'
 import { Button } from '../ui/Button'
 import manifest from '@content/categories.json'
@@ -15,165 +13,31 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '../../ui/alert-dialog'
-
-// react-rnd is a React component; cast to any to avoid Preact/React JSX type
-// mismatches (the established pattern in this codebase — see HeroPhotosField,
-// dialog.tsx, ObjectField.tsx).
-const RndAny = Rnd as any
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** Value ranges per spec section 4.4 (client-side clamping). */
-const RANGES = {
-  x: { min: -50, max: 50 },
-  y: { min: -60, max: 60 },
-  w: { min: 10, max: 100 },
-  h: { min: 8, max: 100 },
-  z: { min: 0, max: 100 },
-  br: { min: 0, max: 100 },
-} as const
-
-/** Aspect ratios representing real device viewports. The canvas is sized
- *  responsively to fill the available workspace while maintaining these
- *  ratios, so photo shapes in the editor match what users see on real devices. */
-const ASPECT = {
-  mobile: { w: 9, h: 19.5 },  // modern phones (iPhone 14/15: 393×852, Galaxy S24: 360×800)
-  desktop: { w: 16, h: 9 },   // standard desktop monitors (1920×1080)
-} as const
-
-/** Pixel distance the cursor must travel before a background mousedown is
- *  treated as a marquee-drag rather than a plain click (which clears the
- *  selection). Prevents accidental selection boxes on simple clicks. */
-const MARQUEE_THRESHOLD = 4
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const clamp = (val: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, val))
-
-const vwToPx = (vw: number, canvasW: number) => (vw / 100) * canvasW
-const vhToPx = (vh: number, canvasH: number) => (vh / 100) * canvasH
-
-const round3 = (num: number) => Math.round(num * 1000) / 1000
-const pxToVw = (px: number, canvasW: number) => round3((px / canvasW) * 100)
-const pxToVh = (px: number, canvasH: number) => round3((px / canvasH) * 100)
-
-/** Snap a vw/vh value to the nearest GRID_STEP (used when snap-to-grid is on). */
-const SNAP_STEP = 2 // vw/vh increments
-const snapVal = (v: number) => Math.round(v / SNAP_STEP) * SNAP_STEP
-
-const clone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj))
-
-/** Resolve a photo's border-radius, defaulting to 0 when unset. */
-const brOf = (pos: PhotoPosition | undefined | null): number =>
-  pos && typeof pos.br === 'number' ? pos.br : 0
-
-/**
- * Pick the hardcoded default position for index `i` on a given device.
- * Returns a fresh clone so callers can mutate freely.
- */
-const mobileDefs = (i: number): PhotoPosition =>
-  clone(DEFAULT_POSITIONS[i % DEFAULT_POSITIONS.length].mobile)
-const desktopDefs = (i: number): PhotoPosition =>
-  clone(DEFAULT_POSITIONS[i % DEFAULT_POSITIONS.length].desktop)
-
-/**
- * Ensure a positions array is exactly `photoCount` long, filling missing
- * entries from the device defaults and truncating extras. Called every time
- * the editor opens.
- */
-function syncPositions(
-  stored: PhotoPosition[] | null,
-  photoCount: number,
-  pickDefault: (i: number) => PhotoPosition,
-): PhotoPosition[] {
-  const base = stored ?? []
-  const result: PhotoPosition[] = []
-  for (let i = 0; i < photoCount; i++) {
-    if (base[i]) result.push(clone(base[i]))
-    else result.push(pickDefault(i))
-  }
-  return result
-}
-
-/** Convert a photo path like `wedding/sample-01.jpg` to its thumb URL. */
-function thumbUrl(photo: string): string {
-  return `/photos/thumbs/${photo.replace(/\.[^.]+$/, '.webp')}`
-}
-
-/**
- * Rectangle overlap test (AABB). Each rect is {left, top, right, bottom}.
- * Used by marquee selection to find photos intersecting the drag box.
- */
-function rectsIntersect(
-  a: { left: number; top: number; right: number; bottom: number },
-  b: { left: number; top: number; right: number; bottom: number },
-): boolean {
-  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
-}
-
-// Visible resize handles at the four corners (the re-resizable defaults are
-// invisible touch areas — these make them discoverable).
-const RESIZE_HANDLES: Record<string, any> = {
-  topLeft: { width: '8px', height: '8px', background: 'var(--color-primary)', borderRadius: '2px', top: '-4px', left: '-4px' },
-  topRight: { width: '8px', height: '8px', background: 'var(--color-primary)', borderRadius: '2px', top: '-4px', right: '-4px' },
-  bottomLeft: { width: '8px', height: '8px', background: 'var(--color-primary)', borderRadius: '2px', bottom: '-4px', left: '-4px' },
-  bottomRight: { width: '8px', height: '8px', background: 'var(--color-primary)', borderRadius: '2px', bottom: '-4px', right: '-4px' },
-}
-
-const ALL_HANDLES = {
-  top: true, right: true, bottom: true, left: true,
-  topRight: true, bottomRight: true, bottomLeft: true, topLeft: true,
-} as const
-
-// ---------------------------------------------------------------------------
-// Icons (inline SVG — kept local to avoid pulling lucide-react into the Preact
-// admin SPA, matching the rest of the admin field components).
-// ---------------------------------------------------------------------------
-
-function PlusIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 12h14" />
-      <path d="M12 5v14" />
-    </svg>
-  )
-}
-
-function TrashIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 6h18" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
-  )
-}
-
-function CheckIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  )
-}
-
-function CropIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 2v14a2 2 0 0 0 2 2h14" />
-      <path d="M18 22V8a2 2 0 0 0-2-2H2" />
-    </svg>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+import {
+  RANGES,
+  ASPECT,
+  MARQUEE_THRESHOLD,
+  vwToPx,
+  vhToPx,
+  pxToVw,
+  pxToVh,
+  snapVal,
+  clone,
+  brOf,
+  mobileDefs,
+  desktopDefs,
+  syncPositions,
+  thumbUrl,
+  rectsIntersect,
+  applyPatch,
+  computeSnap,
+  type Guide,
+} from './immersive/utils'
+import { PlusIcon, TrashIcon, CropIcon } from './immersive/icons'
+import { BorderRadiusSlider } from './immersive/BorderRadiusSlider'
+import { CropEditor } from './immersive/CropEditor'
+import { PhotoPicker, type PickerCategory } from './immersive/PhotoPicker'
+import { CanvasPhoto } from './immersive/CanvasPhoto'
 
 interface Props {
   /** Dotted config path to the immersiveGallery object, e.g. "home.immersiveGallery". */
@@ -200,7 +64,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const [snap, setSnap] = useState(false)
   const [smartAlign, setSmartAlign] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
-  const [guides, setGuides] = useState<{ type: 'x' | 'y', pos: number, spanMin: number, spanMax: number }[]>([])
+  const [guides, setGuides] = useState<Guide[]>([])
   const [cropOpen, setCropOpen] = useState<number | null>(null)
   // Canvas dimensions computed from the workspace size via ResizeObserver.
   // Initialized to a 9:19.5 fallback (the default device is mobile).
@@ -213,7 +77,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pendingAdd, setPendingAdd] = useState<string[]>([])
 
-  // Alert dialog state for replacing window.confirm
+  // Alert dialog state for replacing window.confirm.
   const [alertState, setAlertState] = useState<{
     open: boolean
     title: string
@@ -239,7 +103,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const dragIndexRef = useRef<number | null>(null)
   // Snapshot of positions at drag start to measure delta from a stable origin.
   const dragStartPosRef = useRef<PhotoPosition[] | null>(null)
-  const dragStartHandleRef = useRef<{ x: number, y: number } | null>(null)
+  const dragStartHandleRef = useRef<{ x: number; y: number } | null>(null)
 
   // Read-only snapshots of the stored config arrays (for labels / counts).
   const storedMobilePhotos = (getValue(`${path}.mobilePhotos`) as string[]) ?? []
@@ -295,15 +159,10 @@ export function ImmersiveLayoutEditor({ path }: Props) {
    * (so a plain click on the active photo doesn't deselect).
    */
   const selectPhoto = (index: number, e: MouseEvent) => {
-    // e.stopPropagation() is already handled by react-rnd or we don't strictly need it 
-    // because we check e.target !== e.currentTarget in the background handler, 
-    // but just in case, we can keep the logic simple.
     const isMod = e.metaKey || e.ctrlKey
     if (isMod) {
       setSelected((prev) =>
-        prev.includes(index)
-          ? prev.filter((i) => i !== index)
-          : [...prev, index],
+        prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
       )
       return
     }
@@ -317,11 +176,8 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       setSelected(Array.from(new Set([anchor, ...range])))
       return
     }
-    
     // If the item is already selected, don't clear the rest of the selection.
     // This allows the user to mousedown and start a group drag.
-    // To select ONLY this item if multiple were selected, they can click the
-    // background to clear, or click an unselected item.
     if (!selectedRef.current.includes(index)) {
       setSelected([index])
     }
@@ -329,10 +185,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
   // ---- Marquee (background drag-select) ------------------------------------
 
-  /**
-   * Convert a client (viewport) coordinate to canvas-relative px by subtracting
-   * the canvas div's bounding rect. Used by the marquee handlers.
-   */
+  /** Convert a client (viewport) coordinate to canvas-relative px. */
   const clientToCanvasPx = (clientX: number, clientY: number) => {
     const el = canvasRef.current
     if (!el) return { x: 0, y: 0 }
@@ -346,14 +199,11 @@ export function ImmersiveLayoutEditor({ path }: Props) {
    * MARQUEE_THRESHOLD (so a plain click clears the selection instead).
    */
   const handleCanvasMouseDown = (e: MouseEvent) => {
-    // Only start a marquee on a bare-canvas (workspace or canvas background) mousedown.
     if (e.target !== workspaceRef.current && e.target !== canvasRef.current) return
-    // Ignore right/middle clicks.
     if (e.button !== 0) return
     // Shift/Cmd-drag on the background adds to the existing selection rather
     // than replacing it; we remember the starting set so mouseup can union.
-    const pt = clientToCanvasPx(e.clientX, e.clientY)
-    marqueeStartRef.current = pt
+    marqueeStartRef.current = clientToCanvasPx(e.clientX, e.clientY)
     marqueeActiveRef.current = false
     e.preventDefault()
   }
@@ -372,9 +222,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       if (Math.abs(dx) < MARQUEE_THRESHOLD && Math.abs(dy) < MARQUEE_THRESHOLD) return
       marqueeActiveRef.current = true
     }
-    const left = Math.min(start.x, pt.x)
-    const top = Math.min(start.y, pt.y)
-    setMarquee({ left, top, w: Math.abs(dx), h: Math.abs(dy) })
+    setMarquee({ left: Math.min(start.x, pt.x), top: Math.min(start.y, pt.y), w: Math.abs(dx), h: Math.abs(dy) })
   }
 
   /**
@@ -398,12 +246,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     // state change).
     const m = marqueeRef.current
     if (!m) return
-    const marqueeRect = {
-      left: m.left,
-      top: m.top,
-      right: m.left + m.w,
-      bottom: m.top + m.h,
-    }
+    const marqueeRect = { left: m.left, top: m.top, right: m.left + m.w, bottom: m.top + m.h }
     // Find photos whose rendered rect (canvas-relative px) intersects the box.
     const hits: number[] = []
     activePositions.forEach((pos, i) => {
@@ -411,18 +254,14 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       const h = vhToPx(pos.h, canvas.h)
       const left = canvas.w / 2 + vwToPx(pos.x, canvas.w) - w / 2
       const top = canvas.h / 2 + vhToPx(pos.y, canvas.h) - h / 2
-      const photoRect = { left, top, right: left + w, bottom: top + h }
-      if (rectsIntersect(marqueeRect, photoRect)) hits.push(i)
+      if (rectsIntersect(marqueeRect, { left, top, right: left + w, bottom: top + h })) hits.push(i)
     })
     setSelected(hits)
   }
 
-  // Attach window-level mousemove/mouseup only while a marquee mousedown is
-  // armed (i.e. marqueeStartRef is set). We use a no-op-state-driven effect:
-  // because the ref isn't reactive, we toggle a lightweight state to trigger
-  // (re)attachment. Simpler: always attach while the editor is open and gate
-  // inside the handlers via the ref. The handlers early-return when the ref is
-  // null, so the cost is negligible.
+  // Attach window-level mousemove/mouseup only while the editor is open. The
+  // handlers early-return when the marquee start ref is null, so always-on
+  // attachment is cheap and avoids re-binding on every marquee state change.
   useEffect(() => {
     if (!open) return
     window.addEventListener('mousemove', handleWindowMouseMove)
@@ -449,54 +288,27 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setOpen(true)
   }, [path, storedMobilePhotos, storedDesktopPhotos]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /**
-   * Apply a patch to a single photo's position. Used by resize, keyboard
-   * nudge and single-field edits (NOT by group drag — that goes through
-   * handleDragStop's commit path).
-   */
-  const updatePosition = (
-    index: number,
-    patch: Partial<PhotoPosition>,
-  ) => {
+  /** Apply a clamped patch to a single photo's position. Used by resize,
+   *  keyboard nudge and single-field edits (NOT by group drag — that goes
+   *  through handleDragStop's commit path). */
+  const updatePosition = (index: number, patch: Partial<PhotoPosition>) => {
     setActivePositions((prev) => {
       if (!prev[index]) return prev
-      const cur = prev[index]
-      const next: PhotoPosition = { ...cur }
-      if (patch.x !== undefined) next.x = round3(clamp(patch.x, RANGES.x.min, RANGES.x.max))
-      if (patch.y !== undefined) next.y = round3(clamp(patch.y, RANGES.y.min, RANGES.y.max))
-      if (patch.w !== undefined) next.w = round3(clamp(patch.w, RANGES.w.min, RANGES.w.max))
-      if (patch.h !== undefined) next.h = round3(clamp(patch.h, RANGES.h.min, RANGES.h.max))
-      if (patch.z !== undefined) next.z = clamp(Math.round(patch.z), RANGES.z.min, RANGES.z.max)
-      if (patch.br !== undefined) next.br = clamp(Math.round(patch.br), RANGES.br.min, RANGES.br.max)
-      if (patch.cropX !== undefined) next.cropX = round3(clamp(patch.cropX, 0, 100))
-      if (patch.cropY !== undefined) next.cropY = round3(clamp(patch.cropY, 0, 100))
-      if (patch.cropZoom !== undefined) next.cropZoom = round3(Math.max(1, patch.cropZoom))
       const copy = [...prev]
-      copy[index] = next
+      copy[index] = applyPatch(prev[index], patch)
       return copy
     })
     setDirty(true)
   }
 
-  /**
-   * Apply the same patch to every selected photo. Used for bulk Z-index and
-   * bulk border-radius edits. Indices outside the active array are skipped.
-   */
+  /** Apply the same patch to every selected photo. Used for bulk Z-index and
+   *  bulk border-radius edits. Indices outside the active array are skipped. */
   const updatePositionsBulk = (indices: number[], patch: Partial<PhotoPosition>) => {
     if (indices.length === 0) return
     setActivePositions((prev) => {
       const copy = prev.map((p) => ({ ...p }))
       for (const idx of indices) {
-        if (!copy[idx]) continue
-        if (patch.z !== undefined) copy[idx].z = clamp(Math.round(patch.z), RANGES.z.min, RANGES.z.max)
-        if (patch.br !== undefined) copy[idx].br = clamp(Math.round(patch.br), RANGES.br.min, RANGES.br.max)
-        if (patch.x !== undefined) copy[idx].x = round3(clamp(patch.x, RANGES.x.min, RANGES.x.max))
-        if (patch.y !== undefined) copy[idx].y = round3(clamp(patch.y, RANGES.y.min, RANGES.y.max))
-        if (patch.w !== undefined) copy[idx].w = round3(clamp(patch.w, RANGES.w.min, RANGES.w.max))
-        if (patch.h !== undefined) copy[idx].h = round3(clamp(patch.h, RANGES.h.min, RANGES.h.max))
-        if (patch.cropX !== undefined) copy[idx].cropX = round3(clamp(patch.cropX, 0, 100))
-        if (patch.cropY !== undefined) copy[idx].cropY = round3(clamp(patch.cropY, 0, 100))
-        if (patch.cropZoom !== undefined) copy[idx].cropZoom = round3(Math.max(1, patch.cropZoom))
+        if (copy[idx]) copy[idx] = applyPatch(copy[idx], patch)
       }
       return copy
     })
@@ -504,108 +316,6 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   }
 
   // ---- Group drag (transient delta approach) -------------------------------
-
-  /**
-   * onDragStart for a photo's Rnd. Snapshots the active positions so the
-   * delta is measured from a stable origin, and records which photo is the
-   * drag handle. If the dragged photo isn't in the selection, we select only
-   * it (matching standard file-manager behavior).
-   */
-  const computeSnap = (index: number, rawLeft: number, rawTop: number) => {
-    if (!smartAlign) return { left: rawLeft, top: rawTop, guides: [] };
-
-    const pos = activePositions[index];
-    if (!pos) return { left: rawLeft, top: rawTop, guides: [] };
-    const wPx = vwToPx(pos.w, canvas.w);
-    const hPx = vhToPx(pos.h, canvas.h);
-    
-    let left = rawLeft;
-    let top = rawTop;
-    let right = left + wPx;
-    let bottom = top + hPx;
-    let centerX = left + wPx / 2;
-    let centerY = top + hPx / 2;
-
-    const threshold = 3;
-    let snapX: { diff: number, target: number, guide: number, type: 'center' | 'edge', spanMin: number, spanMax: number } | null = null;
-    let snapY: { diff: number, target: number, guide: number, type: 'center' | 'edge', spanMin: number, spanMax: number } | null = null;
-
-    const checkX = (targetPx: number, type: 'center' | 'edge', targetTop: number, targetBottom: number) => {
-      const points = [
-        { current: left, offset: 0 },
-        { current: right, offset: -wPx },
-        { current: centerX, offset: -wPx / 2 }
-      ];
-      for (const pt of points) {
-        const diff = Math.abs(targetPx - pt.current);
-        if (diff <= threshold) {
-          const requiredLeft = targetPx + pt.offset;
-          if (!snapX || (type === 'center' && snapX.type === 'edge') || (type === snapX.type && diff < snapX.diff)) {
-            snapX = { 
-              diff, target: requiredLeft, guide: targetPx, type,
-              spanMin: Math.min(top, targetTop) - 20,
-              spanMax: Math.max(bottom, targetBottom) + 20
-            };
-          }
-        }
-      }
-    }
-
-    const checkY = (targetPx: number, type: 'center' | 'edge', targetLeft: number, targetRight: number) => {
-      const points = [
-        { current: top, offset: 0 },
-        { current: bottom, offset: -hPx },
-        { current: centerY, offset: -hPx / 2 }
-      ];
-      for (const pt of points) {
-        const diff = Math.abs(targetPx - pt.current);
-        if (diff <= threshold) {
-          const requiredTop = targetPx + pt.offset;
-          if (!snapY || (type === 'center' && snapY.type === 'edge') || (type === snapY.type && diff < snapY.diff)) {
-            snapY = { 
-              diff, target: requiredTop, guide: targetPx, type,
-              spanMin: Math.min(left, targetLeft) - 20,
-              spanMax: Math.max(right, targetRight) + 20
-            };
-          }
-        }
-      }
-    }
-
-    checkX(canvas.w / 2, 'center', 0, canvas.h);
-    checkY(canvas.h / 2, 'center', 0, canvas.w);
-
-    activePositions.forEach((otherPos, i) => {
-      if (i === index) return;
-      const oW = vwToPx(otherPos.w, canvas.w);
-      const oH = vhToPx(otherPos.h, canvas.h);
-      const oLeft = canvas.w / 2 + vwToPx(otherPos.x, canvas.w) - oW / 2;
-      const oTop = canvas.h / 2 + vhToPx(otherPos.y, canvas.h) - oH / 2;
-      
-      checkX(oLeft, 'edge', oTop, oTop + oH);
-      checkX(oLeft + oW, 'edge', oTop, oTop + oH);
-      checkX(oLeft + oW / 2, 'center', oTop, oTop + oH);
-
-      checkY(oTop, 'edge', oLeft, oLeft + oW);
-      checkY(oTop + oH, 'edge', oLeft, oLeft + oW);
-      checkY(oTop + oH / 2, 'center', oLeft, oLeft + oW);
-    });
-
-    const newGuides: { type: 'x' | 'y', pos: number, spanMin: number, spanMax: number }[] = [];
-    let finalLeft = left;
-    let finalTop = top;
-
-    if (snapX) {
-      finalLeft = (snapX as any).target;
-      newGuides.push({ type: 'x', pos: (snapX as any).guide, spanMin: (snapX as any).spanMin, spanMax: (snapX as any).spanMax });
-    }
-    if (snapY) {
-      finalTop = (snapY as any).target;
-      newGuides.push({ type: 'y', pos: (snapY as any).guide, spanMin: (snapY as any).spanMin, spanMax: (snapY as any).spanMax });
-    }
-
-    return { left: finalLeft, top: finalTop, guides: newGuides };
-  }
 
   const handlePhotoDragStart = (index: number, d: { x: number; y: number }) => {
     dragStartPosRef.current = activePositions.map((p) => ({ ...p }))
@@ -618,45 +328,39 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     const isGroupDrag = sel.length > 1 && sel.includes(index)
 
     if (!isGroupDrag) {
-      // Single drag logic with smart guides
-      const snapData = computeSnap(index, d.x, d.y);
-      setGuides(snapData.guides);
-
-      const pos = activePositions[index];
+      // Single drag logic with smart guides.
+      const snapData = computeSnap(index, d.x, d.y, activePositions, canvas.w, canvas.h, smartAlign)
+      setGuides(snapData.guides)
+      const pos = activePositions[index]
       if (pos) {
-        const wPx = vwToPx(pos.w, canvas.w);
-        const hPx = vhToPx(pos.h, canvas.h);
-        const x = pxToVw(snapData.left + wPx / 2 - canvas.w / 2, canvas.w);
-        const y = pxToVh(snapData.top + hPx / 2 - canvas.h / 2, canvas.h);
-        
+        const wPx = vwToPx(pos.w, canvas.w)
+        const hPx = vhToPx(pos.h, canvas.h)
+        const x = pxToVw(snapData.left + wPx / 2 - canvas.w / 2, canvas.w)
+        const y = pxToVh(snapData.top + hPx / 2 - canvas.h / 2, canvas.h)
         setActivePositions((prev) => {
-          const copy = [...prev];
-          copy[index] = { ...copy[index], x: clamp(x, RANGES.x.min, RANGES.x.max), y: clamp(y, RANGES.y.min, RANGES.y.max) };
-          return copy;
-        });
+          if (!prev[index]) return prev
+          const copy = [...prev]
+          copy[index] = applyPatch(prev[index], { x, y })
+          return copy
+        })
       }
-      return;
+      return
     }
 
     if (!dragStartPosRef.current || !dragStartHandleRef.current) return
-
     const startPx = dragStartHandleRef.current
-    const dxPx = d.x - startPx.x
-    const dyPx = d.y - startPx.y
-    const dxVw = pxToVw(dxPx, canvas.w)
-    const dyVh = pxToVh(dyPx, canvas.h)
+    const dxVw = pxToVw(d.x - startPx.x, canvas.w)
+    const dyVh = pxToVh(d.y - startPx.y, canvas.h)
 
     setActivePositions((prev) => {
       const copy = prev.map((p) => ({ ...p }))
       const startList = dragStartPosRef.current!
       for (const idx of sel) {
-        if (idx === index) continue // Let react-rnd handle the dragged item internally
+        if (idx === index) continue // react-rnd handles the dragged item internally
         const startPos = startList[idx]
         if (!startPos || !copy[idx]) continue
-        let x = startPos.x + dxVw
-        let y = startPos.y + dyVh
-        // we don't snap mid-drag for followers to keep it smooth
-        copy[idx] = { ...copy[idx], x: clamp(x, RANGES.x.min, RANGES.x.max), y: clamp(y, RANGES.y.min, RANGES.y.max) }
+        // We don't snap mid-drag for followers to keep it smooth.
+        copy[idx] = applyPatch(copy[idx], { x: startPos.x + dxVw, y: startPos.y + dyVh })
       }
       return copy
     })
@@ -667,35 +371,28 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     const startList = dragStartPosRef.current
     const sel = selectedRef.current
     const startPx = dragStartHandleRef.current || { x: d.x, y: d.y }
-    const dxPx = d.x - startPx.x
-    const dyPx = d.y - startPx.y
-    const dxVw = pxToVw(dxPx, canvas.w)
-    const dyVh = pxToVh(dyPx, canvas.h)
-
+    const dxVw = pxToVw(d.x - startPx.x, canvas.w)
+    const dyVh = pxToVh(d.y - startPx.y, canvas.h)
     const isGroupDrag = sel.length > 1 && sel.includes(index)
 
     setActivePositions((prev) => {
       const copy = prev.map((p) => ({ ...p }))
       if (!isGroupDrag || !startList) {
-        // Single drag
+        // Single drag: apply grid snap to the already-updated position.
         const pos = prev[index]
         if (pos) {
-          // If snap to grid is on, we take the already updated position (from smart guides)
-          // and apply grid snapping. Otherwise keep it.
-          let x = pos.x;
-          let y = pos.y;
-          if (snap) { x = snapVal(x); y = snapVal(y) }
-          copy[index] = { ...copy[index], x: clamp(x, RANGES.x.min, RANGES.x.max), y: clamp(y, RANGES.y.min, RANGES.y.max) }
+          const patch = snap ? { x: snapVal(pos.x), y: snapVal(pos.y) } : {}
+          copy[index] = applyPatch(copy[index], patch)
         }
       } else {
-        // Group drag
+        // Group drag: apply delta + optional grid snap to every selected photo.
         for (const idx of sel) {
           const startPos = startList[idx]
           if (!startPos || !copy[idx]) continue
           let x = startPos.x + dxVw
           let y = startPos.y + dyVh
           if (snap) { x = snapVal(x); y = snapVal(y) }
-          copy[idx] = { ...copy[idx], x: clamp(x, RANGES.x.min, RANGES.x.max), y: clamp(y, RANGES.y.min, RANGES.y.max) }
+          copy[idx] = applyPatch(copy[idx], { x, y })
         }
       }
       return copy
@@ -712,48 +409,49 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     ref: HTMLElement,
     position: { x: number; y: number },
   ) => {
+    // Convert react-rnd top-left (px) back to center-origin (vw/vh).
     let w = pxToVw(ref.offsetWidth, canvas.w)
     let h = pxToVh(ref.offsetHeight, canvas.h)
-    // Convert react-rnd top-left (px) back to center-origin (vw/vh).
-    // The element's center is at (position.x + ref.offsetWidth/2, position.y + ref.offsetHeight/2).
     let x = pxToVw(position.x + ref.offsetWidth / 2 - canvas.w / 2, canvas.w)
     let y = pxToVh(position.y + ref.offsetHeight / 2 - canvas.h / 2, canvas.h)
     if (snap) { w = snapVal(w); h = snapVal(h); x = snapVal(x); y = snapVal(y) }
     updatePosition(index, { w, h, x, y })
   }
 
-  const handleInputChange = (field: keyof PhotoPosition, raw: string, bulkIndices?: number[]) => {
-    if (raw === '' || raw === '-' || raw === '.') return
-    const num = Number(raw)
-    if (Number.isNaN(num)) return
-    if (bulkIndices && bulkIndices.length > 1) {
-      updatePositionsBulk(bulkIndices, { [field]: num } as Partial<PhotoPosition>)
-    } else {
-      const idx = bulkIndices ? bulkIndices[0] : primary
-      if (idx === null) return
-      updatePosition(idx, { [field]: num } as Partial<PhotoPosition>)
-    }
-  }
-
-  const commitInput = (field: keyof PhotoPosition, bulkIndices?: number[]) => {
+  /**
+   * Commit a drafted numeric input for `field` against the current selection.
+   * Merges the old handleInputChange + commitInput: validates the raw draft
+   * (skips intermediate states like "-" / "." / "" and NaN), routes to single
+   * or bulk update, then always clears the draft.
+   */
+  const commitInput = (field: keyof PhotoPosition) => {
     const raw = inputDraft[field]
     if (raw === undefined) return
-    handleInputChange(field, raw, bulkIndices)
+    if (raw !== '' && raw !== '-' && raw !== '.') {
+      const num = Number(raw)
+      if (!Number.isNaN(num)) {
+        const sel = selectedRef.current
+        if (sel.length > 1) updatePositionsBulk(sel, { [field]: num } as Partial<PhotoPosition>)
+        else if (sel.length === 1) updatePosition(sel[0], { [field]: num } as Partial<PhotoPosition>)
+      }
+    }
     setInputDraft((d) => { const next = { ...d }; delete next[field]; return next })
   }
+
+  /** Shorthand to open the confirm alert dialog with a titled action. */
+  const confirm = (
+    title: string,
+    description: string,
+    actionText: string,
+    actionCallback: () => void,
+  ) => setAlertState({ open: true, title, description, actionText, actionCallback })
 
   const handleDeviceToggle = (next: 'mobile' | 'desktop') => {
     if (next === device) return
     if (dirtyRef.current) {
-      setAlertState({
-        open: true,
-        title: 'Unsaved Changes',
-        description: 'You have unsaved changes. Switch device anyway?',
-        actionText: 'Switch Device',
-        actionCallback: () => {
-          setDevice(next)
-          setSelected([])
-        }
+      confirm('Unsaved Changes', 'You have unsaved changes. Switch device anyway?', 'Switch Device', () => {
+        setDevice(next)
+        setSelected([])
       })
       return
     }
@@ -762,12 +460,11 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   }
 
   const handleCopyMobileToDesktop = () => {
-    setAlertState({
-      open: true,
-      title: 'Overwrite Positions',
-      description: 'Overwrite desktop positions with the current mobile positions for all overlapping photos? Continue?',
-      actionText: 'Overwrite',
-      actionCallback: () => {
+    confirm(
+      'Overwrite Positions',
+      'Overwrite desktop positions with the current mobile positions for all overlapping photos? Continue?',
+      'Overwrite',
+      () => {
         setLocalDesktopPositions((prev) => {
           const result: PhotoPosition[] = []
           for (let i = 0; i < prev.length; i++) {
@@ -777,21 +474,20 @@ export function ImmersiveLayoutEditor({ path }: Props) {
           return result
         })
         setDirty(true)
-      }
-    })
+      },
+    )
   }
 
   const handleReset = () => {
-    setAlertState({
-      open: true,
-      title: 'Reset Positions',
-      description: `Reset ${device} positions to the hardcoded defaults?`,
-      actionText: 'Reset',
-      actionCallback: () => {
+    confirm(
+      'Reset Positions',
+      `Reset ${device} positions to the hardcoded defaults?`,
+      'Reset',
+      () => {
         setActivePositions((prev) => prev.map((_, i) => defPicker(i)))
         setDirty(true)
-      }
-    })
+      },
+    )
   }
 
   const handleFront = () => {
@@ -833,28 +529,14 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     if (selected.length === 0) return
     const count = selected.length
     const label = count === 1 ? `photo #${selected[0]}` : `${count} photos`
-    setAlertState({
-      open: true,
-      title: 'Remove Photos',
-      description: `Remove ${label} from the ${device} layout?`,
-      actionText: 'Remove',
-      actionCallback: () => {
-        // Remove in descending index order so earlier removals don't shift
-        // the indices of later ones.
-        const indices = [...selected].sort((a, b) => b - a)
-        setActivePhotos((prev) => {
-          let next = prev
-          for (const idx of indices) next = next.filter((_, i) => i !== idx)
-          return next
-        })
-        setActivePositions((prev) => {
-          let next = prev
-          for (const idx of indices) next = next.filter((_, i) => i !== idx)
-          return next
-        })
-        setSelected([])
-        setDirty(true)
-      }
+    confirm(`Remove Photos`, `Remove ${label} from the ${device} layout?`, 'Remove', () => {
+      // Remove in descending index order so earlier removals don't shift
+      // the indices of later ones.
+      const indices = [...selected].sort((a, b) => b - a)
+      setActivePhotos((prev) => indices.reduce((next, idx) => next.filter((_, i) => i !== idx), prev))
+      setActivePositions((prev) => indices.reduce((next, idx) => next.filter((_, i) => i !== idx), prev))
+      setSelected([])
+      setDirty(true)
     })
   }
 
@@ -873,9 +555,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setActivePhotos((prev) => [...prev, ...pendingAdd])
     setActivePositions((prev) => {
       const next = [...prev]
-      for (let i = 0; i < pendingAdd.length; i++) {
-        next.push(defPicker(prev.length + i))
-      }
+      for (let i = 0; i < pendingAdd.length; i++) next.push(defPicker(prev.length + i))
       return next
     })
     setSelected([firstNewIndex])
@@ -884,23 +564,18 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setPickerOpen(false)
   }
 
-  const handleClose = useCallback(() => {
-    if (dirtyRef.current) {
-      setAlertState({
-        open: true,
-        title: 'Unsaved Changes',
-        description: 'You have unsaved changes. Close anyway?',
-        actionText: 'Close Anyway',
-        actionCallback: () => {
-          setOpen(false)
-          setPickerOpen(false)
-        }
-      })
-      return
-    }
+  const closeEditor = () => {
     setOpen(false)
     setPickerOpen(false)
-  }, [])
+  }
+
+  const handleClose = useCallback(() => {
+    if (dirtyRef.current) {
+      confirm('Unsaved Changes', 'You have unsaved changes. Close anyway?', 'Close Anyway', closeEditor)
+      return
+    }
+    closeEditor()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = useCallback(async () => {
     // Write the whole immersiveGallery object in a single setValue call (the
@@ -934,16 +609,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
         if (pickerOpen) { setPickerOpen(false); return }
         if (selectedRef.current.length > 0) { setSelected([]); return }
         if (dirtyRef.current) {
-          setAlertState({
-            open: true,
-            title: 'Unsaved Changes',
-            description: 'You have unsaved changes. Close anyway?',
-            actionText: 'Close Anyway',
-            actionCallback: () => {
-              setOpen(false)
-              setPickerOpen(false)
-            }
-          })
+          confirm('Unsaved Changes', 'You have unsaved changes. Close anyway?', 'Close Anyway', closeEditor)
           return
         }
         setOpen(false)
@@ -966,20 +632,16 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       if (selectedRef.current.length === 0) return
       const target = e.target as HTMLElement
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
-      const step = e.shiftKey ? 5 : 1
-      const active = deviceRef.current === 'mobile' ? localMobilePositions : localDesktopPositions
       const sel = selectedRef.current
-      if (e.key === 'ArrowLeft') {
-        updatePositionsBulk(sel, { x: (active[sel[0]]?.x ?? 0) - step })
-        e.preventDefault()
-      } else if (e.key === 'ArrowRight') {
-        updatePositionsBulk(sel, { x: (active[sel[0]]?.x ?? 0) + step })
-        e.preventDefault()
-      } else if (e.key === 'ArrowUp') {
-        updatePositionsBulk(sel, { y: (active[sel[0]]?.y ?? 0) - step })
-        e.preventDefault()
-      } else if (e.key === 'ArrowDown') {
-        updatePositionsBulk(sel, { y: (active[sel[0]]?.y ?? 0) + step })
+      const step = e.shiftKey ? 5 : 1
+      const base = (deviceRef.current === 'mobile' ? localMobilePositions : localDesktopPositions)[sel[0]] ?? { x: 0, y: 0 }
+      const nudge =
+        e.key === 'ArrowLeft' ? { x: base.x - step } :
+        e.key === 'ArrowRight' ? { x: base.x + step } :
+        e.key === 'ArrowUp' ? { y: base.y - step } :
+        e.key === 'ArrowDown' ? { y: base.y + step } : undefined
+      if (nudge) {
+        updatePositionsBulk(sel, nudge as Partial<PhotoPosition>)
         e.preventDefault()
       }
     }
@@ -1010,10 +672,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       const r = ratio.w / ratio.h
       let w = availW
       let h = w / r
-      if (h > availH) {
-        h = availH
-        w = h * r
-      }
+      if (h > availH) { h = availH; w = h * r }
       setCanvasSize({ w: Math.round(w), h: Math.round(h) })
     }
     update()
@@ -1026,37 +685,41 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
   // The position shown in single-edit mode (X/Y/W/H/Z/br).
   const selectedPos: PhotoPosition | null =
-    primary !== null && activePositions[primary]
-      ? activePositions[primary]
-      : null
+    primary !== null && activePositions[primary] ? activePositions[primary] : null
 
   // Shared value for bulk-editable fields across the selection. When all
   // selected photos share the same value, show it; otherwise show a blank
   // placeholder so the user knows the values differ.
-  const bulkZ = (() => {
+  const sharedValue = (pick: (i: number) => number | undefined) => {
     if (selected.length === 0) return undefined
-    const zs = selected.map((i) => activePositions[i]?.z)
-    if (zs.every((v) => v === zs[0])) return zs[0]
-    return undefined // mixed
-  })()
-  const bulkBr = (() => {
-    if (selected.length === 0) return undefined
-    const brs = selected.map((i) => brOf(activePositions[i]))
-    if (brs.every((v) => v === brs[0])) return brs[0]
-    return undefined // mixed
-  })()
+    const vals = selected.map(pick)
+    return vals.every((v) => v === vals[0]) ? vals[0] : undefined
+  }
+  const bulkZ = sharedValue((i) => activePositions[i]?.z)
+  const bulkBr = sharedValue((i) => brOf(activePositions[i]))
 
   // Flatten the build-time manifest into a category-grouped list for the picker.
-  const pickerCategories: Array<{ slug: string; name: string; photos: string[] }> =
-    (manifest as any).categories.map((c: any) => ({
-      slug: c.slug,
-      name: c.name || c.slug,
-      photos: c.photos.map((p: any) => p.filename),
-    }))
+  const pickerCategories: PickerCategory[] = (manifest as any).categories.map((c: any) => ({
+    slug: c.slug,
+    name: c.name || c.slug,
+    photos: c.photos.map((p: any) => p.filename),
+  }))
 
   // ---- Render --------------------------------------------------------------
 
   const isMulti = selected.length > 1
+  const toggleBtn = (active: boolean, onClick: () => void, title: string, label: string) => (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`px-2.5 py-1 text-xs font-medium border rounded-sm transition-colors ${
+        active ? 'bg-primary text-primary-text border-primary' : 'bg-canvas text-muted border-border hover:text-ink'
+      }`}
+    >
+      {label}
+    </button>
+  )
 
   return (
     <>
@@ -1075,9 +738,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       {open && (
         <div
           className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) handleClose()
-          }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose() }}
         >
           {/* overflow-hidden fixes the squared-corner glitch where the inner
               header/body/footer bg-surface spilled past the rounded modal frame. */}
@@ -1087,68 +748,22 @@ export function ImmersiveLayoutEditor({ path }: Props) {
               <h2 className="text-base font-semibold text-ink">Immersive Gallery Layout Editor</h2>
               <div className="flex items-center gap-3">
                 <div className="flex bg-canvas border border-border rounded-sm overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => handleDeviceToggle('mobile')}
-                    className={`px-3 py-1 text-xs font-medium transition-colors ${
-                      device === 'mobile'
-                        ? 'bg-primary text-primary-text'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                  >
-                    Mobile
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeviceToggle('desktop')}
-                    className={`px-3 py-1 text-xs font-medium transition-colors ${
-                      device === 'desktop'
-                        ? 'bg-primary text-primary-text'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                  >
-                    Desktop
-                  </button>
+                  {(['mobile', 'desktop'] as const).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => handleDeviceToggle(d)}
+                      className={`px-3 py-1 text-xs font-medium transition-colors ${
+                        device === d ? 'bg-primary text-primary-text' : 'text-muted hover:text-ink'
+                      }`}
+                    >
+                      {d === 'mobile' ? 'Mobile' : 'Desktop'}
+                    </button>
+                  ))}
                 </div>
-                {/* Show grid toggle */}
-                <button
-                  type="button"
-                  onClick={() => setShowGrid((s) => !s)}
-                  className={`px-2.5 py-1 text-xs font-medium border rounded-sm transition-colors ${
-                    showGrid
-                      ? 'bg-primary text-primary-text border-primary'
-                      : 'bg-canvas text-muted border-border hover:text-ink'
-                  }`}
-                  title="Show grid lines on the canvas"
-                >
-                  Show Grid
-                </button>
-                {/* Smart Alignment toggle */}
-                <button
-                  type="button"
-                  onClick={() => setSmartAlign((s) => !s)}
-                  className={`px-2.5 py-1 text-xs font-medium border rounded-sm transition-colors ${
-                    smartAlign
-                      ? 'bg-primary text-primary-text border-primary'
-                      : 'bg-canvas text-muted border-border hover:text-ink'
-                  }`}
-                  title="Snap positions dynamically to other photos and canvas center"
-                >
-                  Smart Alignment
-                </button>
-                {/* Snap-to-grid toggle */}
-                <button
-                  type="button"
-                  onClick={() => setSnap((s) => !s)}
-                  className={`px-2.5 py-1 text-xs font-medium border rounded-sm transition-colors ${
-                    snap
-                      ? 'bg-primary text-primary-text border-primary'
-                      : 'bg-canvas text-muted border-border hover:text-ink'
-                  }`}
-                  title="Snap positions/sizes to a 2vw/2vh grid"
-                >
-                  Snap to grid
-                </button>
+                {toggleBtn(showGrid, () => setShowGrid((s) => !s), 'Show grid lines on the canvas', 'Show Grid')}
+                {toggleBtn(smartAlign, () => setSmartAlign((s) => !s), 'Snap positions dynamically to other photos and canvas center', 'Smart Alignment')}
+                {toggleBtn(snap, () => setSnap((s) => !s), 'Snap positions/sizes to a 2vw/2vh grid', 'Snap to grid')}
                 <button
                   type="button"
                   onClick={handleClose}
@@ -1177,9 +792,9 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                 <div
                   ref={canvasRef}
                   className="relative bg-surface border-2 border-border shadow-inner"
-                  style={{ 
-                    width: canvas.w, 
-                    height: canvas.h, 
+                  style={{
+                    width: canvas.w,
+                    height: canvas.h,
                     overflow: 'visible',
                     ...(showGrid ? {
                       backgroundImage: `
@@ -1187,8 +802,8 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                         linear-gradient(to bottom, rgba(128,128,128,0.1) 1px, transparent 1px)
                       `,
                       backgroundSize: `${vwToPx(2, canvas.w)}px ${vhToPx(2, canvas.h)}px`,
-                      backgroundPosition: 'center center'
-                    } : {})
+                      backgroundPosition: 'center center',
+                    } : {}),
                   }}
                 >
                   {/* Smart Alignment Guides */}
@@ -1217,68 +832,22 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                       No photos — use “Add Photo” to start
                     </div>
                   ) : (
-                    activePhotos.map((photo, i) => {
-                      const pos = activePositions[i] ?? defPicker(i)
-                      const isSel = selected.includes(i)
-                      const br = brOf(pos)
-                      return (
-                        <RndAny
-                          key={`${photo}-${i}`}
-                          size={{
-                            width: vwToPx(pos.w, canvas.w),
-                            height: vhToPx(pos.h, canvas.h),
-                          }}
-                          position={{
-                            x: canvas.w / 2 + vwToPx(pos.x, canvas.w) - vwToPx(pos.w, canvas.w) / 2,
-                            y: canvas.h / 2 + vhToPx(pos.y, canvas.h) - vhToPx(pos.h, canvas.h) / 2,
-                          }}
-                          onDragStart={(_e: any, d: any) => handlePhotoDragStart(i, { x: d.x, y: d.y })}
-                          onDrag={(_e: any, d: any) => handlePhotoDrag(i, { x: d.x, y: d.y })}
-                          onDragStop={(_e: any, d: any) => handlePhotoDragStop(i, { x: d.x, y: d.y })}
-                          onResizeStop={(
-                            _e: any,
-                            _dir: any,
-                            ref: any,
-                            _delta: any,
-                            position: any,
-                          ) => handleResizeStop(i, ref, position)}
-                          onMouseDown={(e: MouseEvent) => selectPhoto(i, e)}
-                          enableResizing={ALL_HANDLES}
-                          minWidth={vwToPx(RANGES.w.min, canvas.w)}
-                          minHeight={vhToPx(RANGES.h.min, canvas.h)}
-                          resizeHandleStyles={RESIZE_HANDLES}
-                          style={{
-                            zIndex: pos.z,
-                            border: isSel
-                              ? selected.length > 1
-                                ? '2px dashed var(--color-primary)'
-                                : '2px solid var(--color-primary)'
-                              : '1px solid var(--color-border)',
-                            borderRadius: `${br}px`,
-                            overflow: 'hidden',
-                            cursor: 'move',
-                            boxSizing: 'border-box',
-                          }}
-                        >
-                          <div className="relative w-full h-full">
-                            <img
-                              src={thumbUrl(photo)}
-                              alt={`Photo ${i}`}
-                              className="w-full h-full object-cover select-none pointer-events-none will-change-transform"
-                              draggable={false}
-                              style={{
-                                objectPosition: `${pos.cropX ?? 50}% ${pos.cropY ?? 50}%`,
-                                transform: `scale(${pos.cropZoom ?? 1})`,
-                                transformOrigin: 'center'
-                              }}
-                            />
-                            <span className="absolute top-0.5 left-1 text-[10px] font-mono text-white bg-black/60 px-1 rounded-sm pointer-events-none">
-                              {i}
-                            </span>
-                          </div>
-                        </RndAny>
-                      )
-                    })
+                    activePhotos.map((photo, i) => (
+                      <CanvasPhoto
+                        key={`${photo}-${i}`}
+                        photo={photo}
+                        index={i}
+                        pos={activePositions[i] ?? defPicker(i)}
+                        isSelected={selected.includes(i)}
+                        selectedCount={selected.length}
+                        canvas={canvas}
+                        onDragStart={handlePhotoDragStart}
+                        onDrag={handlePhotoDrag}
+                        onDragStop={handlePhotoDragStop}
+                        onResizeStop={handleResizeStop}
+                        onSelect={selectPhoto}
+                      />
+                    ))
                   )}
 
                   {/* Marquee selection box — rendered above photos while the
@@ -1286,12 +855,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                   {marquee && (
                     <div
                       className="absolute border border-primary bg-primary/20 pointer-events-none z-[150]"
-                      style={{
-                        left: marquee.left,
-                        top: marquee.top,
-                        width: marquee.w,
-                        height: marquee.h,
-                      }}
+                      style={{ left: marquee.left, top: marquee.top, width: marquee.w, height: marquee.h }}
                     />
                   )}
                 </div>
@@ -1316,126 +880,41 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
                 {selectedPos ? (
                   <div className="p-4 space-y-5 flex-1">
-                    {/* Position — only editable when a single photo is selected.
-                        For multi-select, per-photo geometry isn't a meaningful
-                        batch operation, so hide these inputs. */}
+                    {/* Position & Size — only editable when a single photo is
+                        selected. For multi-select, per-photo geometry isn't a
+                        meaningful batch operation, so hide these inputs. */}
                     {!isMulti && (
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted uppercase tracking-wide">Position (vw / vh)</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <span className="text-[10px] text-muted">X</span>
-                            <input
-                              type="number"
-                              value={inputDraft.x ?? selectedPos.x}
-                              step={0.5}
-                              min={RANGES.x.min}
-                              max={RANGES.x.max}
-                              onInput={(e) => setInputDraft((d) => ({ ...d, x: (e.currentTarget as HTMLInputElement).value }))}
-                              onBlur={() => commitInput('x')}
-                              onKeyDown={(e) => { if (e.key === 'Enter') commitInput('x') }}
-                              className="w-full h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <span className="text-[10px] text-muted">Y</span>
-                            <input
-                              type="number"
-                              value={inputDraft.y ?? selectedPos.y}
-                              step={0.5}
-                              min={RANGES.y.min}
-                              max={RANGES.y.max}
-                              onInput={(e) => setInputDraft((d) => ({ ...d, y: (e.currentTarget as HTMLInputElement).value }))}
-                              onBlur={() => commitInput('y')}
-                              onKeyDown={(e) => { if (e.key === 'Enter') commitInput('y') }}
-                              className="w-full h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      <FieldGroup label="Position (vw / vh)" fields={['x', 'y']} pos={selectedPos} draft={inputDraft} setDraft={setInputDraft} onCommit={commitInput} />
                     )}
-
-                    {/* Size — single-select only (same rationale as Position). */}
                     {!isMulti && (
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-muted uppercase tracking-wide">Size (vw / vh)</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <span className="text-[10px] text-muted">W</span>
-                            <input
-                              type="number"
-                              value={inputDraft.w ?? selectedPos.w}
-                              step={0.5}
-                              min={RANGES.w.min}
-                              max={RANGES.w.max}
-                              onInput={(e) => setInputDraft((d) => ({ ...d, w: (e.currentTarget as HTMLInputElement).value }))}
-                              onBlur={() => commitInput('w')}
-                              onKeyDown={(e) => { if (e.key === 'Enter') commitInput('w') }}
-                              className="w-full h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <span className="text-[10px] text-muted">H</span>
-                            <input
-                              type="number"
-                              value={inputDraft.h ?? selectedPos.h}
-                              step={0.5}
-                              min={RANGES.h.min}
-                              max={RANGES.h.max}
-                              onInput={(e) => setInputDraft((d) => ({ ...d, h: (e.currentTarget as HTMLInputElement).value }))}
-                              onBlur={() => commitInput('h')}
-                              onKeyDown={(e) => { if (e.key === 'Enter') commitInput('h') }}
-                              className="w-full h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      <FieldGroup label="Size (vw / vh)" fields={['w', 'h']} pos={selectedPos} draft={inputDraft} setDraft={setInputDraft} onCommit={commitInput} />
                     )}
 
                     {/* Z-index — editable only for single selection. */}
                     {!isMulti && (
                       <div className="space-y-1.5">
-                        <label className="text-xs text-muted uppercase tracking-wide">
-                          Z-index
-                        </label>
+                        <label className="text-xs text-muted uppercase tracking-wide">Z-index</label>
                         <div className="flex gap-2">
                           <input
                             type="number"
-                            value={inputDraft.z ?? selectedPos?.z ?? ''}
+                            value={inputDraft.z ?? selectedPos.z}
                             step={1}
                             min={RANGES.z.min}
                             max={RANGES.z.max}
                             onInput={(e) => setInputDraft((d) => ({ ...d, z: (e.currentTarget as HTMLInputElement).value }))}
-                            onBlur={() => commitInput('z', selected)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') commitInput('z', selected) }}
+                            onBlur={() => commitInput('z')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') commitInput('z') }}
                             className="w-20 h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
                           />
-                          <button
-                            type="button"
-                            onClick={handleFront}
-                            className="h-8 px-2 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors"
-                          >
-                            Front
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleBack}
-                            className="h-8 px-2 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors"
-                          >
-                            Back
-                          </button>
+                          <button type="button" onClick={handleFront} className="h-8 px-2 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Front</button>
+                          <button type="button" onClick={handleBack} className="h-8 px-2 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Back</button>
                         </div>
                       </div>
                     )}
 
                     {!isMulti && (
                       <div className="pt-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setCropOpen(primary)}
-                          className="w-full"
-                        >
+                        <Button variant="secondary" size="sm" onClick={() => setCropOpen(primary)} className="w-full">
                           <CropIcon size={14} /> Crop & Pan Photo
                         </Button>
                       </div>
@@ -1443,18 +922,14 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
                     {/* Border Radius — range slider for both single and bulk.
                         Sliders only emit valid integers, so we commit directly
-                        to state on every change (no inputDraft needed, unlike
-                        the text number fields where "-" / "." are intermediate). */}
+                        to state on every change (no inputDraft needed). */}
                     <BorderRadiusSlider
                       value={bulkBr}
                       isMulti={isMulti}
                       isMixed={isMulti && bulkBr === undefined}
                       onChange={(v) => {
-                        if (isMulti) {
-                          updatePositionsBulk(selected, { br: v })
-                        } else if (primary !== null) {
-                          updatePosition(primary, { br: v })
-                        }
+                        if (isMulti) updatePositionsBulk(selected, { br: v })
+                        else if (primary !== null) updatePosition(primary, { br: v })
                       }}
                     />
 
@@ -1520,104 +995,28 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                 Changes save to config. Run &ldquo;Republish&rdquo; to apply to the live site.
               </p>
               <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button variant="primary" size="sm" onClick={handleSave}>
-                  Save
-                </Button>
+                <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
+                <Button variant="primary" size="sm" onClick={handleSave}>Save</Button>
               </div>
             </div>
           </div>
 
           {/* ---- Photo picker (rendered above the editor modal) ---- */}
           {pickerOpen && (
-            <div
-              className="fixed inset-0 z-[110] bg-black/80 flex items-center justify-center p-4"
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget) setPickerOpen(false)
-              }}
-            >
-              <div className="bg-canvas border border-border rounded-lg w-full max-w-3xl max-h-[80vh] flex flex-col shadow-xl overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface">
-                  <h3 className="text-sm font-semibold text-ink">
-                    Add photos to {device} layout
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setPickerOpen(false)}
-                    className="text-muted hover:text-ink transition-colors text-lg leading-none px-1"
-                    aria-label="Close"
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4">
-                  <div className="mb-3 text-xs text-muted">
-                    Selected: {pendingAdd.length}
-                  </div>
-                  {pickerCategories.length === 0 && (
-                    <p className="text-sm text-muted">No categories available. Add photos to your photos source and regenerate.</p>
-                  )}
-                  {pickerCategories.map((cat) => (
-                    <div key={cat.slug} className="mb-6">
-                      <h4 className="text-sm font-medium mb-2 text-muted">{cat.name}</h4>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                        {cat.photos.map((filename) => {
-                          const photoPath = `${cat.slug}/${filename}`
-                          const isSelected = pendingAdd.includes(photoPath)
-                          const alreadyAdded = activePhotos.includes(photoPath)
-                          return (
-                            <div
-                              key={photoPath}
-                              onClick={() => !alreadyAdded && togglePendingAdd(photoPath)}
-                              className={`relative aspect-square rounded-sm overflow-hidden border-2 transition-all ${
-                                isSelected
-                                  ? 'border-primary ring-1 ring-primary'
-                                  : 'border-transparent hover:border-border'
-                              } ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-                              title={alreadyAdded ? 'Already in this layout' : filename}
-                            >
-                              <img
-                                src={`/photos/thumbs/${cat.slug}/${filename.replace(/\.[^.]+$/, '.webp')}`}
-                                alt={filename}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                              />
-                              {isSelected && (
-                                <div className="absolute top-1 right-1 bg-primary text-primary-text rounded-full p-0.5">
-                                  <CheckIcon size={12} />
-                                </div>
-                              )}
-                              {alreadyAdded && (
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                  <span className="text-[10px] text-white">Added</span>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-end gap-2 px-4 py-3 border-t border-border bg-surface">
-                  <Button variant="secondary" size="sm" onClick={() => setPickerOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button variant="primary" size="sm" onClick={handleConfirmAdd} disabled={pendingAdd.length === 0}>
-                    Add Selected ({pendingAdd.length})
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <PhotoPicker
+              device={device}
+              categories={pickerCategories}
+              pendingAdd={pendingAdd}
+              activePhotos={activePhotos}
+              onToggle={togglePendingAdd}
+              onConfirm={handleConfirmAdd}
+              onClose={() => setPickerOpen(false)}
+            />
           )}
         </div>
       )}
 
-      <AlertDialog open={alertState.open} onOpenChange={(o) => setAlertState(prev => ({ ...prev, open: o }))}>
+      <AlertDialog open={alertState.open} onOpenChange={(o) => setAlertState((prev) => ({ ...prev, open: o }))}>
         {(<AlertDialogContent className="z-[120]" overlayClassName="z-[120]">
           {(<AlertDialogHeader>
             {(<AlertDialogTitle>{alertState.title}</AlertDialogTitle>) as any}
@@ -1627,9 +1026,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
           </AlertDialogHeader>) as any}
           {(<AlertDialogFooter>
             {(<AlertDialogCancel>Cancel</AlertDialogCancel>) as any}
-            {(<AlertDialogAction onClick={() => {
-              alertState.actionCallback?.()
-            }}>
+            {(<AlertDialogAction onClick={() => alertState.actionCallback?.()}>
               {alertState.actionText || 'Continue'}
             </AlertDialogAction>) as any}
           </AlertDialogFooter>) as any}
@@ -1658,168 +1055,48 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 }
 
 // ---------------------------------------------------------------------------
-// BorderRadiusSlider — a range slider with a numeric readout. Used for both
-// single-select and bulk border-radius editing. In bulk mode with mixed
-// values, the slider renders at 0 with a "mixed" label until the user drags it
-// (at which point all selected photos adopt the dragged value).
+// FieldGroup — renders a labeled 2-column row of numeric inputs (X/Y or W/H)
+// for single-select editing. Each input drafts intermediate keystrokes and
+// commits on blur/Enter via the parent's commitInput.
 // ---------------------------------------------------------------------------
 
-interface BorderRadiusSliderProps {
-  /** Current value, or undefined when photos have differing br values. */
-  value: number | undefined
-  isMulti: boolean
-  isMixed: boolean
-  onChange: (v: number) => void
-}
+const FIELD_LABELS: Record<string, string> = { x: 'X', y: 'Y', w: 'W', h: 'H' }
 
-function BorderRadiusSlider({ value, isMulti, isMixed, onChange }: BorderRadiusSliderProps) {
-  // Render 0 for the thumb position when mixed; the label shows "mixed".
-  // Once the user drags, onChange fires and all selected photos adopt the new
-  // value, so isMixed becomes false and the thumb tracks normally.
-  const sliderVal = isMixed ? 0 : (value ?? 0)
+function FieldGroup({
+  label,
+  fields,
+  pos,
+  draft,
+  setDraft,
+  onCommit,
+}: {
+  label: string
+  fields: Array<keyof typeof RANGES>
+  pos: PhotoPosition
+  draft: Record<string, string>
+  setDraft: (upd: (prev: Record<string, string>) => Record<string, string>) => void
+  onCommit: (field: keyof PhotoPosition) => void
+}) {
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <label className="text-xs text-muted uppercase tracking-wide">
-          Border Radius (px){isMulti ? ' (bulk)' : ''}
-        </label>
-        <span className="text-xs font-mono text-ink tabular-nums">
-          {isMixed ? 'mixed' : `${sliderVal}px`}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={RANGES.br.min}
-        max={RANGES.br.max}
-        step={1}
-        value={sliderVal}
-        // Preact/React wire `onChange` for range inputs to the input event
-        // (continuous), so a single handler is enough and the thumb tracks the
-        // cursor. No draft/commit split is needed because a slider only emits
-        // valid integers (unlike text number inputs where "-" / "." are valid
-        // intermediate states).
-        onChange={(e) => {
-          const v = Number((e.currentTarget as HTMLInputElement).value)
-          onChange(v)
-        }}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-canvas border border-border accent-primary"
-      />
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// CropEditor — standalone modal to adjust the crop and zoom (object-position and scale).
-// ---------------------------------------------------------------------------
-
-interface CropEditorProps {
-  photoUrl: string
-  w: number
-  h: number
-  canvasW: number
-  canvasH: number
-  initialCropX?: number
-  initialCropY?: number
-  initialZoom?: number
-  onSave: (cropX: number, cropY: number, zoom: number) => void
-  onCancel: () => void
-}
-
-function CropEditor({
-  photoUrl,
-  w,
-  h,
-  canvasW,
-  canvasH,
-  initialCropX = 50,
-  initialCropY = 50,
-  initialZoom = 1,
-  onSave,
-  onCancel,
-}: CropEditorProps) {
-  const [cropX, setCropX] = useState(initialCropX)
-  const [cropY, setCropY] = useState(initialCropY)
-  const [zoom, setZoom] = useState(initialZoom)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const handlePointerDown = (e: any) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startY = e.clientY
-    const startCropX = cropX
-    const startCropY = cropY
-
-    const cw = containerRef.current?.offsetWidth || 100
-    const ch = containerRef.current?.offsetHeight || 100
-
-    const onPointerMove = (ev: PointerEvent) => {
-      const dx = ev.clientX - startX
-      const dy = ev.clientY - startY
-      const sensitivity = 100 / zoom
-      setCropX(clamp(startCropX - (dx / cw) * sensitivity, 0, 100))
-      setCropY(clamp(startCropY - (dy / ch) * sensitivity, 0, 100))
-    }
-
-    const onPointerUp = () => {
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerUp)
-    }
-
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp)
-  }
-
-  const aspectW = (w / 100) * canvasW
-  const aspectH = (h / 100) * canvasH
-  const r = aspectW / aspectH
-
-  return (
-    <div className="fixed inset-0 z-[150] bg-black/90 flex flex-col items-center justify-center p-8">
-      <div className="mb-4 text-white text-sm font-semibold">Drag to pan, use slider to zoom</div>
-      
-      <div 
-        className="relative bg-surface border border-border shadow-2xl overflow-hidden cursor-move"
-        ref={containerRef}
-        style={{ 
-          width: r > 1 ? '60vw' : `calc(60vh * ${r})`, 
-          height: r > 1 ? `calc(60vw / ${r})` : '60vh',
-          maxHeight: '60vh',
-          maxWidth: '60vw',
-          aspectRatio: `${aspectW} / ${aspectH}`,
-          touchAction: 'none'
-        }}
-        onPointerDown={handlePointerDown}
-      >
-        <img 
-          src={photoUrl} 
-          draggable={false}
-          className="w-full h-full object-cover pointer-events-none will-change-transform" 
-          style={{
-            objectPosition: `${cropX}% ${cropY}%`,
-            transform: `scale(${zoom})`,
-            transformOrigin: 'center'
-          }}
-        />
-      </div>
-
-      <div className="mt-8 bg-surface p-4 rounded-lg border border-border w-full max-w-md flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <label className="text-xs text-muted uppercase">Zoom</label>
-          <input 
-            type="range" 
-            min="1" 
-            max="3" 
-            step="0.05" 
-            value={zoom} 
-            onChange={e => setZoom(parseFloat((e.currentTarget as HTMLInputElement).value))}
-            className="flex-1 accent-primary" 
+      <label className="text-xs text-muted uppercase tracking-wide">{label}</label>
+      <div className="grid grid-cols-2 gap-2">
+        {fields.map((field) => (
+          <div key={field} className="space-y-1">
+          <span className="text-[10px] text-muted">{FIELD_LABELS[field]}</span>
+          <input
+            type="number"
+            value={draft[field] ?? (pos[field] as number)}
+            step={0.5}
+            min={RANGES[field].min}
+            max={RANGES[field].max}
+            onInput={(e) => setDraft((d) => ({ ...d, [field]: (e.currentTarget as HTMLInputElement).value }))}
+            onBlur={() => onCommit(field)}
+            onKeyDown={(e) => { if (e.key === 'Enter') onCommit(field) }}
+            className="w-full h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
           />
-          <span className="text-xs text-ink font-mono">{zoom.toFixed(2)}x</span>
-        </div>
-        <div className="flex gap-2 justify-end mt-2">
-          <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-          <Button variant="primary" onClick={() => onSave(cropX, cropY, zoom)}>Done</Button>
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   )
