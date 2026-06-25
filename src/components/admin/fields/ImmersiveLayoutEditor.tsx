@@ -57,8 +57,10 @@ const clamp = (val: number, min: number, max: number) =>
 
 const vwToPx = (vw: number, canvasW: number) => (vw / 100) * canvasW
 const vhToPx = (vh: number, canvasH: number) => (vh / 100) * canvasH
-const pxToVw = (px: number, canvasW: number) => (px / canvasW) * 100
-const pxToVh = (px: number, canvasH: number) => (px / canvasH) * 100
+
+const round3 = (num: number) => Math.round(num * 1000) / 1000
+const pxToVw = (px: number, canvasW: number) => round3((px / canvasW) * 100)
+const pxToVh = (px: number, canvasH: number) => round3((px / canvasH) * 100)
 
 /** Snap a vw/vh value to the nearest GRID_STEP (used when snap-to-grid is on). */
 const SNAP_STEP = 2 // vw/vh increments
@@ -160,6 +162,15 @@ function CheckIcon({ size = 14 }: { size?: number }) {
   )
 }
 
+function CropIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+      <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+    </svg>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -187,6 +198,10 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const [localDesktopPositions, setLocalDesktopPositions] = useState<PhotoPosition[]>([])
   const [dirty, setDirty] = useState(false)
   const [snap, setSnap] = useState(false)
+  const [smartAlign, setSmartAlign] = useState(true)
+  const [showGrid, setShowGrid] = useState(false)
+  const [guides, setGuides] = useState<{ type: 'x' | 'y', pos: number, spanMin: number, spanMax: number }[]>([])
+  const [cropOpen, setCropOpen] = useState<number | null>(null)
   // Canvas dimensions computed from the workspace size via ResizeObserver.
   // Initialized to a 9:19.5 fallback (the default device is mobile).
   const [canvasSize, setCanvasSize] = useState({ w: 280, h: 607 })
@@ -447,12 +462,15 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       if (!prev[index]) return prev
       const cur = prev[index]
       const next: PhotoPosition = { ...cur }
-      if (patch.x !== undefined) next.x = clamp(patch.x, RANGES.x.min, RANGES.x.max)
-      if (patch.y !== undefined) next.y = clamp(patch.y, RANGES.y.min, RANGES.y.max)
-      if (patch.w !== undefined) next.w = clamp(patch.w, RANGES.w.min, RANGES.w.max)
-      if (patch.h !== undefined) next.h = clamp(patch.h, RANGES.h.min, RANGES.h.max)
+      if (patch.x !== undefined) next.x = round3(clamp(patch.x, RANGES.x.min, RANGES.x.max))
+      if (patch.y !== undefined) next.y = round3(clamp(patch.y, RANGES.y.min, RANGES.y.max))
+      if (patch.w !== undefined) next.w = round3(clamp(patch.w, RANGES.w.min, RANGES.w.max))
+      if (patch.h !== undefined) next.h = round3(clamp(patch.h, RANGES.h.min, RANGES.h.max))
       if (patch.z !== undefined) next.z = clamp(Math.round(patch.z), RANGES.z.min, RANGES.z.max)
       if (patch.br !== undefined) next.br = clamp(Math.round(patch.br), RANGES.br.min, RANGES.br.max)
+      if (patch.cropX !== undefined) next.cropX = round3(clamp(patch.cropX, 0, 100))
+      if (patch.cropY !== undefined) next.cropY = round3(clamp(patch.cropY, 0, 100))
+      if (patch.cropZoom !== undefined) next.cropZoom = round3(Math.max(1, patch.cropZoom))
       const copy = [...prev]
       copy[index] = next
       return copy
@@ -472,10 +490,13 @@ export function ImmersiveLayoutEditor({ path }: Props) {
         if (!copy[idx]) continue
         if (patch.z !== undefined) copy[idx].z = clamp(Math.round(patch.z), RANGES.z.min, RANGES.z.max)
         if (patch.br !== undefined) copy[idx].br = clamp(Math.round(patch.br), RANGES.br.min, RANGES.br.max)
-        if (patch.x !== undefined) copy[idx].x = clamp(patch.x, RANGES.x.min, RANGES.x.max)
-        if (patch.y !== undefined) copy[idx].y = clamp(patch.y, RANGES.y.min, RANGES.y.max)
-        if (patch.w !== undefined) copy[idx].w = clamp(patch.w, RANGES.w.min, RANGES.w.max)
-        if (patch.h !== undefined) copy[idx].h = clamp(patch.h, RANGES.h.min, RANGES.h.max)
+        if (patch.x !== undefined) copy[idx].x = round3(clamp(patch.x, RANGES.x.min, RANGES.x.max))
+        if (patch.y !== undefined) copy[idx].y = round3(clamp(patch.y, RANGES.y.min, RANGES.y.max))
+        if (patch.w !== undefined) copy[idx].w = round3(clamp(patch.w, RANGES.w.min, RANGES.w.max))
+        if (patch.h !== undefined) copy[idx].h = round3(clamp(patch.h, RANGES.h.min, RANGES.h.max))
+        if (patch.cropX !== undefined) copy[idx].cropX = round3(clamp(patch.cropX, 0, 100))
+        if (patch.cropY !== undefined) copy[idx].cropY = round3(clamp(patch.cropY, 0, 100))
+        if (patch.cropZoom !== undefined) copy[idx].cropZoom = round3(Math.max(1, patch.cropZoom))
       }
       return copy
     })
@@ -490,6 +511,102 @@ export function ImmersiveLayoutEditor({ path }: Props) {
    * drag handle. If the dragged photo isn't in the selection, we select only
    * it (matching standard file-manager behavior).
    */
+  const computeSnap = (index: number, rawLeft: number, rawTop: number) => {
+    if (!smartAlign) return { left: rawLeft, top: rawTop, guides: [] };
+
+    const pos = activePositions[index];
+    if (!pos) return { left: rawLeft, top: rawTop, guides: [] };
+    const wPx = vwToPx(pos.w, canvas.w);
+    const hPx = vhToPx(pos.h, canvas.h);
+    
+    let left = rawLeft;
+    let top = rawTop;
+    let right = left + wPx;
+    let bottom = top + hPx;
+    let centerX = left + wPx / 2;
+    let centerY = top + hPx / 2;
+
+    const threshold = 3;
+    let snapX: { diff: number, target: number, guide: number, type: 'center' | 'edge', spanMin: number, spanMax: number } | null = null;
+    let snapY: { diff: number, target: number, guide: number, type: 'center' | 'edge', spanMin: number, spanMax: number } | null = null;
+
+    const checkX = (targetPx: number, type: 'center' | 'edge', targetTop: number, targetBottom: number) => {
+      const points = [
+        { current: left, offset: 0 },
+        { current: right, offset: -wPx },
+        { current: centerX, offset: -wPx / 2 }
+      ];
+      for (const pt of points) {
+        const diff = Math.abs(targetPx - pt.current);
+        if (diff <= threshold) {
+          const requiredLeft = targetPx + pt.offset;
+          if (!snapX || (type === 'center' && snapX.type === 'edge') || (type === snapX.type && diff < snapX.diff)) {
+            snapX = { 
+              diff, target: requiredLeft, guide: targetPx, type,
+              spanMin: Math.min(top, targetTop) - 20,
+              spanMax: Math.max(bottom, targetBottom) + 20
+            };
+          }
+        }
+      }
+    }
+
+    const checkY = (targetPx: number, type: 'center' | 'edge', targetLeft: number, targetRight: number) => {
+      const points = [
+        { current: top, offset: 0 },
+        { current: bottom, offset: -hPx },
+        { current: centerY, offset: -hPx / 2 }
+      ];
+      for (const pt of points) {
+        const diff = Math.abs(targetPx - pt.current);
+        if (diff <= threshold) {
+          const requiredTop = targetPx + pt.offset;
+          if (!snapY || (type === 'center' && snapY.type === 'edge') || (type === snapY.type && diff < snapY.diff)) {
+            snapY = { 
+              diff, target: requiredTop, guide: targetPx, type,
+              spanMin: Math.min(left, targetLeft) - 20,
+              spanMax: Math.max(right, targetRight) + 20
+            };
+          }
+        }
+      }
+    }
+
+    checkX(canvas.w / 2, 'center', 0, canvas.h);
+    checkY(canvas.h / 2, 'center', 0, canvas.w);
+
+    activePositions.forEach((otherPos, i) => {
+      if (i === index) return;
+      const oW = vwToPx(otherPos.w, canvas.w);
+      const oH = vhToPx(otherPos.h, canvas.h);
+      const oLeft = canvas.w / 2 + vwToPx(otherPos.x, canvas.w) - oW / 2;
+      const oTop = canvas.h / 2 + vhToPx(otherPos.y, canvas.h) - oH / 2;
+      
+      checkX(oLeft, 'edge', oTop, oTop + oH);
+      checkX(oLeft + oW, 'edge', oTop, oTop + oH);
+      checkX(oLeft + oW / 2, 'center', oTop, oTop + oH);
+
+      checkY(oTop, 'edge', oLeft, oLeft + oW);
+      checkY(oTop + oH, 'edge', oLeft, oLeft + oW);
+      checkY(oTop + oH / 2, 'center', oLeft, oLeft + oW);
+    });
+
+    const newGuides: { type: 'x' | 'y', pos: number, spanMin: number, spanMax: number }[] = [];
+    let finalLeft = left;
+    let finalTop = top;
+
+    if (snapX) {
+      finalLeft = (snapX as any).target;
+      newGuides.push({ type: 'x', pos: (snapX as any).guide, spanMin: (snapX as any).spanMin, spanMax: (snapX as any).spanMax });
+    }
+    if (snapY) {
+      finalTop = (snapY as any).target;
+      newGuides.push({ type: 'y', pos: (snapY as any).guide, spanMin: (snapY as any).spanMin, spanMax: (snapY as any).spanMax });
+    }
+
+    return { left: finalLeft, top: finalTop, guides: newGuides };
+  }
+
   const handlePhotoDragStart = (index: number, d: { x: number; y: number }) => {
     dragStartPosRef.current = activePositions.map((p) => ({ ...p }))
     dragIndexRef.current = index
@@ -499,7 +616,29 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const handlePhotoDrag = (index: number, d: { x: number; y: number }) => {
     const sel = selectedRef.current
     const isGroupDrag = sel.length > 1 && sel.includes(index)
-    if (!isGroupDrag || !dragStartPosRef.current || !dragStartHandleRef.current) return
+
+    if (!isGroupDrag) {
+      // Single drag logic with smart guides
+      const snapData = computeSnap(index, d.x, d.y);
+      setGuides(snapData.guides);
+
+      const pos = activePositions[index];
+      if (pos) {
+        const wPx = vwToPx(pos.w, canvas.w);
+        const hPx = vhToPx(pos.h, canvas.h);
+        const x = pxToVw(snapData.left + wPx / 2 - canvas.w / 2, canvas.w);
+        const y = pxToVh(snapData.top + hPx / 2 - canvas.h / 2, canvas.h);
+        
+        setActivePositions((prev) => {
+          const copy = [...prev];
+          copy[index] = { ...copy[index], x: clamp(x, RANGES.x.min, RANGES.x.max), y: clamp(y, RANGES.y.min, RANGES.y.max) };
+          return copy;
+        });
+      }
+      return;
+    }
+
+    if (!dragStartPosRef.current || !dragStartHandleRef.current) return
 
     const startPx = dragStartHandleRef.current
     const dxPx = d.x - startPx.x
@@ -524,6 +663,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   }
 
   const handlePhotoDragStop = (index: number, d: { x: number; y: number }) => {
+    setGuides([])
     const startList = dragStartPosRef.current
     const sel = selectedRef.current
     const startPx = dragStartHandleRef.current || { x: d.x, y: d.y }
@@ -537,13 +677,13 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setActivePositions((prev) => {
       const copy = prev.map((p) => ({ ...p }))
       if (!isGroupDrag || !startList) {
-        // Single drag: use the dragged item's final position directly.
+        // Single drag
         const pos = prev[index]
         if (pos) {
-          const w = vwToPx(pos.w, canvas.w)
-          const h = vhToPx(pos.h, canvas.h)
-          let x = pxToVw(d.x + w / 2 - canvas.w / 2, canvas.w)
-          let y = pxToVh(d.y + h / 2 - canvas.h / 2, canvas.h)
+          // If snap to grid is on, we take the already updated position (from smart guides)
+          // and apply grid snapping. Otherwise keep it.
+          let x = pos.x;
+          let y = pos.y;
           if (snap) { x = snapVal(x); y = snapVal(y) }
           copy[index] = { ...copy[index], x: clamp(x, RANGES.x.min, RANGES.x.max), y: clamp(y, RANGES.y.min, RANGES.y.max) }
         }
@@ -970,6 +1110,32 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                     Desktop
                   </button>
                 </div>
+                {/* Show grid toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowGrid((s) => !s)}
+                  className={`px-2.5 py-1 text-xs font-medium border rounded-sm transition-colors ${
+                    showGrid
+                      ? 'bg-primary text-primary-text border-primary'
+                      : 'bg-canvas text-muted border-border hover:text-ink'
+                  }`}
+                  title="Show grid lines on the canvas"
+                >
+                  Show Grid
+                </button>
+                {/* Smart Alignment toggle */}
+                <button
+                  type="button"
+                  onClick={() => setSmartAlign((s) => !s)}
+                  className={`px-2.5 py-1 text-xs font-medium border rounded-sm transition-colors ${
+                    smartAlign
+                      ? 'bg-primary text-primary-text border-primary'
+                      : 'bg-canvas text-muted border-border hover:text-ink'
+                  }`}
+                  title="Snap positions dynamically to other photos and canvas center"
+                >
+                  Smart Alignment
+                </button>
                 {/* Snap-to-grid toggle */}
                 <button
                   type="button"
@@ -1011,8 +1177,41 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                 <div
                   ref={canvasRef}
                   className="relative bg-surface border-2 border-border shadow-inner"
-                  style={{ width: canvas.w, height: canvas.h, overflow: 'visible' }}
+                  style={{ 
+                    width: canvas.w, 
+                    height: canvas.h, 
+                    overflow: 'visible',
+                    ...(showGrid ? {
+                      backgroundImage: `
+                        linear-gradient(to right, rgba(128,128,128,0.1) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(128,128,128,0.1) 1px, transparent 1px)
+                      `,
+                      backgroundSize: `${vwToPx(2, canvas.w)}px ${vhToPx(2, canvas.h)}px`,
+                      backgroundPosition: 'center center'
+                    } : {})
+                  }}
                 >
+                  {/* Smart Alignment Guides */}
+                  {guides.map((g, i) => (
+                    <div
+                      key={`guide-${i}`}
+                      className="absolute pointer-events-none z-[150]"
+                      style={
+                        g.type === 'x'
+                          ? { left: g.pos, top: g.spanMin, height: g.spanMax - g.spanMin, width: 1, borderLeft: '1px dotted var(--color-primary)' }
+                          : { top: g.pos, left: g.spanMin, width: g.spanMax - g.spanMin, height: 1, borderTop: '1px dotted var(--color-primary)' }
+                      }
+                    />
+                  ))}
+
+                  {/* Horizontal/Vertical Center Crosshairs */}
+                  {showGrid && (
+                    <>
+                      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-border/50 pointer-events-none z-0" />
+                      <div className="absolute left-0 right-0 top-1/2 h-px bg-border/50 pointer-events-none z-0" />
+                    </>
+                  )}
+
                   {activePhotos.length === 0 ? (
                     <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">
                       No photos — use “Add Photo” to start
@@ -1065,8 +1264,13 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                             <img
                               src={thumbUrl(photo)}
                               alt={`Photo ${i}`}
-                              className="w-full h-full object-cover select-none pointer-events-none"
+                              className="w-full h-full object-cover select-none pointer-events-none will-change-transform"
                               draggable={false}
+                              style={{
+                                objectPosition: `${pos.cropX ?? 50}% ${pos.cropY ?? 50}%`,
+                                transform: `scale(${pos.cropZoom ?? 1})`,
+                                transformOrigin: 'center'
+                              }}
                             />
                             <span className="absolute top-0.5 left-1 text-[10px] font-mono text-white bg-black/60 px-1 rounded-sm pointer-events-none">
                               {i}
@@ -1221,6 +1425,19 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                             Back
                           </button>
                         </div>
+                      </div>
+                    )}
+
+                    {!isMulti && (
+                      <div className="pt-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setCropOpen(primary)}
+                          className="w-full"
+                        >
+                          <CropIcon size={14} /> Crop & Pan Photo
+                        </Button>
                       </div>
                     )}
 
@@ -1418,6 +1635,24 @@ export function ImmersiveLayoutEditor({ path }: Props) {
           </AlertDialogFooter>) as any}
         </AlertDialogContent>) as any}
       </AlertDialog>
+
+      {cropOpen !== null && activePositions[cropOpen] && (
+        <CropEditor
+          photoUrl={thumbUrl(activePhotos[cropOpen])}
+          w={activePositions[cropOpen].w}
+          h={activePositions[cropOpen].h}
+          canvasW={canvas.w}
+          canvasH={canvas.h}
+          initialCropX={activePositions[cropOpen].cropX ?? 50}
+          initialCropY={activePositions[cropOpen].cropY ?? 50}
+          initialZoom={activePositions[cropOpen].cropZoom ?? 1}
+          onSave={(cropX, cropY, zoom) => {
+            updatePosition(cropOpen, { cropX, cropY, cropZoom: zoom })
+            setCropOpen(null)
+          }}
+          onCancel={() => setCropOpen(null)}
+        />
+      )}
     </>
   )
 }
@@ -1469,6 +1704,123 @@ function BorderRadiusSlider({ value, isMulti, isMixed, onChange }: BorderRadiusS
         }}
         className="w-full h-2 rounded-full appearance-none cursor-pointer bg-canvas border border-border accent-primary"
       />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// CropEditor — standalone modal to adjust the crop and zoom (object-position and scale).
+// ---------------------------------------------------------------------------
+
+interface CropEditorProps {
+  photoUrl: string
+  w: number
+  h: number
+  canvasW: number
+  canvasH: number
+  initialCropX?: number
+  initialCropY?: number
+  initialZoom?: number
+  onSave: (cropX: number, cropY: number, zoom: number) => void
+  onCancel: () => void
+}
+
+function CropEditor({
+  photoUrl,
+  w,
+  h,
+  canvasW,
+  canvasH,
+  initialCropX = 50,
+  initialCropY = 50,
+  initialZoom = 1,
+  onSave,
+  onCancel,
+}: CropEditorProps) {
+  const [cropX, setCropX] = useState(initialCropX)
+  const [cropY, setCropY] = useState(initialCropY)
+  const [zoom, setZoom] = useState(initialZoom)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handlePointerDown = (e: any) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startCropX = cropX
+    const startCropY = cropY
+
+    const cw = containerRef.current?.offsetWidth || 100
+    const ch = containerRef.current?.offsetHeight || 100
+
+    const onPointerMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX
+      const dy = ev.clientY - startY
+      const sensitivity = 100 / zoom
+      setCropX(clamp(startCropX - (dx / cw) * sensitivity, 0, 100))
+      setCropY(clamp(startCropY - (dy / ch) * sensitivity, 0, 100))
+    }
+
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+    }
+
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+  }
+
+  const aspectW = (w / 100) * canvasW
+  const aspectH = (h / 100) * canvasH
+  const r = aspectW / aspectH
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/90 flex flex-col items-center justify-center p-8">
+      <div className="mb-4 text-white text-sm font-semibold">Drag to pan, use slider to zoom</div>
+      
+      <div 
+        className="relative bg-surface border border-border shadow-2xl overflow-hidden cursor-move"
+        ref={containerRef}
+        style={{ 
+          width: r > 1 ? '60vw' : `calc(60vh * ${r})`, 
+          height: r > 1 ? `calc(60vw / ${r})` : '60vh',
+          maxHeight: '60vh',
+          maxWidth: '60vw',
+          aspectRatio: `${aspectW} / ${aspectH}`,
+          touchAction: 'none'
+        }}
+        onPointerDown={handlePointerDown}
+      >
+        <img 
+          src={photoUrl} 
+          draggable={false}
+          className="w-full h-full object-cover pointer-events-none will-change-transform" 
+          style={{
+            objectPosition: `${cropX}% ${cropY}%`,
+            transform: `scale(${zoom})`,
+            transformOrigin: 'center'
+          }}
+        />
+      </div>
+
+      <div className="mt-8 bg-surface p-4 rounded-lg border border-border w-full max-w-md flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <label className="text-xs text-muted uppercase">Zoom</label>
+          <input 
+            type="range" 
+            min="1" 
+            max="3" 
+            step="0.05" 
+            value={zoom} 
+            onChange={e => setZoom(parseFloat((e.currentTarget as HTMLInputElement).value))}
+            className="flex-1 accent-primary" 
+          />
+          <span className="text-xs text-ink font-mono">{zoom.toFixed(2)}x</span>
+        </div>
+        <div className="flex gap-2 justify-end mt-2">
+          <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+          <Button variant="primary" onClick={() => onSave(cropX, cropY, zoom)}>Done</Button>
+        </div>
+      </div>
     </div>
   )
 }

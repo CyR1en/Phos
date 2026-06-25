@@ -298,12 +298,23 @@ export default function ImmersiveScrollGallery({
 
 					// When a custom border-radius is set, drop the `rounded-lg`
 					// class (it would override the inline style) and apply via style.
-					const imgClassName = br !== null
-						? "object-cover w-full h-full will-change-transform"
-						: "object-cover w-full h-full rounded-lg will-change-transform";
-					const imgStyle = br !== null
-						? { transform: "translateZ(0)", borderRadius: `${br}px` }
-						: { transform: "translateZ(0)" };
+					const wrapperClassName = pos ? "relative overflow-hidden" : `relative overflow-hidden ${IMAGE_STYLES[index % IMAGE_STYLES.length]}`;
+					
+					const wrapperStyle = posStyle ? { ...posStyle } as any : {};
+					if (br !== null) {
+						wrapperStyle.borderRadius = `${br}px`;
+					}
+
+					const cropX = pos?.cropX ?? 50;
+					const cropY = pos?.cropY ?? 50;
+					const cropZoom = pos?.cropZoom ?? 1;
+
+					const imgClassName = "object-cover w-full h-full will-change-transform";
+					const imgStyle = { 
+						transform: `translateZ(0) scale(${cropZoom})`, 
+						transformOrigin: 'center',
+						objectPosition: `${cropX}% ${cropY}%`
+					};
 
 					return (
 						<motion.div
@@ -313,8 +324,8 @@ export default function ImmersiveScrollGallery({
 						>
 							{(
 								<div
-									className={pos ? "relative" : `relative ${IMAGE_STYLES[index % IMAGE_STYLES.length]}`}
-									style={posStyle as any}
+									className={br !== null ? wrapperClassName : `${wrapperClassName} rounded-lg`}
+									style={wrapperStyle}
 								>
 									<ProgressiveImage
 										src={src}

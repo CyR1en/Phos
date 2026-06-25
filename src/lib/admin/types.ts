@@ -5,6 +5,9 @@ export interface PhotoPosition {
   h: number   // vh, height
   z: number   // unitless integer, stacking order
   br?: number // px, border-radius of the photo frame (0 = sharp corners)
+  cropX?: number // object-position X % (0-100)
+  cropY?: number // object-position Y % (0-100)
+  cropZoom?: number // scale factor (>= 1)
 }
 
 export interface PositionConfig {
