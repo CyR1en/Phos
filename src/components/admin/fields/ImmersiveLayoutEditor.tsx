@@ -100,6 +100,9 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const marqueeActiveRef = useRef(false)
 
   // ---- Group-drag state --------------------------------------------------
+  const dragRafRef = useRef<number | null>(null)
+  const dragRawPosRef = useRef<{ x: number; y: number } | null>(null)
+  const latestDragRef = useRef<{ index: number; d: { x: number; y: number; deltaX: number; deltaY: number } } | null>(null)
   const dragIndexRef = useRef<number | null>(null)
   // Snapshot of positions at drag start to measure delta from a stable origin.
   const dragStartPosRef = useRef<PhotoPosition[] | null>(null)
@@ -321,52 +324,73 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     dragStartPosRef.current = activePositions.map((p) => ({ ...p }))
     dragIndexRef.current = index
     dragStartHandleRef.current = { x: d.x, y: d.y }
+    dragRawPosRef.current = { x: d.x, y: d.y }
   }
 
-  const handlePhotoDrag = (index: number, d: { x: number; y: number }) => {
-    const sel = selectedRef.current
-    const isGroupDrag = sel.length > 1 && sel.includes(index)
+  const handlePhotoDrag = (index: number, d: { x: number; y: number; deltaX: number; deltaY: number }) => {
+    latestDragRef.current = { index, d }
+    if (dragRafRef.current) return
+    dragRafRef.current = requestAnimationFrame(() => {
+      dragRafRef.current = null
+      const current = latestDragRef.current
+      if (!current) return
+      const { index, d } = current
 
-    if (!isGroupDrag) {
-      // Single drag logic with smart guides.
-      const snapData = computeSnap(index, d.x, d.y, activePositions, canvas.w, canvas.h, smartAlign)
-      setGuides(snapData.guides)
-      const pos = activePositions[index]
-      if (pos) {
-        const wPx = vwToPx(pos.w, canvas.w)
-        const hPx = vhToPx(pos.h, canvas.h)
-        const x = pxToVw(snapData.left + wPx / 2 - canvas.w / 2, canvas.w)
-        const y = pxToVh(snapData.top + hPx / 2 - canvas.h / 2, canvas.h)
-        setActivePositions((prev) => {
-          if (!prev[index]) return prev
-          const copy = [...prev]
-          copy[index] = applyPatch(prev[index], { x, y })
-          return copy
-        })
+      const sel = selectedRef.current
+      const isGroupDrag = sel.length > 1 && sel.includes(index)
+
+      if (!isGroupDrag) {
+        // Single drag logic with smart guides.
+        if (!dragRawPosRef.current) {
+          dragRawPosRef.current = { x: d.x, y: d.y }
+        }
+        dragRawPosRef.current.x += d.deltaX
+        dragRawPosRef.current.y += d.deltaY
+
+        const snapData = computeSnap(index, dragRawPosRef.current.x, dragRawPosRef.current.y, activePositions, canvas.w, canvas.h, smartAlign)
+        setGuides(snapData.guides)
+        const pos = activePositions[index]
+        if (pos) {
+          const wPx = vwToPx(pos.w, canvas.w)
+          const hPx = vhToPx(pos.h, canvas.h)
+          const x = pxToVw(snapData.left + wPx / 2 - canvas.w / 2, canvas.w)
+          const y = pxToVh(snapData.top + hPx / 2 - canvas.h / 2, canvas.h)
+          setActivePositions((prev) => {
+            if (!prev[index]) return prev
+            const copy = [...prev]
+            copy[index] = applyPatch(prev[index], { x, y })
+            return copy
+          })
+        }
+        return
       }
-      return
-    }
 
-    if (!dragStartPosRef.current || !dragStartHandleRef.current) return
-    const startPx = dragStartHandleRef.current
-    const dxVw = pxToVw(d.x - startPx.x, canvas.w)
-    const dyVh = pxToVh(d.y - startPx.y, canvas.h)
+      if (!dragStartPosRef.current || !dragStartHandleRef.current) return
+      const startPx = dragStartHandleRef.current
+      const dxVw = pxToVw(d.x - startPx.x, canvas.w)
+      const dyVh = pxToVh(d.y - startPx.y, canvas.h)
 
-    setActivePositions((prev) => {
-      const copy = prev.map((p) => ({ ...p }))
-      const startList = dragStartPosRef.current!
-      for (const idx of sel) {
-        if (idx === index) continue // react-rnd handles the dragged item internally
-        const startPos = startList[idx]
-        if (!startPos || !copy[idx]) continue
-        // We don't snap mid-drag for followers to keep it smooth.
-        copy[idx] = applyPatch(copy[idx], { x: startPos.x + dxVw, y: startPos.y + dyVh })
-      }
-      return copy
+      setActivePositions((prev) => {
+        const copy = prev.map((p) => ({ ...p }))
+        const startList = dragStartPosRef.current!
+        for (const idx of sel) {
+          if (idx === index) continue // react-rnd handles dragged item internally
+          const startPos = startList[idx]
+          if (!startPos || !copy[idx]) continue
+          // We don't snap mid-drag followers to keep it smooth.
+          copy[idx] = applyPatch(copy[idx], { x: startPos.x + dxVw, y: startPos.y + dyVh })
+        }
+        return copy
+      })
     })
   }
 
   const handlePhotoDragStop = (index: number, d: { x: number; y: number }) => {
+    dragRawPosRef.current = null
+    if (dragRafRef.current) {
+      cancelAnimationFrame(dragRafRef.current)
+      dragRafRef.current = null
+    }
     setGuides([])
     const startList = dragStartPosRef.current
     const sel = selectedRef.current
@@ -713,7 +737,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-2.5 py-1 text-xs font-medium border rounded-sm transition-colors ${
+      className={`px-2.5 py-1 text-sm font-medium border rounded-sm transition-colors ${
         active ? 'bg-primary text-primary-text border-primary' : 'bg-canvas text-muted border-border hover:text-ink'
       }`}
     >
@@ -727,7 +751,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
         <Button variant="secondary" size="sm" onClick={openEditor}>
           Edit Layout
         </Button>
-        <p className="text-xs text-muted">
+        <p className="text-sm text-muted">
           Curate and position photos separately for mobile and desktop.
           {storedMobilePhotos.length > 0 || storedDesktopPhotos.length > 0
             ? ` Mobile: ${storedMobilePhotos.length}, Desktop: ${storedDesktopPhotos.length}.`
@@ -753,7 +777,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                       key={d}
                       type="button"
                       onClick={() => handleDeviceToggle(d)}
-                      className={`px-3 py-1 text-xs font-medium transition-colors ${
+                      className={`px-3 py-1 text-sm font-medium transition-colors ${
                         device === d ? 'bg-primary text-primary-text' : 'text-muted hover:text-ink'
                       }`}
                     >
@@ -846,6 +870,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                         onDragStop={handlePhotoDragStop}
                         onResizeStop={handleResizeStop}
                         onSelect={selectPhoto}
+                        onDoubleClick={(idx) => setCropOpen(idx)}
                       />
                     ))
                   )}
@@ -872,7 +897,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                         : `${device} · ${activePhotos.length} photo${activePhotos.length === 1 ? '' : 's'}`}
                   </h3>
                   {isMulti && (
-                    <p className="text-[10px] text-muted mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Shift/Cmd-click or drag on the background to select. X/Y/W/H hidden for multi-select.
                     </p>
                   )}
@@ -893,7 +918,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                     {/* Z-index — editable only for single selection. */}
                     {!isMulti && (
                       <div className="space-y-1.5">
-                        <label className="text-xs text-muted uppercase tracking-wide">Z-index</label>
+                        <label className="text-sm text-muted uppercase tracking-wide">Z-index</label>
                         <div className="flex gap-2">
                           <input
                             type="number"
@@ -904,10 +929,10 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                             onInput={(e) => setInputDraft((d) => ({ ...d, z: (e.currentTarget as HTMLInputElement).value }))}
                             onBlur={() => commitInput('z')}
                             onKeyDown={(e) => { if (e.key === 'Enter') commitInput('z') }}
-                            className="w-20 h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
+                            className="w-20 h-10 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
                           />
-                          <button type="button" onClick={handleFront} className="h-8 px-2 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Front</button>
-                          <button type="button" onClick={handleBack} className="h-8 px-2 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Back</button>
+                          <button type="button" onClick={handleFront} className="h-10 px-2 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Front</button>
+                          <button type="button" onClick={handleBack} className="h-10 px-2 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Back</button>
                         </div>
                       </div>
                     )}
@@ -938,7 +963,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                       <button
                         type="button"
                         onClick={handleRemoveSelected}
-                        className="w-full h-8 px-3 text-xs bg-surface border border-border rounded-sm text-error hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-1.5"
+                        className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-error hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-1.5"
                       >
                         <TrashIcon size={14} /> Remove {isMulti ? `${selected.length} Photos` : 'Photo'}
                       </button>
@@ -946,7 +971,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                         <button
                           type="button"
                           onClick={handleCopyMobileToDesktop}
-                          className="w-full h-8 px-3 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors"
+                          className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors"
                         >
                           Copy mobile &rarr; desktop
                         </button>
@@ -954,7 +979,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                       <button
                         type="button"
                         onClick={handleReset}
-                        className="w-full h-8 px-3 text-xs bg-surface border border-border rounded-sm text-error hover:opacity-80 transition-opacity"
+                        className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-error hover:opacity-80 transition-opacity"
                       >
                         Reset to default
                       </button>
@@ -963,11 +988,11 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                 ) : (
                   <div className="p-4 flex-1 flex flex-col items-center justify-center gap-3">
                     <p className="text-sm text-muted text-center">Select a photo on the canvas to edit its position.</p>
-                    <p className="text-[10px] text-muted/70 text-center -mt-1">Shift/Cmd-click or drag on the background to multi-select · Cmd+A for all</p>
+                    <p className="text-xs text-muted/70 text-center -mt-1">Shift/Cmd-click or drag on the background to multi-select · Cmd+A for all</p>
                     <button
                       type="button"
                       onClick={() => { setPendingAdd([]); setPickerOpen(true) }}
-                      className="inline-flex items-center gap-1.5 text-xs bg-surface border border-border text-ink px-3 py-1.5 rounded-sm hover:bg-surface-hover transition-colors"
+                      className="inline-flex items-center gap-1.5 text-sm bg-surface border border-border text-ink px-3 py-1.5 rounded-sm hover:bg-surface-hover transition-colors"
                     >
                       <PlusIcon size={14} /> Add Photo
                     </button>
@@ -980,7 +1005,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
                     <button
                       type="button"
                       onClick={() => { setPendingAdd([]); setPickerOpen(true) }}
-                      className="w-full h-8 px-3 text-xs bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-1.5"
+                      className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-1.5"
                     >
                       <PlusIcon size={14} /> Add Photo
                     </button>
@@ -991,7 +1016,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
             {/* ---- Footer ---- */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface">
-              <p className="text-xs text-muted">
+              <p className="text-sm text-muted">
                 Changes save to config. Run &ldquo;Republish&rdquo; to apply to the live site.
               </p>
               <div className="flex gap-2">
@@ -1079,11 +1104,11 @@ function FieldGroup({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs text-muted uppercase tracking-wide">{label}</label>
+      <label className="text-sm text-muted uppercase tracking-wide">{label}</label>
       <div className="grid grid-cols-2 gap-2">
         {fields.map((field) => (
           <div key={field} className="space-y-1">
-          <span className="text-[10px] text-muted">{FIELD_LABELS[field]}</span>
+          <span className="text-xs text-muted">{FIELD_LABELS[field]}</span>
           <input
             type="number"
             value={draft[field] ?? (pos[field] as number)}
@@ -1093,7 +1118,7 @@ function FieldGroup({
             onInput={(e) => setDraft((d) => ({ ...d, [field]: (e.currentTarget as HTMLInputElement).value }))}
             onBlur={() => onCommit(field)}
             onKeyDown={(e) => { if (e.key === 'Enter') onCommit(field) }}
-            className="w-full h-8 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
+            className="w-full h-10 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
           />
           </div>
         ))}

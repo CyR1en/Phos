@@ -22,10 +22,11 @@ interface Props {
   selectedCount: number
   canvas: { w: number; h: number }
   onDragStart: (index: number, d: { x: number; y: number }) => void
-  onDrag: (index: number, d: { x: number; y: number }) => void
+  onDrag: (index: number, d: { x: number; y: number; deltaX: number; deltaY: number }) => void
   onDragStop: (index: number, d: { x: number; y: number }) => void
   onResizeStop: (index: number, ref: HTMLElement, position: { x: number; y: number }) => void
   onSelect: (index: number, e: MouseEvent) => void
+  onDoubleClick?: (index: number, e: MouseEvent) => void
 }
 
 /**
@@ -45,6 +46,7 @@ export function CanvasPhoto({
   onDragStop,
   onResizeStop,
   onSelect,
+  onDoubleClick,
 }: Props) {
   const br = brOf(pos)
   return (
@@ -56,11 +58,12 @@ export function CanvasPhoto({
         y: canvas.h / 2 + vhToPx(pos.y, canvas.h) - vhToPx(pos.h, canvas.h) / 2,
       }}
       onDragStart={(_e: any, d: any) => onDragStart(index, { x: d.x, y: d.y })}
-      onDrag={(_e: any, d: any) => onDrag(index, { x: d.x, y: d.y })}
+      onDrag={(_e: any, d: any) => onDrag(index, { x: d.x, y: d.y, deltaX: d.deltaX, deltaY: d.deltaY })}
       onDragStop={(_e: any, d: any) => onDragStop(index, { x: d.x, y: d.y })}
       onResizeStop={(_e: any, _dir: any, ref: any, _delta: any, position: any) =>
         onResizeStop(index, ref, position)}
       onMouseDown={(e: MouseEvent) => onSelect(index, e)}
+      onDoubleClick={(e: MouseEvent) => onDoubleClick?.(index, e)}
       enableResizing={ALL_HANDLES}
       minWidth={vwToPx(RANGES.w.min, canvas.w)}
       minHeight={vhToPx(RANGES.h.min, canvas.h)}
