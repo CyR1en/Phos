@@ -20,6 +20,8 @@ const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.t
 const THUMB_WIDTH = 800
 const THUMB_HEIGHT = 600
 const MOBILE_THUMB_WIDTH = 400
+const IMMERSIVE_WIDTH = 2200
+const IMMERSIVE_MOBILE_WIDTH = 1100
 const CONCURRENCY = 4
 
 async function ensureDir(dir) {
@@ -78,6 +80,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
   const fullPath = join(OUTPUT_DIR, 'full', catSlug, file)
   const thumbPath = join(OUTPUT_DIR, 'thumbs', catSlug, thumbName)
   const mobileThumbPath = join(OUTPUT_DIR, 'thumbs-mobile', catSlug, thumbName)
+  const immersivePath = join(OUTPUT_DIR, 'immersive', catSlug, thumbName)
+  const immersiveMobilePath = join(OUTPUT_DIR, 'immersive-mobile', catSlug, thumbName)
   const metaInfo = photoMeta[file] || {}
 
   const cached = cache.files[relPath]
@@ -87,7 +91,9 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
     cached.size === srcStat.size &&
     existsSync(fullPath) &&
     existsSync(thumbPath) &&
-    existsSync(mobileThumbPath)
+    existsSync(mobileThumbPath) &&
+    existsSync(immersivePath) &&
+    existsSync(immersiveMobilePath)
   ) {
     return {
       filename: file,
@@ -96,6 +102,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
       full: `/photos/full/${catSlug}/${file}`,
       thumb: `/photos/thumbs/${catSlug}/${thumbName}`,
       thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
+      immersive: `/photos/immersive/${catSlug}/${thumbName}`,
+      immersiveMobile: `/photos/immersive-mobile/${catSlug}/${thumbName}`,
       width: cached.width,
       height: cached.height,
       blur: cached.blur,
@@ -125,6 +133,16 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
       .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 75 })
       .toFile(mobileThumbPath),
+
+    sharp(srcBuf)
+      .resize(IMMERSIVE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 84 })
+      .toFile(immersivePath),
+
+    sharp(srcBuf)
+      .resize(IMMERSIVE_MOBILE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toFile(immersiveMobilePath),
   ])
 
   cache.files[relPath] = {
@@ -143,6 +161,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
     full: `/photos/full/${catSlug}/${file}`,
     thumb: `/photos/thumbs/${catSlug}/${thumbName}`,
     thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
+    immersive: `/photos/immersive/${catSlug}/${thumbName}`,
+    immersiveMobile: `/photos/immersive-mobile/${catSlug}/${thumbName}`,
     width: imgMeta.width,
     height: imgMeta.height,
     blur,
@@ -206,9 +226,13 @@ async function processCategory(entry, cache) {
   const fullDir = join(OUTPUT_DIR, 'full', catSlug)
   const thumbDir = join(OUTPUT_DIR, 'thumbs', catSlug)
   const mobileThumbDir = join(OUTPUT_DIR, 'thumbs-mobile', catSlug)
+  const immersiveDir = join(OUTPUT_DIR, 'immersive', catSlug)
+  const immersiveMobileDir = join(OUTPUT_DIR, 'immersive-mobile', catSlug)
   await ensureDir(fullDir)
   await ensureDir(thumbDir)
   await ensureDir(mobileThumbDir)
+  await ensureDir(immersiveDir)
+  await ensureDir(immersiveMobileDir)
 
   const photoMeta = meta.photos || {}
   const coverFile = meta.cover || files[0]
@@ -375,6 +399,8 @@ async function main() {
         await rm(join(OUTPUT_DIR, 'full', cat), { recursive: true, force: true }).catch(() => {})
         await rm(join(OUTPUT_DIR, 'thumbs', cat), { recursive: true, force: true }).catch(() => {})
         await rm(join(OUTPUT_DIR, 'thumbs-mobile', cat), { recursive: true, force: true }).catch(() => {})
+        await rm(join(OUTPUT_DIR, 'immersive', cat), { recursive: true, force: true }).catch(() => {})
+        await rm(join(OUTPUT_DIR, 'immersive-mobile', cat), { recursive: true, force: true }).catch(() => {})
       }
     }
   }

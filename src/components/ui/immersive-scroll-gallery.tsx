@@ -76,7 +76,7 @@ function StarLayer({ count, size, transition, className }: StarLayerProps) {
 	) as any;
 }
 
-function ProgressiveImage({ src, thumb, alt, className, style }: any) {
+function ProgressiveImage({ src, thumb, alt, className, style, shouldLoadFull }: any) {
 	const [isLoaded, setIsLoaded] = React.useState(false);
 
 	return (
@@ -87,17 +87,23 @@ function ProgressiveImage({ src, thumb, alt, className, style }: any) {
 				className={cn(className, isLoaded ? "opacity-0" : "opacity-100", "absolute inset-0 transition-opacity duration-1000")}
 				style={style}
 			/>
-			<img
-				src={src}
-				alt={alt}
-				onLoad={() => setIsLoaded(true)}
-				className={cn(className, isLoaded ? "opacity-100" : "opacity-0", "absolute inset-0 transition-opacity duration-1000")}
-				style={style}
-				loading="lazy"
-				decoding="async"
-			/>
+			{shouldLoadFull && (
+				<img
+					src={src}
+					alt={alt}
+					onLoad={() => setIsLoaded(true)}
+					className={cn(className, isLoaded ? "opacity-100" : "opacity-0", "absolute inset-0 transition-opacity duration-1000")}
+					style={style}
+					loading="eager"
+					decoding="async"
+				/>
+			)}
 		</>
 	);
+}
+
+function photoPath(src: string, variant: "thumbs" | "immersive" | "immersive-mobile") {
+	return `/photos/${variant}/${src.replace(/\.[^.]+$/, ".webp")}`;
 }
 
 const IMAGE_STYLES = [
@@ -122,8 +128,10 @@ export default function ImmersiveScrollGallery({
 
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const photos = isDesktop ? desktopPhotos : mobilePhotos;
+	const photoKey = photos.join("|");
 	const positions = isDesktop ? desktopPositions : mobilePositions;
 	const hasPositions = positions != null && positions.length > 0;
+	const [shouldLoadFullImages, setShouldLoadFullImages] = React.useState(false);
 
 	const { scrollYProgress } = useScroll({
 		target: container,
@@ -141,18 +149,19 @@ export default function ImmersiveScrollGallery({
 	const opacitySection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0, 1, 1]);
 	const scaleSection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0.8, 1, 1]);
 
-	const pictures = photos.map((src: string, index: number) => {
+	const pictures = React.useMemo(() => photos.map((src: string, index: number) => {
 		return {
-			src: `/photos/full/${src}`,
-			thumb: `/photos/thumbs/${src.replace(/\.[^.]+$/, ".webp")}`,
+			src: photoPath(src, isDesktop ? "immersive" : "immersive-mobile"),
+			thumb: photoPath(src, "thumbs"),
 			scale: [scale4, scale5, scale6, scale5, scale6, scale8, scale9][
 				index % 7
 			],
 		};
-	});
+	}), [isDesktop, photoKey, scale4, scale5, scale6, scale8, scale9]);
 
 	const stickyRef = useRef<HTMLDivElement | null>(null);
 	const inView = useInView(stickyRef, { amount: "some", once: false });
+	const shouldRenderStars = shouldLoadFullImages || inView;
 
 	const offsetX = useMotionValue(0);
 	const offsetY = useMotionValue(0);
@@ -183,6 +192,40 @@ export default function ImmersiveScrollGallery({
 		};
 	}, []);
 
+	React.useEffect(() => {
+		setShouldLoadFullImages(false);
+	}, [isDesktop, photoKey]);
+
+	React.useEffect(() => {
+		const el = container.current;
+		if (!el || shouldLoadFullImages) return;
+
+		const warmImages = () => {
+			setShouldLoadFullImages(true);
+			pictures.forEach(({ src }) => {
+				const img = new Image();
+				img.decoding = "async";
+				img.src = src;
+				if (img.decode) {
+					img.decode().catch(() => {});
+				}
+			});
+		};
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) {
+					warmImages();
+					observer.disconnect();
+				}
+			},
+			{ rootMargin: "1400px 0px", threshold: 0 }
+		);
+
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [pictures, shouldLoadFullImages]);
+
 	return (
 		<div ref={container} className={`absolute inset-0 ${className}`}>
 			<div
@@ -196,7 +239,7 @@ export default function ImmersiveScrollGallery({
 					style={{ opacity: opacitySection2, x: springX, y: springY } as any}
 					className="absolute inset-0 pointer-events-none text-ink/50 dark:text-ink/30"
 				>
-				{inView && (
+				{shouldRenderStars && (
 					<>
 						{(
 							<StarLayer
@@ -288,6 +331,7 @@ export default function ImmersiveScrollGallery({
 										alt={`Zoom image ${index + 1}`}
 										className={imgClassName}
 										style={imgStyle}
+										shouldLoadFull={shouldLoadFullImages}
 									/>
 								</div>
 							) as any}
@@ -318,4 +362,3 @@ export default function ImmersiveScrollGallery({
 		</div>
 	) as any;
 }
-
