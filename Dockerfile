@@ -4,7 +4,7 @@ RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-RUN npm install -g npm@latest
+RUN npm install -g npm@12.0.2
 RUN mkdir -p plugins
 
 COPY package.json package-lock.json* ./
@@ -38,6 +38,8 @@ RUN deluser node && delgroup node; \
     adduser -D -u 1001 appuser && \
     chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config && \
     chmod +x /entrypoint.sh
+
+RUN su-exec appuser node scripts/verify-native-modules.mjs
 
 EXPOSE 8080
 

@@ -3,6 +3,12 @@
   "type": "module",
   "version": "1.8.20",
   "private": true,
+  "allowScripts": {
+    "better-sqlite3@12.10.0": true,
+    "esbuild@0.27.7": true,
+    "fsevents@2.3.3": true,
+    "sharp@0.34.5": true
+  },
   "scripts": {
     "dev": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && (node admin/server.mjs &) && astro dev",
     "build": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && astro build",
