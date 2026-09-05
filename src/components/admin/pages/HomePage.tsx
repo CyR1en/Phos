@@ -69,8 +69,7 @@ export function HomePage() {
 
   return (
     <div class="max-w-3xl">
-      <div class="mb-8">
-          <p class="text-xs font-mono uppercase tracking-wider text-accent mb-2">home</p>
+      <div class="admin-page-heading">
           <h1 class="font-display text-3xl font-bold text-ink">Home Page</h1>
           <p class="text-base text-muted mt-2">{config?.home?.page_description}</p>
       </div>

@@ -22,7 +22,7 @@ export function SaveIndicator() {
           : 'text-muted'
   return (
     <span
-      class={`text-xs font-mono uppercase tracking-wider ${color} transition-colors`}
+      class={`admin-save-status text-xs ${color} transition-colors`}
       role="status"
       aria-live="polite"
     >

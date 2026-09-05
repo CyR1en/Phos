@@ -4,7 +4,7 @@ import { inView, animate } from 'framer-motion/dom'
 
 const lenis = new Lenis({
   lerp: 0.15,
-  smoothWheel: true,
+  smoothWheel: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   wheelMultiplier: 1,
   touchMultiplier: 1,
   orientation: 'vertical',
@@ -28,6 +28,10 @@ function initScrollAnimations() {
 
   const headers = document.querySelectorAll('[data-animate-header]')
   headers.forEach((header) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      header.classList.remove('opacity-0')
+      return
+    }
     // Prevent re-binding if already animated
     if ((header as HTMLElement).dataset.animated) return
     ;(header as HTMLElement).dataset.animated = 'true'

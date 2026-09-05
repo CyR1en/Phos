@@ -35,9 +35,9 @@ function isActive(path: string) {
 }
 ---
 
-<header class="sticky top-0 z-40 border-b border-border bg-canvas/85 backdrop-blur-md dark:bg-canvas/85">
-  <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-    <a href="/" class="flex items-center gap-1.5 shrink-0">
+<header class="sticky top-0 z-40 border-b border-border site-header">
+  <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 lg:px-8 site-nav">
+    <a href="/" class="site-brand flex items-center gap-1.5 shrink-0" aria-label={config.site.title || "Home"}>
       <div>
         {logoSvg ? (
           <span class="size-6 text-ink" set:html={logoSvg} />
@@ -51,18 +51,18 @@ function isActive(path: string) {
       <div class="font-display text-xl tracking-wide text-ink">{config.site.title}</div>
     </a>
 
-    <div class="hidden items-center gap-8 sm:flex">
-      <a href="/" class:list={["text-sm font-medium transition-colors", isActive('/') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Home</a>
-      <a href="/galleries" class:list={["text-sm font-medium transition-colors", isActive('/galleries') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Galleries</a>
-      <a href="/photos/all" class:list={["text-sm font-medium transition-colors", isActive('/photos') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Photos</a>
-      <a href="/about" class:list={["text-sm font-medium transition-colors", isActive('/about') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>About</a>
-      <a href="/contact" class:list={["text-sm font-medium transition-colors", isActive('/contact') ? "text-primary font-semibold" : "text-ink hover:text-primary"]}>Contact</a>
+    <div class="hidden items-center gap-7 lg:flex">
+      <a href="/" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/') ? "page" : undefined}>Home</a>
+      <a href="/galleries" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/galleries') ? "page" : undefined}>Galleries</a>
+      <a href="/photos/all" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/photos') ? "page" : undefined}>Photos</a>
+      <a href="/about" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/about') ? "page" : undefined}>About</a>
+      <a href="/contact" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/contact') ? "page" : undefined}>Contact</a>
     </div>
 
     <div class="flex items-center gap-3">
-      <a href="/contact" class="hidden sm:inline-flex items-center rounded-pill bg-primary px-6 py-2 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors">Get in touch</a>
+      <a href="/contact" class="hidden lg:inline-flex site-button items-center rounded-pill bg-primary px-6 py-2 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors">Get in touch</a>
       <ThemeToggle />
-      <button id="menu-btn" type="button" class="flex h-11 w-11 items-center justify-center rounded-sm text-ink hover:bg-surface transition-colors sm:hidden" data-hs-overlay="#mobile-nav" aria-label="Open menu">
+      <button id="menu-btn" type="button" class="flex h-11 w-11 items-center justify-center rounded-sm text-ink hover:bg-surface transition-colors lg:hidden" data-hs-overlay="#mobile-nav" aria-label="Open menu">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18M3 6h18M3 18h18" />
         </svg>

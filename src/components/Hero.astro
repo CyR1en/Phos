@@ -24,7 +24,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 ---
 
 {first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
-<section class="relative flex min-h-[88vh] items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval}>
+<section class="photo-hero relative flex items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval}>
   {heroPriority.length > 0 ? (
     <div class="absolute inset-0 z-0 hero-parallax pointer-events-none will-change-transform" id="hero-bg">
       {heroPriority.map((photo, i) => (
@@ -51,10 +51,10 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
     <div class="absolute inset-0 bg-canvas" />
   )}
 
-  <div class="relative z-10 mx-auto w-full max-w-7xl px-6 pb-16 sm:px-6 lg:px-8 lg:pb-24">
+  <div class="hero-content relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8">
     <div class="max-w-4xl">
-      <p data-hero-photographer class="font-mono text-[13px] font-medium uppercase tracking-wider text-[var(--color-phos-dark-text)] opacity-0" style="text-shadow: 0 1px 8px rgba(0,0,0,0.65);" data-config="about.photographer.name">{config.about.photographer.name}</p>
-      <h1 data-hero-heading class="mt-4 font-display text-[var(--color-phos-dark-text)]" style="font-size: clamp(36px, 5vw, 64px); line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5);" data-config="home.hero.heading">
+      <p data-hero-photographer class="hero-name font-body font-medium uppercase opacity-0" style="text-shadow: 0 1px 8px rgba(0,0,0,0.65);" data-config="about.photographer.name">{config.about.photographer.name}</p>
+      <h1 data-hero-heading class="hero-heading mt-5 font-display text-[#f4f5f7]" data-config="home.hero.heading">
         {
           config.home.hero.heading.split(' ').map((word) => (
             <span class="inline-block overflow-hidden pb-1 -mb-1">
@@ -66,14 +66,14 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       <div data-hero-ctas class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-start">
         <a
           href="/galleries"
-          class="inline-flex items-center justify-center rounded-pill bg-canvas px-5 py-2.5 text-sm font-medium text-ink hover:bg-canvas-alt transition-colors w-full sm:w-auto opacity-0"
+          class="site-button hero-primary inline-flex items-center justify-center rounded-pill text-sm w-full sm:w-auto opacity-0"
         >
           <span data-config="home.hero.cta1">{config.home.hero.cta1}</span>
           <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
         <a
           href="/contact"
-          class="inline-flex items-center justify-center rounded-pill border border-[var(--color-phos-dark-text)]/30 px-5 py-2.5 text-sm font-medium text-[var(--color-phos-dark-text)] hover:bg-[var(--color-phos-dark-text)]/10 transition-colors w-full sm:w-auto opacity-0"
+          class="site-button hero-secondary inline-flex items-center justify-center rounded-pill text-sm w-full sm:w-auto opacity-0"
         >
           <span data-config="home.hero.cta2">{config.home.hero.cta2}</span>
         </a>
@@ -82,16 +82,14 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
   </div>
 
   {heroPriority.length > 0 && (
-    <div class="absolute bottom-8 left-1/2 z-30 -translate-x-1/2 flex gap-2 pointer-events-auto">
+    <div class="absolute bottom-3 left-1/2 z-30 -translate-x-1/2 flex pointer-events-auto">
       {heroPriority.map((_, i) => (
         <button
           type="button"
-          class={`relative cursor-pointer after:absolute after:-inset-y-3 after:-inset-x-1 after:content-[''] h-1.5 rounded-pill transition-all duration-500`}
-          class:list={[
-            i === 0 ? 'w-8 bg-[var(--color-phos-dark-text)]' : 'w-1.5 bg-[var(--color-phos-dark-text)]/40 hover:bg-[var(--color-phos-dark-text)]/60',
-          ]}
+          class="hero-slide-control"
           data-hero-dot={i}
           aria-label={`Slide ${i + 1}`}
+          aria-pressed={i === 0}
         />
       ))}
     </div>
@@ -106,6 +104,17 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
     const dots = document.querySelectorAll('[data-hero-dot]')
     const heroBg = document.getElementById('hero-bg')
     const heroSection = document.querySelector('[data-hero-interval]') as HTMLElement | null
+    let heroVisible = false
+    let updateSlideshowVisibility = () => {}
+
+    if (heroSection) {
+      const observer = new IntersectionObserver(([entry]) => {
+        heroVisible = entry.isIntersecting
+        updateSlideshowVisibility()
+      })
+      observer.observe(heroSection)
+      document.addEventListener('astro:before-swap', () => observer.disconnect(), { once: true })
+    }
 
     if (slides.length > 0) {
       // Lazy load full size images
@@ -119,6 +128,9 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       })
     }
 
+    const motionAllowed = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (motionAllowed) {
     // --- Framer Motion Animations ---
     // 1. Background image cinematic reveal
     const firstSlide = document.querySelector('[data-hero-slide="0"]')
@@ -167,6 +179,8 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       )
     }
 
+    }
+
     // --- Slideshow Setup ---
     if (slides.length > 1) {
       let current = 0
@@ -177,13 +191,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
           ;(s as HTMLElement).style.opacity = i === index ? '1' : '0'
         })
         dots.forEach((d, i) => {
-          if (i === index) {
-            d.classList.add('w-8', 'bg-[var(--color-phos-dark-text)]')
-            d.classList.remove('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
-          } else {
-            d.classList.remove('w-8', 'bg-[var(--color-phos-dark-text)]')
-            d.classList.add('w-1.5', 'bg-[var(--color-phos-dark-text)]/40', 'hover:bg-[var(--color-phos-dark-text)]/60')
-          }
+          d.setAttribute('aria-pressed', String(i === index))
         })
         current = index
       }
@@ -193,7 +201,8 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       }
 
       function start() {
-        if (interval) clearInterval(interval)
+        stop()
+        if (!heroVisible || document.hidden || !motionAllowed) return
         const heroInterval = parseInt(heroSection?.dataset.heroInterval || '', 10) || 6000
         interval = setInterval(next, heroInterval)
       }
@@ -218,11 +227,15 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
         heroBg.addEventListener('mouseleave', start)
       }
 
+      // Hidden slide transitions can trigger large image decodes during gallery scrolling.
+      updateSlideshowVisibility = start
+      document.addEventListener('visibilitychange', updateSlideshowVisibility)
       start()
 
       // Clean up interval on page swap to avoid memory leaks
       document.addEventListener('astro:before-swap', () => {
         stop()
+        document.removeEventListener('visibilitychange', updateSlideshowVisibility)
       }, { once: true })
     }
 
@@ -241,6 +254,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
         let lastFrameTime = performance.now()
 
         const onLenisScroll = (lenis: any) => {
+          if (!heroVisible) return
           const now = performance.now()
           const dt = now - lastFrameTime
           lastFrameTime = now

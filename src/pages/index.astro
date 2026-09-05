@@ -110,18 +110,17 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
         }).filter(Boolean)
 
         return (
-          <section id="showcase" data-animate class="animate-reveal py-16 lg:py-24">
+          <section id="showcase" data-animate class="site-section animate-reveal">
             <div class="mx-auto max-w-7xl px-6 lg:px-8">
               <div class="flex flex-wrap items-end justify-between gap-8">
                 <div data-animate-header class="opacity-0">
-                  <p class="font-mono text-xs uppercase tracking-wider text-muted">Showcase</p>
-                  <h2 class="mt-4 font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
+                  <h2 class="section-heading font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
                 </div>
                 <a href="/photos/all/" class="text-sm font-medium text-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
               </div>
 
               {items.length > 0 ? (
-                <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="showcase-grid mt-12">
                   {items.map((item: any) => (
                     <CategoryCard
                       name={item.name}

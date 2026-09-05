@@ -229,7 +229,7 @@ export function PreviewPanel({
 
   return (
     <div
-      className="hidden md:flex fixed top-0 right-0 bottom-0 border-l border-border bg-surface flex-col z-30 pr-[env(safe-area-inset-right,0px)]"
+      className="admin-preview hidden md:flex fixed top-0 right-0 bottom-0 border-l border-border bg-surface flex-col z-30 pr-[env(safe-area-inset-right,0px)]"
       style={{ width: `${width}px` }}
     >
       {/* Resize Handle on Left Edge */}
@@ -263,13 +263,15 @@ export function PreviewPanel({
               autoFocus
             />
           ) : (
-            <div
+            <button
+              type="button"
+              aria-label="Edit preview URL"
               onClick={() => setIsEditingUrl(true)}
               className="text-xs text-muted hover:text-ink cursor-pointer truncate font-mono hover:bg-surface-hover px-2 py-1 rounded-sm w-full transition-colors"
               title="Click to edit URL"
             >
               {currentUrl}
-            </div>
+            </button>
           )}
         </div>
 
@@ -298,7 +300,7 @@ export function PreviewPanel({
       </div>
 
       {/* Iframe Viewport */}
-      <div className="flex-1 bg-white relative">
+      <div className="admin-preview-frame flex-1 relative">
         <iframe
           ref={iframeRef}
           src={currentUrl}

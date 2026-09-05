@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./fonts.css";
 @import "./themes/rose-pine.css";
 @import "./themes/modern-elegant.css";
 @import "./themes/noir.css";
@@ -7,6 +8,7 @@
 @import "./themes/nord.css";
 @import "./themes/solarized.css";
 @import "./themes/everforest.css";
+@import "./interface.css";
 
 @import "../../node_modules/preline/variants.css";
 @source "../../node_modules/preline/dist/index.mjs";

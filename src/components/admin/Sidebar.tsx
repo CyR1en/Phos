@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { useConfig } from '../../lib/admin/store'
-import { version } from '../../../package.json'
+import { Globe, House, UserRound, Mail, CircleAlert, FolderOpen, Images, Blocks, ArrowUpRight } from 'lucide-preact'
 import { SidebarResizeHandle } from './SidebarResizeHandle'
 import { Tooltip } from './ui/Tooltip'
 
@@ -12,69 +12,11 @@ const NAV: Array<{ id: string; label: string }> = [
   { id: 'notFound', label: '404' },
 ]
 
+const NAV_ICONS = { site: Globe, home: House, about: UserRound, contact: Mail, notFound: CircleAlert, categories: FolderOpen, galleries: Images, plugins: Blocks }
+
 function getIcon(id: string, collapsed: boolean) {
-  const iconClass = `size-4${collapsed ? '' : ' mr-2.5'}`
-  switch (id) {
-    case 'site':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="2" y1="12" x2="22" y2="12" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-      )
-    case 'home':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-          <polyline points="9 22 9 12 15 12 15 22" />
-        </svg>
-      )
-    case 'about':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-      )
-    case 'contact':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect width="20" height="16" x="2" y="4" rx="2" />
-          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-        </svg>
-      )
-    case 'notFound':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="12" />
-          <line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-      )
-    case 'categories':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      )
-    case 'galleries':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-          <circle cx="9" cy="9" r="2" />
-          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-        </svg>
-      )
-    case 'plugins':
-      return (
-        <svg class={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-        </svg>
-      )
-    default:
-      return null
-  }
+  const Icon = NAV_ICONS[id as keyof typeof NAV_ICONS]
+  return Icon ? <Icon size={17} strokeWidth={1.75} className={collapsed ? '' : 'mr-3'} aria-hidden="true" /> : null
 }
 
 interface SidebarProps {
@@ -190,7 +132,7 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
         onClick={onClick}
         data-measure="nav-item"
         aria-current={active ? 'page' : undefined}
-        class={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-3'} py-2 text-sm font-medium rounded-sm transition-all duration-150 ${
+        class={`admin-nav-button w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-3'} py-2 text-sm font-medium rounded-sm transition-all duration-150 ${
           active
             ? 'bg-surface text-ink shadow-2xs font-semibold'
             : 'text-body-muted hover:bg-surface/40 hover:text-ink'
@@ -229,7 +171,7 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
             <div class="flex items-center gap-2.5">
               <img src="/logo.svg" alt="Phos Logo" class="h-6 w-auto dark:invert" />
               <div>
-                <p class="font-display font-semibold text-base text-ink leading-tight">
+                <p class="admin-brand font-semibold text-base text-ink leading-tight">
                   Phos Admin
                 </p>
               </div>
@@ -276,7 +218,7 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
           <nav class={`py-4 space-y-6 ${isCollapsed ? 'px-2' : 'px-3'}`}>
             <div class="space-y-1">
               {!isCollapsed && (
-                <p class="px-3 text-xs font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
+                <p class="px-3 admin-nav-label text-muted mb-2" data-measure="nav-header">
                   Pages
                 </p>
               )}
@@ -288,7 +230,7 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
 
             <div class="space-y-1">
               {!isCollapsed && (
-                <p class="px-3 text-xs font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
+                <p class="px-3 admin-nav-label text-muted mb-2" data-measure="nav-header">
                   Content
                 </p>
               )}
@@ -299,7 +241,7 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
             {hasPlugins && (
               <div class="space-y-1">
                 {!isCollapsed && (
-                  <p class="px-3 text-xs font-mono uppercase tracking-wider text-muted mb-2" data-measure="nav-header">
+                  <p class="px-3 admin-nav-label text-muted mb-2" data-measure="nav-header">
                     Extensions
                   </p>
                 )}
@@ -309,19 +251,10 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
           </nav>
         </div>
         <div class={`mt-auto border-t border-border p-4 bg-surface/10 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`} data-measure="nav-item">
-          {isCollapsed ? (
-            <div class="flex items-center justify-center">
-              <span class="size-2 rounded-full bg-success animate-pulse" title="System Active" />
-            </div>
-          ) : (
-            <>
-              <div class="flex items-center gap-2">
-                <span class="size-2 rounded-full bg-success animate-pulse" />
-                <span class="text-xs text-muted">System Active</span>
-              </div>
-              <span class="text-xs text-muted">v{version}</span>
-            </>
-          )}
+          <a href="/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-sm text-muted hover:text-ink" aria-label="View website">
+            <ArrowUpRight size={17} strokeWidth={1.75} aria-hidden="true" />
+            {!isCollapsed && 'View website'}
+          </a>
         </div>
 
         {/* Sidebar Resize Handle */}

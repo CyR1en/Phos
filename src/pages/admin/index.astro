@@ -1,6 +1,7 @@
 ---
 import { Dashboard } from '../../components/admin/Dashboard.tsx'
 import '../../styles/global.css'
+import '../../styles/admin.css'
 ---
 
 <!DOCTYPE html>
@@ -8,13 +9,8 @@ import '../../styles/global.css'
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Admin — Phos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <title>Admin | Phos</title>
+    <link rel="preload" href="/fonts/dm-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <script is:inline>
       (function() {
         var stored = localStorage.getItem('theme');
@@ -36,7 +32,7 @@ import '../../styles/global.css'
       })();
     </script>
   </head>
-  <body class="font-body antialiased">
+  <body class="admin-app font-body antialiased">
     <div id="admin-root">
       <a
         href="#admin-main"

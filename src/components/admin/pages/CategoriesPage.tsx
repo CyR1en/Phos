@@ -93,10 +93,7 @@ export function CategoriesPage() {
   if (!categories || categories.length === 0) {
     return (
       <div class="max-w-3xl space-y-6">
-        <div class="space-y-1">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-            Photos
-          </h2>
+        <div class="admin-page-heading">
           <h1 class="font-display text-3xl font-bold text-ink">
             Categories
           </h1>
@@ -155,10 +152,7 @@ export function CategoriesPage() {
 
   return (
     <div class="max-w-4xl space-y-8">
-      <div class="space-y-1">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-          Photos
-        </h2>
+      <div class="admin-page-heading">
         <h1 class="font-display text-3xl font-bold text-ink">
           Categories
         </h1>

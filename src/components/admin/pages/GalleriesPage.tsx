@@ -5,6 +5,8 @@ import { useConfig } from '../../../lib/admin/store'
 import type { Gallery, GalleryPhoto } from '../../../lib/admin/types'
 import { Button } from '../ui/Button'
 import { Section } from '../ui/Section'
+import { LoadingState } from '../ui/LoadingState'
+import { Images } from 'lucide-preact'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -168,10 +170,7 @@ function GalleryEditor({
           </svg>
           Back to Galleries
         </button>
-        <div class="space-y-1">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-            Gallery Editor
-          </h2>
+        <div class="admin-page-heading">
           <h1 class="font-display text-3xl font-bold text-ink">
             {gallery.name}
           </h1>
@@ -510,10 +509,7 @@ export function GalleriesPage() {
   return (
     <div class="max-w-4xl space-y-8">
       <div class="flex items-center justify-between gap-4 border-b border-border pb-6">
-        <div class="space-y-1">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-            Portfolio
-          </h2>
+        <div class="admin-page-heading">
           <h1 class="font-display text-3xl font-bold text-ink">
             Galleries
           </h1>
@@ -574,17 +570,18 @@ export function GalleriesPage() {
       )}
 
       {galleriesQuery.isLoading ? (
-        <div class="flex items-center justify-center p-12">
-          <svg class="animate-spin h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-          </svg>
-          <span class="ml-3 text-sm text-muted">Loading galleries...</span>
+        <LoadingState label="Loading galleries" />
+      ) : galleriesQuery.isError ? (
+        <div class="admin-empty" role="alert">
+          <h2>Unable to load galleries</h2>
+          <p>Your collections could not be loaded. Please try again.</p>
+          <Button variant="secondary" onClick={() => galleriesQuery.refetch()}>Try again</Button>
         </div>
       ) : galleries.length === 0 ? (
-        <div class="border border-dashed border-border rounded-sm p-12 text-center bg-surface/20">
-          <p class="text-sm text-muted">
-            No galleries yet. Create one to start curating photo collections.
-          </p>
+        <div class="admin-empty">
+          <Images size={32} strokeWidth={1.5} aria-hidden="true" />
+          <h2>Your first collection starts here</h2>
+          <p>Create a gallery to bring photographs together around a shoot, a subject, or a story.</p>
         </div>
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

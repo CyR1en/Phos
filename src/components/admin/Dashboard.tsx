@@ -12,6 +12,13 @@ import { ThemeToggle } from './ui/ThemeToggle'
 import { SaveIcon, RepublishPhotosIcon, RepublishSiteIcon, SignOutIcon, SpinnerIcon } from './ui/Icons'
 import { ConfigProvider, useConfig } from '../../lib/admin/store'
 import { ErrorBoundary } from './ErrorBoundary'
+import { Menu, Monitor } from 'lucide-preact'
+import { LoadingState } from './ui/LoadingState'
+
+const PAGE_LABELS: Record<string, string> = {
+  site: 'Site', home: 'Home', about: 'About', contact: 'Contact', notFound: '404',
+  categories: 'Categories', galleries: 'Galleries', plugins: 'Plugins',
+}
 
 const SitePage = lazy(() => import('./pages/SitePage').then(m => ({ default: m.SitePage })))
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
@@ -34,7 +41,7 @@ const queryClient = new QueryClient({
 function PageRouter() {
   const { currentPage } = useConfig()
   return (
-    <Suspense fallback={<div class="p-8 text-muted">Loading...</div>}>
+    <Suspense fallback={<LoadingState />}>
       {(() => {
         switch (currentPage) {
           case 'site':
@@ -77,6 +84,15 @@ function DashboardBody() {
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorageState('admin.sidebar.collapsed', false)
   const [previewVisible, setPreviewVisible] = useLocalStorageState('admin.preview.visible', true)
   const [previewWidth, setPreviewWidth] = useLocalStorageState('admin.preview.width', 480)
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth)
+  const previewAvailable = viewportWidth >= 1280
+  const effectivePreviewWidth = Math.min(previewWidth, viewportWidth - (sidebarCollapsed ? 56 : sidebarWidth) - 544)
+
+  useEffect(() => {
+    const resize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', resize)
+    return () => window.removeEventListener('resize', resize)
+  }, [])
 
   useEffect(() => {
     if (!sidebarCollapsed && sidebarWidth <= 200) {
@@ -159,10 +175,10 @@ function DashboardBody() {
 
   return (
     <div
-      class="min-h-screen bg-canvas flex"
+      class="admin-shell bg-canvas flex"
       style={{
         '--sidebar-width': `${sidebarCollapsed ? 56 : sidebarWidth}px`,
-        '--preview-width': `${previewVisible ? previewWidth : 0}px`,
+        '--preview-width': `${previewVisible && previewAvailable ? effectivePreviewWidth : 0}px`,
       } as any}
     >
       <Sidebar
@@ -172,19 +188,18 @@ function DashboardBody() {
         setCollapsed={setSidebarCollapsed}
       />
       <main ref={mainRef} id="admin-main" class="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden md:ml-[var(--sidebar-width)] md:mr-[var(--preview-width)]">
-        <header class="fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 md:right-[var(--preview-width)] z-40 h-[calc(4rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] border-b border-border box-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/60 text-ink">
-          <div class="h-full px-4 md:px-8 flex items-center justify-between md:justify-end gap-4">
+        <header class="admin-toolbar fixed top-0 left-0 md:left-[var(--sidebar-width)] right-0 md:right-[var(--preview-width)] z-40 h-[calc(4rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] border-b border-border box-border text-ink">
+          <div class="admin-toolbar-inner h-full px-4 md:px-8 flex items-center">
+            <span class="admin-toolbar-title">{PAGE_LABELS[currentPage]}</span>
             <button
               type="button"
               data-hs-overlay="#admin-sidebar"
               class="md:hidden flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               aria-label="Open menu"
             >
-              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 12h18M3 6h18M3 18h18" />
-              </svg>
+              <Menu size={20} strokeWidth={1.75} aria-hidden="true" />
             </button>
-            <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto max-w-full scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div class="admin-toolbar-actions flex items-center gap-1 sm:gap-2 overflow-x-auto max-w-full scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               <style>{`
                 .scrollbar-hide::-webkit-scrollbar {
                   display: none;
@@ -221,12 +236,14 @@ function DashboardBody() {
                   disabled={running}
                   class="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:text-ink hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                   aria-label="Republish site"
+                  data-publish-button
                 >
                   {running ? <SpinnerIcon /> : <RepublishSiteIcon />}
+                  <span class="publish-label">Publish</span>
                 </button>
               </Tooltip>
               <div class="w-px h-4 bg-border mx-1" />
-              <div class="hidden md:block">
+              <div class="hidden xl:block">
                 <Tooltip text="Toggle preview">
                   <button
                     type="button"
@@ -236,11 +253,7 @@ function DashboardBody() {
                     }`}
                     aria-label="Toggle preview"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                      <line x1="8" y1="21" x2="16" y2="21" />
-                      <line x1="12" y1="17" x2="12" y2="21" />
-                    </svg>
+                    <Monitor size={18} strokeWidth={1.75} aria-hidden="true" />
                   </button>
                 </Tooltip>
               </div>
@@ -258,14 +271,14 @@ function DashboardBody() {
             </div>
           </div>
         </header>
-        <div class="flex-1 pt-[calc(6rem+env(safe-area-inset-top,0px))] px-4 md:px-8 pb-4 md:pb-8 bg-canvas">
+        <div class="admin-content flex-1 bg-canvas">
           <PageRouter />
         </div>
       </main>
       <PreviewPanel
-        visible={previewVisible}
+        visible={previewVisible && previewAvailable}
         onClose={() => setPreviewVisible(false)}
-        width={previewWidth}
+        width={effectivePreviewWidth}
         onResize={setPreviewWidth}
         sidebarWidth={sidebarWidth}
         sidebarCollapsed={sidebarCollapsed}

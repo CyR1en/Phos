@@ -1,27 +1,25 @@
 ---
 import config from '@lib/config'
+const testimonials = config.home.testimonials.testimonials
 ---
 
-<section data-animate class="animate-reveal bg-surface">
-  <div class="mx-auto max-w-7xl px-6 py-16 lg:py-24 sm:px-6 lg:px-8">
-    <div class="max-w-3xl" data-animate-header class="opacity-0">
-      <p class="font-mono text-xs uppercase tracking-wider text-muted">Testimonials</p>
-      <h2 class="mt-4 font-display text-3xl sm:text-4xl text-ink" data-config="home.testimonials.heading">{config.home.testimonials.heading}</h2>
+{testimonials.length > 0 && (
+  <section data-animate class="site-section animate-reveal">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="max-w-3xl opacity-0" data-animate-header>
+        <h2 class="section-heading font-display text-ink" data-config="home.testimonials.heading">{config.home.testimonials.heading}</h2>
+      </div>
+      <div class="testimonial-grid">
+        {testimonials.map((t) => (
+          <figure class="testimonial">
+            <blockquote class="text-ink">&ldquo;{t.quote}&rdquo;</blockquote>
+            <figcaption>
+              <span class="text-sm font-semibold text-ink">{t.author}</span>
+              {t.role && <span class="block text-sm text-muted mt-1">{t.role}</span>}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
     </div>
-
-    <div class="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-      {config.home.testimonials.testimonials.map((t) => (
-        <figure class="rounded-sm bg-canvas p-8 border border-border">
-          <svg class="mb-6 h-6 w-6 text-accent" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/>
-          </svg>
-          <blockquote class="text-lg text-ink leading-relaxed">&ldquo;{t.quote}&rdquo;</blockquote>
-          <figcaption class="mt-6 border-t border-border pt-4">
-            <span class="text-sm font-medium text-ink">{t.author}</span>
-            {t.role && <span class="block text-xs text-muted mt-0.5">{t.role}</span>}
-          </figcaption>
-        </figure>
-      ))}
-    </div>
-  </div>
-</section>
+  </section>
+)}

@@ -93,10 +93,7 @@ export function SitePage() {
 
   return (
     <div class="max-w-3xl space-y-8">
-      <div class="space-y-1">
-        <p class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-          Site Configuration
-        </p>
+      <div class="admin-page-heading">
         <h1 class="font-display text-3xl font-bold text-ink">
           General Settings
         </h1>
@@ -114,18 +111,19 @@ export function SitePage() {
             rows={2}
           />
           <div class="border-t border-border pt-6 mt-6 space-y-4">
-            <h3 class="text-sm font-semibold text-ink uppercase tracking-wider font-mono">Logo</h3>
+            <h3 class="text-sm font-semibold text-ink">Logo</h3>
             <div class="p-4 bg-canvas/30 rounded-sm border border-border text-sm text-ink flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
               <span class="text-muted">Current Logo File</span>
               <div class="overflow-x-auto max-w-full">
-                <code class="font-mono text-xs font-semibold px-2.5 py-1 rounded-sm bg-surface border border-border text-primary block whitespace-nowrap">
+                <code class="font-mono text-xs font-semibold px-2.5 py-1 rounded-sm bg-surface border border-border text-ink block whitespace-nowrap">
                   {logoStatus?.light ?? 'none'}
                 </code>
               </div>
             </div>
             <div class="space-y-2">
-              <label class="text-xs font-medium text-muted block">Upload New Logo SVG/PNG</label>
+              <label for="site-logo-upload" class="text-xs font-medium text-muted block">Upload New Logo SVG/PNG</label>
               <input
+                id="site-logo-upload"
                 ref={lightInputRef}
                 type="file"
                 accept=".svg,.png,.jpg,.jpeg,.webp,.avif"

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRef } from "react";
-import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView, useMotionValueEvent } from "framer-motion";
 import { cn } from "@lib/utils";
 import type { PhotoPosition } from "@lib/admin/types";
 
@@ -32,7 +32,8 @@ function useMediaQuery(query: string): boolean {
 type StarLayerProps = {
 	count: number;
 	size: number;
-	transition: any;
+	duration: number;
+	active: boolean;
 	className?: string;
 };
 
@@ -51,13 +52,31 @@ function generateStars(count: number) {
 	return value;
 }
 
-function StarLayer({ count, size, transition, className }: StarLayerProps) {
+function StarLayer({ count, size, duration, active, className }: StarLayerProps) {
 	const boxShadow = generateStars(count);
+	const layer = useRef<HTMLDivElement>(null);
+	const animation = useRef<Animation | null>(null);
+
+	React.useEffect(() => {
+		// Native transforms avoid a JavaScript style update on every frame.
+		const drift = layer.current?.animate(
+			[{ transform: "translateY(0)" }, { transform: "translateY(-2000px)" }],
+			{ duration: duration * 1000, iterations: Infinity, easing: "linear" }
+		);
+		if (!drift) return;
+		drift.pause();
+		animation.current = drift;
+		return () => drift.cancel();
+	}, [duration]);
+
+	React.useEffect(() => {
+		if (active) animation.current?.play();
+		else animation.current?.pause();
+	}, [active, duration]);
 
 	return (
-		<motion.div
-			animate={{ y: [0, -2000] }}
-			transition={transition}
+		<div
+			ref={layer}
 			className={cn("absolute top-0 left-0 w-full h-[2000px]", className)}
 		>
 			{(
@@ -72,33 +91,43 @@ function StarLayer({ count, size, transition, className }: StarLayerProps) {
 					style={{ width: size, height: size, boxShadow }}
 				/>
 			) as any}
-		</motion.div>
+		</div>
 	) as any;
 }
 
-function ProgressiveImage({ src, thumb, alt, className, style, shouldLoadFull }: any) {
-	const [isLoaded, setIsLoaded] = React.useState(false);
+interface ProgressiveImageProps {
+	src: string;
+	thumb: string;
+	alt: string;
+	className: string;
+	style: React.CSSProperties;
+	shouldLoadFull: boolean;
+}
+
+function ProgressiveImage({ src, thumb, alt, className, style, shouldLoadFull }: ProgressiveImageProps) {
+	const [decodedSrc, setDecodedSrc] = React.useState<string | null>(null);
+
+	React.useEffect(() => {
+		if (!shouldLoadFull) return;
+		let cancelled = false;
+		const image = new Image();
+		image.decoding = "async";
+		image.src = src;
+		// Keep the thumbnail visible until its replacement is ready to paint.
+		image.decode().then(() => {
+			if (!cancelled) setDecodedSrc(src);
+		}).catch(() => {});
+		return () => { cancelled = true; };
+	}, [src, shouldLoadFull]);
 
 	return (
-		<>
-			<img
-				src={thumb}
-				alt={alt}
-				className={cn(className, isLoaded ? "opacity-0" : "opacity-100", "absolute inset-0 transition-opacity duration-1000")}
-				style={style}
-			/>
-			{shouldLoadFull && (
-				<img
-					src={src}
-					alt={alt}
-					onLoad={() => setIsLoaded(true)}
-					className={cn(className, isLoaded ? "opacity-100" : "opacity-0", "absolute inset-0 transition-opacity duration-1000")}
-					style={style}
-					loading="eager"
-					decoding="async"
-				/>
-			)}
-		</>
+		<img
+			src={decodedSrc === src ? src : thumb}
+			alt={alt}
+			className={cn(className, "absolute inset-0")}
+			style={style}
+			decoding="async"
+		/>
 	);
 }
 
@@ -127,6 +156,7 @@ export default function ImmersiveScrollGallery({
 	const container = useRef<HTMLDivElement | null>(null);
 
 	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 	const photos = isDesktop ? desktopPhotos : mobilePhotos;
 	const photoKey = photos.join("|");
 	const positions = isDesktop ? desktopPositions : mobilePositions;
@@ -138,16 +168,18 @@ export default function ImmersiveScrollGallery({
 		offset: ["start start", "end end"],
 	});
 
-	const scale4 = useTransform(scrollYProgress, [0.1, 1], [1, 4]);
-	const scale5 = useTransform(scrollYProgress, [0.1, 1], [1, 5]);
-	const scale6 = useTransform(scrollYProgress, [0.1, 1], [1, 6]);
-	const scale8 = useTransform(scrollYProgress, [0.1, 1], [1, 8]);
-	const scale9 = useTransform(scrollYProgress, [0.1, 1], [1, 9]);
+	// Photos have faded out at 80%; stop enlarging their composited surfaces there.
+	const imageProgress = useTransform(scrollYProgress, [0, 0.8], [0, 0.8]);
+	const scale4 = useTransform(imageProgress, [0.1, 1], [1, reducedMotion ? 1 : 4]);
+	const scale5 = useTransform(imageProgress, [0.1, 1], [1, reducedMotion ? 1 : 5]);
+	const scale6 = useTransform(imageProgress, [0.1, 1], [1, reducedMotion ? 1 : 6]);
+	const scale8 = useTransform(imageProgress, [0.1, 1], [1, reducedMotion ? 1 : 8]);
+	const scale9 = useTransform(imageProgress, [0.1, 1], [1, reducedMotion ? 1 : 9]);
 
 	const opacityImage = useTransform(scrollYProgress, [0.1, 0.8, 1], [1, 0, 0]);
 
 	const opacitySection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0, 1, 1]);
-	const scaleSection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0.8, 1, 1]);
+	const scaleSection2 = useTransform(scrollYProgress, [0.6, 0.8, 1], [reducedMotion ? 1 : 0.8, 1, 1]);
 
 	const pictures = React.useMemo(() => photos.map((src: string, index: number) => {
 		return {
@@ -162,6 +194,12 @@ export default function ImmersiveScrollGallery({
 	const stickyRef = useRef<HTMLDivElement | null>(null);
 	const inView = useInView(stickyRef, { amount: "some", once: false });
 	const shouldRenderStars = shouldLoadFullImages || inView;
+	const [starsVisible, setStarsVisible] = React.useState(false);
+	const [imagesVisible, setImagesVisible] = React.useState(true);
+	useMotionValueEvent(scrollYProgress, "change", (progress) => {
+		setStarsVisible(progress > 0.6);
+		setImagesVisible(progress < 0.8);
+	});
 
 	const offsetX = useMotionValue(0);
 	const offsetY = useMotionValue(0);
@@ -202,14 +240,6 @@ export default function ImmersiveScrollGallery({
 
 		const warmImages = () => {
 			setShouldLoadFullImages(true);
-			pictures.forEach(({ src }) => {
-				const img = new Image();
-				img.decoding = "async";
-				img.src = src;
-				if (img.decode) {
-					img.decode().catch(() => {});
-				}
-			});
 		};
 
 		const observer = new IntersectionObserver(
@@ -231,7 +261,7 @@ export default function ImmersiveScrollGallery({
 			<div
 				ref={stickyRef}
 				className="sticky top-0 h-[100vh] overflow-hidden"
-				onMouseMove={inView ? handleMouseMove : undefined}
+					onMouseMove={inView && starsVisible && !reducedMotion ? handleMouseMove : undefined}
 			>
 
 				{/* Stars Background (Fades in with the text) */}
@@ -245,21 +275,24 @@ export default function ImmersiveScrollGallery({
 							<StarLayer
 								count={300}
 								size={2}
-								transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+								duration={60}
+								active={inView && starsVisible && !reducedMotion}
 							/>
 						) as any}
 						{(
 							<StarLayer
 								count={150}
 								size={3}
-								transition={{ repeat: Infinity, duration: 90, ease: "linear" }}
+								duration={90}
+								active={inView && starsVisible && !reducedMotion}
 							/>
 						) as any}
 						{(
 							<StarLayer
 								count={50}
 								size={4}
-								transition={{ repeat: Infinity, duration: 120, ease: "linear" }}
+								duration={120}
+								active={inView && starsVisible && !reducedMotion}
 							/>
 						) as any}
 					</>
@@ -267,7 +300,10 @@ export default function ImmersiveScrollGallery({
 				</motion.div>
 
 			{/* Zooming Images — scaled down + offset down to center vertically and clear the nav bar */}
-			<div className="absolute inset-0 origin-center scale-[0.9] translate-y-[2.5vh] will-change-transform pointer-events-none">
+			<div
+				className="absolute inset-0 origin-center scale-[0.9] translate-y-[2.5vh] pointer-events-none"
+				style={{ visibility: imagesVisible ? "visible" : "hidden" }}
+			>
 				{pictures.map(({ src, thumb, scale }, index) => {
 					const pos = hasPositions ? positions![index] : null;
 					const zIndex = pos ? pos.z : undefined;
@@ -309,16 +345,16 @@ export default function ImmersiveScrollGallery({
 
 					const imgClassName = "object-cover w-full h-full";
 					const imgStyle = { 
-						transform: `translateZ(0) scale(${cropZoom})`, 
+						transform: `scale(${cropZoom})`,
 						transformOrigin: 'center',
 						objectPosition: `${cropX}% ${cropY}%`
 					};
 
 					return (
 						<motion.div
-							key={index}
-							style={{ scale, opacity: opacityImage, zIndex: resolvedZIndex } as any}
-							className="absolute flex items-center justify-center w-full h-full top-0 will-change-transform pointer-events-none"
+							key={`${src}-${index}`}
+							style={{ scale, opacity: opacityImage, zIndex: resolvedZIndex, willChange: inView && imagesVisible ? "transform" : "auto" } as any}
+							className="absolute flex items-center justify-center w-full h-full top-0 pointer-events-none"
 						>
 							{(
 								<div

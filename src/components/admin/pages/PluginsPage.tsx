@@ -158,10 +158,7 @@ export function PluginsPage() {
   if (!pluginConfigs) {
     return (
       <div class="max-w-3xl space-y-6">
-        <div class="space-y-1">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-            Extensions
-          </h2>
+        <div class="admin-page-heading">
           <h1 class="font-display text-3xl font-bold text-ink">Plugins</h1>
         </div>
         <div class="flex items-center justify-center p-12">
@@ -177,10 +174,7 @@ export function PluginsPage() {
   if (pluginConfigs.length === 0) {
     return (
       <div class="max-w-3xl space-y-6">
-        <div class="space-y-1">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-            Extensions
-          </h2>
+        <div class="admin-page-heading">
           <h1 class="font-display text-3xl font-bold text-ink">
             Plugins
           </h1>
@@ -199,10 +193,7 @@ export function PluginsPage() {
 
   return (
     <div class="max-w-3xl space-y-8">
-      <div class="space-y-1">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-          Extensions
-        </h2>
+      <div class="admin-page-heading">
         <h1 class="font-display text-3xl font-bold text-ink">
           Plugins
         </h1>
