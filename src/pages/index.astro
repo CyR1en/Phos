@@ -88,6 +88,7 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
               photoCount: gal.photoCount,
               blur: gal.coverBlur,
               link: `/galleries/${gal.slug}/`,
+              actionLabel: 'View gallery',
               displayTitle: item.title || undefined,
               displayDescription: item.description !== undefined ? item.description : undefined,
             }
@@ -104,23 +105,24 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
             photoCount: cat.photoCount,
             blur: cat.coverBlur,
             link: `/photos/all/?cat=${cat.slug}`,
+            actionLabel: 'View photos',
             displayTitle: item.title || undefined,
             displayDescription: item.description !== undefined ? item.description : undefined,
           }
         }).filter(Boolean)
 
         return (
-          <section id="showcase" data-animate class="site-section animate-reveal">
-            <div class="mx-auto max-w-7xl px-6 lg:px-8">
-              <div class="flex flex-wrap items-end justify-between gap-8">
+          <section id="showcase" class="showcase-section" aria-labelledby="showcase-heading">
+            <div class="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+              <div class="showcase-header">
                 <div data-animate-header class="opacity-0">
-                  <h2 class="section-heading font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
+                  <h2 id="showcase-heading" class="section-heading font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
                 </div>
-                <a href="/photos/all/" class="text-sm font-medium text-ink underline underline-offset-4 hover:opacity-80 transition-opacity">Browse all photos</a>
+                <a href="/photos/all/" class="showcase-browse">Browse all photos</a>
               </div>
 
               {items.length > 0 ? (
-                <div class="showcase-grid mt-12">
+                <div class="showcase-list">
                   {items.map((item: any) => (
                     <CategoryCard
                       name={item.name}
@@ -134,6 +136,7 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
                       link={item.link}
                       displayTitle={item.displayTitle}
                       displayDescription={item.displayDescription}
+                      actionLabel={item.actionLabel}
                     />
                   ))}
                 </div>
