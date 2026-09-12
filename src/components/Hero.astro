@@ -24,14 +24,14 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 ---
 
 {first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
-<section class="photo-hero relative flex items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval}>
+<section class="photo-hero relative flex items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval} style={`--hero-interval: ${slideshowInterval}ms`}>
   {heroPriority.length > 0 ? (
     <div class="absolute inset-0 z-0 hero-parallax pointer-events-none will-change-transform" id="hero-bg">
       {heroPriority.map((photo, i) => (
         <div
-          class="absolute inset-0 bg-cover bg-center"
+          class:list={["absolute inset-0 bg-cover bg-center hero-slide", i === 0 && "is-active"]}
           id={i === 0 ? 'hero-active-slide' : undefined}
-          style={`background-image: url('${photo.blur}'); opacity: ${i === 0 ? 1 : 0};${hasSlideshow ? ' transition: opacity 1.5s ease;' : ''}`}
+          style={`background-image: url('${photo.blur}'); opacity: ${i === 0 ? 1 : 0};${hasSlideshow ? ' transition: opacity 1.5s ease, transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);' : ''}`}
           data-hero-slide={i}
           role="img"
           aria-label={photo.title}
@@ -53,7 +53,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
 
   <div class="hero-content relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8">
     <div class="max-w-4xl">
-      <p data-hero-photographer class="hero-name font-body font-medium uppercase opacity-0" style="text-shadow: 0 1px 8px rgba(0,0,0,0.65);" data-config="about.photographer.name">{config.about.photographer.name}</p>
+      <p data-hero-photographer class="hero-name font-body font-medium uppercase opacity-0" data-config="about.photographer.name">{config.about.photographer.name}</p>
       <h1 data-hero-heading class="hero-heading mt-5 font-display text-[#f4f5f7]" data-config="home.hero.heading">
         {
           config.home.hero.heading.split(' ').map((word) => (
@@ -189,6 +189,7 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       function showSlide(index: number) {
         slides.forEach((s, i) => {
           ;(s as HTMLElement).style.opacity = i === index ? '1' : '0'
+          s.classList.toggle('is-active', i === index)
         })
         dots.forEach((d, i) => {
           d.setAttribute('aria-pressed', String(i === index))

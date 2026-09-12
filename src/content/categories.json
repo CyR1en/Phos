@@ -141,20 +141,6 @@
           "hero_priority": 0
         },
         {
-          "filename": "sample-04.jpg",
-          "title": "Sample 04",
-          "description": "",
-          "full": "/photos/full/cars/sample-04.jpg",
-          "thumb": "/photos/thumbs/cars/sample-04.webp",
-          "thumbMobile": "/photos/thumbs-mobile/cars/sample-04.webp",
-          "immersive": "/photos/immersive/cars/sample-04.webp",
-          "immersiveMobile": "/photos/immersive-mobile/cars/sample-04.webp",
-          "width": 3000,
-          "height": 2000,
-          "blur": "data:image/webp;base64,UklGRkQAAABXRUJQVlA4IDgAAADwAgCdASoUAA0APxFysFAsJqSisAgBgCIJZwAAg+9sSAD+7rAlA2shPi7BQhDXPl5qbQJz5UAAAA==",
-          "hero_priority": 3
-        },
-        {
           "filename": "sample-03.jpg",
           "title": "City Cruise",
           "description": "Silver sports car in Hamburg",
@@ -167,6 +153,20 @@
           "height": 7167,
           "blur": "data:image/webp;base64,UklGRsAAAABXRUJQVlA4ILQAAACQBACdASoUAB4APxF8tFQsJ6SjKAqpgCIJYwC2yAzsJ9L5XFgxji3EP6mKhyAA/TliYmVFDhMP/YAYHGzhwAxbZpx7d4GtMjb1hAR9S3Lv5OW76l5iLayXMFbUzeDeII+TXvczrsmIOPw8VTMm0vQRgvVHQ3DNqc+s0n1eYLR9H1J1Z/58ZbI5qUY1erzs3rZ5IRac/+9/oJ3OVOZPQZDd21GRfg2mtC3cbCG0TPRo/cKkAAA=",
           "hero_priority": 0
+        },
+        {
+          "filename": "sample-04.jpg",
+          "title": "Sample 04",
+          "description": "",
+          "full": "/photos/full/cars/sample-04.jpg",
+          "thumb": "/photos/thumbs/cars/sample-04.webp",
+          "thumbMobile": "/photos/thumbs-mobile/cars/sample-04.webp",
+          "immersive": "/photos/immersive/cars/sample-04.webp",
+          "immersiveMobile": "/photos/immersive-mobile/cars/sample-04.webp",
+          "width": 3000,
+          "height": 2000,
+          "blur": "data:image/webp;base64,UklGRkQAAABXRUJQVlA4IDgAAADwAgCdASoUAA0APxFysFAsJqSisAgBgCIJZwAAg+9sSAD+7rAlA2shPi7BQhDXPl5qbQJz5UAAAA==",
+          "hero_priority": 3
         },
         {
           "filename": "sample-05.jpg",
@@ -212,20 +212,6 @@
           "hero_priority": 0
         },
         {
-          "filename": "sample-03.jpg",
-          "title": "Floral Elegance",
-          "description": "Artistic portrait in floral dress",
-          "full": "/photos/full/portrait/sample-03.jpg",
-          "thumb": "/photos/thumbs/portrait/sample-03.webp",
-          "thumbMobile": "/photos/thumbs-mobile/portrait/sample-03.webp",
-          "immersive": "/photos/immersive/portrait/sample-03.webp",
-          "immersiveMobile": "/photos/immersive-mobile/portrait/sample-03.webp",
-          "width": 6000,
-          "height": 4000,
-          "blur": "data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAACwAwCdASoUAA0APxFysFAsJqSisAgBgCIJYgCdACFPcUkDmRvqgAD9zDGWSmZqAVzlqtHmEjm4HT5EAZ2HI23Q1IcIl+KNdYsg96R6ftmFoSZZxqHP8LTfFa1uf9QyMxcvgAAA",
-          "hero_priority": 0
-        },
-        {
           "filename": "sample-02.jpg",
           "title": "Editorial Style",
           "description": "Modern fashion portrait",
@@ -237,6 +223,20 @@
           "width": 2005,
           "height": 3024,
           "blur": "data:image/webp;base64,UklGRpIAAABXRUJQVlA4IIYAAABwBACdASoUAB4APxF2slGsJySnqA1RgCIJaQAAvewIsGk2uKpg/WnyIrqeQAD+3nkI5j6xVPKl9fv7VjZvWHJPPfQ8ny50q1I3UR7u9+PWfz+4397y0PCYdyzRjE9dAOIRtsJD7PLQa++IN7bFOYKKoSCW6Pg1uorpcb9LatFLuFYawcAAAA==",
+          "hero_priority": 0
+        },
+        {
+          "filename": "sample-03.jpg",
+          "title": "Floral Elegance",
+          "description": "Artistic portrait in floral dress",
+          "full": "/photos/full/portrait/sample-03.jpg",
+          "thumb": "/photos/thumbs/portrait/sample-03.webp",
+          "thumbMobile": "/photos/thumbs-mobile/portrait/sample-03.webp",
+          "immersive": "/photos/immersive/portrait/sample-03.webp",
+          "immersiveMobile": "/photos/immersive-mobile/portrait/sample-03.webp",
+          "width": 6000,
+          "height": 4000,
+          "blur": "data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAACwAwCdASoUAA0APxFysFAsJqSisAgBgCIJYgCdACFPcUkDmRvqgAD9zDGWSmZqAVzlqtHmEjm4HT5EAZ2HI23Q1IcIl+KNdYsg96R6ftmFoSZZxqHP8LTfFa1uf9QyMxcvgAAA",
           "hero_priority": 0
         },
         {

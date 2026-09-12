@@ -44,7 +44,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
         All
       </button>
       {categories.map((cat) => (
-        <button class="filter-btn text-sm font-medium rounded-pill border border-border px-4 py-2 text-ink hover:border-primary min-h-[36px] transition-colors" data-filter={cat.slug} aria-pressed="false">
+        <button class="filter-btn text-sm font-medium rounded-pill border border-border px-4 py-2 text-ink min-h-[36px] transition-colors" data-filter={cat.slug} aria-pressed="false">
           {cat.name}
         </button>
       ))}

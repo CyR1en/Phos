@@ -39,7 +39,6 @@ const serialized = JSON.stringify(photos)
 
   <div class="flex-1 min-h-0 w-full flex items-center justify-center p-4 sm:p-12">
     <div class="relative max-h-full max-w-full flex items-center justify-center">
-      <div id="lightbox-blur" class="absolute inset-0 rounded-xs bg-cover bg-center blur-xl" style="display:none"></div>
       <img id="lightbox-img" class="max-h-full max-w-full w-auto h-auto object-contain select-none rounded-xs cursor-zoom-in" src="" alt="" style="transition: opacity 0.3s ease, transform 0.3s ease" />
       <div id="lightbox-error" class="absolute inset-0 hidden flex-col items-center justify-center rounded-xs bg-black/60 text-white/60 text-sm">
         <span>Failed to load image</span>
@@ -65,7 +64,6 @@ const serialized = JSON.stringify(photos)
     if (!lightbox) return
 
     const img = document.getElementById('lightbox-img') as HTMLImageElement
-    const blurEl = document.getElementById('lightbox-blur')!
     const errorEl = document.getElementById('lightbox-error')!
     const titleEl = document.getElementById('lightbox-title')!
     const counterEl = document.getElementById('lightbox-counter')!
@@ -133,13 +131,12 @@ const serialized = JSON.stringify(photos)
       img.src = photo.full
       img.alt = photo.title
       errorEl.classList.add('hidden')
-      showBlur(photo)
       updateMeta(photo, data)
 
-      img.onload = () => { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
-      img.onerror = () => { img.style.opacity = '1'; showError(); hideBlur() }
+      img.onload = () => { img.style.opacity = '1'; preloadAdjacent(data) }
+      img.onerror = () => { img.style.opacity = '1'; showError() }
 
-      if (img.complete && img.naturalWidth) { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
+      if (img.complete && img.naturalWidth) { img.style.opacity = '1'; preloadAdjacent(data) }
 
       lightbox!.classList.remove('hidden')
       lastFocused = document.activeElement as HTMLElement | null
@@ -174,15 +171,6 @@ const serialized = JSON.stringify(photos)
       }, 200)
     }
 
-    function showBlur(photo: any) {
-      if (photo.blur) {
-        blurEl.style.display = 'block'
-        blurEl.style.backgroundImage = `url('${photo.blur}')`
-      }
-    }
-
-    function hideBlur() { blurEl.style.display = 'none' }
-
     function showError() { errorEl.classList.remove('hidden') }
 
     function updateMeta(photo: any, data: any[]) {
@@ -199,7 +187,6 @@ const serialized = JSON.stringify(photos)
       img.style.transform = 'none'
       img.style.opacity = '0'
       errorEl.classList.add('hidden')
-      showBlur(photo)
       updateMeta(photo, data)
 
       function onFadeOut(e: TransitionEvent) {
@@ -221,10 +208,10 @@ const serialized = JSON.stringify(photos)
       img.style.transform = 'none'
       img.src = photo.full
       img.alt = photo.title
-      img.onload = () => { hideBlur(); img.style.opacity = '1'; transitioning = false; preloadAdjacent(data) }
-      img.onerror = () => { showError(); hideBlur(); img.style.opacity = '1'; transitioning = false }
+      img.onload = () => { img.style.opacity = '1'; transitioning = false; preloadAdjacent(data) }
+      img.onerror = () => { showError(); img.style.opacity = '1'; transitioning = false }
       if (img.complete && img.naturalWidth) {
-        hideBlur(); img.style.opacity = '1'; transitioning = false; preloadAdjacent(data)
+        img.style.opacity = '1'; transitioning = false; preloadAdjacent(data)
       }
     }
 
@@ -357,12 +344,11 @@ const serialized = JSON.stringify(photos)
         img.src = photo.full
         img.alt = photo.title
         errorEl.classList.add('hidden')
-        showBlur(photo)
         updateMeta(photo, data)
         cancelPreload()
-        img.onload = () => { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
-        img.onerror = () => { img.style.opacity = '1'; showError(); hideBlur() }
-        if (img.complete && img.naturalWidth) { img.style.opacity = '1'; hideBlur(); preloadAdjacent(data) }
+        img.onload = () => { img.style.opacity = '1'; preloadAdjacent(data) }
+        img.onerror = () => { img.style.opacity = '1'; showError() }
+        if (img.complete && img.naturalWidth) { img.style.opacity = '1'; preloadAdjacent(data) }
       }
     }
   }

@@ -23,7 +23,28 @@
   text-wrap: balance;
 }
 .public-site p { text-wrap: pretty; }
-.site-header { background: var(--color-canvas); }
+.public-site ::selection {
+  background: color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+/* Transparent over the page top, frosted glass once scrolled.
+   .is-scrolled is toggled by the #header-sentinel IntersectionObserver in Header.astro. */
+.site-header {
+  background-color: transparent;
+  border-bottom-color: transparent;
+  transition: background-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    -webkit-backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.site-header.is-scrolled {
+  background-color: color-mix(in srgb, var(--color-canvas) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom-color: var(--color-border);
+  box-shadow: 0 12px 32px -22px color-mix(in srgb, var(--color-ink) 30%, transparent);
+}
 .site-nav { height: var(--site-header-height); }
 .site-brand { min-width: 32px; }
 .site-brand svg { display: block; height: 28px; width: auto; }
@@ -36,7 +57,7 @@
   color: var(--color-muted);
 }
 .site-nav-link:hover, .site-nav-link[aria-current="page"] { color: var(--color-ink); }
-.site-nav-link[aria-current="page"]::after {
+.site-nav-link::after {
   content: "";
   position: absolute;
   height: 2px;
@@ -44,7 +65,16 @@
   left: 0;
   right: 0;
   background: var(--color-primary);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.site-nav-link:not([aria-current="page"]):hover::after {
+  transform: scaleX(1);
+  background: var(--color-ink);
+}
+.site-nav-link[aria-current="page"]::after { transform: scaleX(1); }
 .site-button {
   min-height: 44px;
   gap: 12px;
@@ -52,10 +82,19 @@
   white-space: nowrap;
   font-weight: 600;
   line-height: 1.25;
-  transition: opacity 180ms ease, transform 180ms ease;
+  /* translate/scale (not transform) so framer-motion inline transforms don't block the press feedback */
+  transition: translate 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    scale 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.site-button:hover { opacity: .86; }
-.site-button:active { transform: scale(.98); }
+.site-button:hover {
+  translate: 0 -1px;
+  box-shadow: 0 12px 28px -14px color-mix(in srgb, var(--color-ink) 35%, transparent);
+}
+.site-button:active { scale: .98; }
+.hero-primary:hover, .hero-secondary:hover { box-shadow: 0 12px 28px -14px rgb(0 0 0 / .45); }
 .site-button svg { flex-shrink: 0; width: 16px; height: 16px; }
 .site-section { padding-block: clamp(64px, 8vw, 112px); }
 .section-heading { font-size: clamp(32px, 3.6vw, 52px); line-height: 1.15; }
@@ -67,9 +106,49 @@
 .hero-secondary { background: rgb(26 29 43 / .5); color: #f4f5f7; border: 1px solid rgb(244 245 247 / .65); }
 .hero-name { color: #f4f5f7; font-size: 13px; letter-spacing: .12em; }
 .hero-slide-control { width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; border-radius: 999px; }
-.hero-slide-control::after { content: ""; width: 6px; height: 6px; border-radius: 999px; background: rgb(244 245 247 / .5); transition: width 250ms ease, background-color 250ms ease; }
+.hero-slide-control::after { content: ""; width: 6px; height: 6px; border-radius: 999px; background: rgb(244 245 247 / .5); transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1), background-color 300ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1); }
 .hero-slide-control[aria-pressed="true"]::after { width: 32px; background: #f4f5f7; }
+.hero-slide-control:hover::after { background: rgb(244 245 247 / .9); transform: scale(1.3); }
 .hero-slide-control:focus-visible { outline: 2px solid #f4f5f7; outline-offset: 2px; }
+
+/* Ken Burns: the active hero slide eases from 1.02 to 1.08 across the slide
+   interval. Resting scale equals the keyframe end, so dropping .is-active
+   mid-crossfade never snaps the outgoing image. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-slide { transform: scale(1.08); }
+  .hero-slide.is-active {
+    animation: heroKenBurns calc(var(--hero-interval, 8000ms) + 1600ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+@keyframes heroKenBurns {
+  from { transform: scale(1.02); }
+  to { transform: scale(1.08); }
+}
+
+/* Staggered child reveals: grid/list children cascade once the observed
+   [data-animate] ancestor receives [data-visible]. Never per-child observers,
+   so off-screen children still end fully visible. */
+.showcase-grid > *,
+.service-list > *,
+.testimonial-grid > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--stagger-i, 0) * 90ms),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--stagger-i, 0) * 90ms);
+}
+[data-visible] .showcase-grid > *,
+[data-visible] .service-list > *,
+[data-visible] .testimonial-grid > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+.showcase-grid > :nth-child(2), .service-list > :nth-child(2), .testimonial-grid > :nth-child(2) { --stagger-i: 1; }
+.showcase-grid > :nth-child(3), .service-list > :nth-child(3), .testimonial-grid > :nth-child(3) { --stagger-i: 2; }
+.showcase-grid > :nth-child(4), .service-list > :nth-child(4), .testimonial-grid > :nth-child(4) { --stagger-i: 3; }
+.showcase-grid > :nth-child(5), .service-list > :nth-child(5), .testimonial-grid > :nth-child(5) { --stagger-i: 4; }
+.showcase-grid > :nth-child(6), .service-list > :nth-child(6), .testimonial-grid > :nth-child(6) { --stagger-i: 5; }
+.showcase-grid > :nth-child(7), .service-list > :nth-child(7), .testimonial-grid > :nth-child(7) { --stagger-i: 6; }
+.showcase-grid > :nth-child(n+8), .service-list > :nth-child(n+8), .testimonial-grid > :nth-child(n+8) { --stagger-i: 7; }
 
 .service-list { display: grid; margin-top: 40px; }
 .service-item {
@@ -77,26 +156,110 @@
   grid-template-columns: 96px minmax(0, 1fr) auto;
   align-items: center;
   gap: 28px;
-  padding-block: 24px;
+  margin-inline: -12px;
+  padding: 24px 12px;
   border-top: 1px solid var(--color-border);
+  border-radius: 12px;
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--stagger-i, 0) * 90ms),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--stagger-i, 0) * 90ms),
+    background-color 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.service-item img { width: 96px; height: 112px; object-fit: cover; border-radius: 8px; }
+.service-item:hover { background-color: var(--color-surface); }
+.service-item img { width: 96px; height: 112px; object-fit: cover; border-radius: 8px; transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+.service-item:hover img { transform: scale(1.04); }
 .service-item h3 { font-size: clamp(24px, 3vw, 36px); }
-.service-item svg { width: 24px; height: 24px; transition: transform 200ms; }
+.service-item svg { width: 24px; height: 24px; transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1); }
 .service-item:hover svg { transform: translateX(4px); }
 .showcase-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px 32px; }
 .showcase-grid > :nth-child(even) { margin-top: 64px; }
-.photo-card { min-width: 0; }
-.photo-card-image { border-radius: 12px; }
+.photo-card {
+  min-width: 0;
+  border-radius: 12px;
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--stagger-i, 0) * 90ms),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--stagger-i, 0) * 90ms),
+    box-shadow 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.photo-card:hover { box-shadow: 0 16px 40px -16px color-mix(in srgb, var(--color-ink) 28%, transparent); }
+.photo-card-image {
+  border-radius: 12px;
+  /* Mounted-print hairline so photos read as finished pieces against the canvas */
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 8%, transparent);
+}
+.photo-card-image img {
+  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.photo-card:hover .photo-card-image img {
+  transform: scale(1.06);
+}
 .photo-card-copy { padding-top: 20px; }
 .photo-card-title { font-family: var(--font-body); font-size: 20px; font-weight: 500; }
 .photo-card-action { display: inline-flex; align-items: center; gap: 8px; }
-.photo-card-action svg { transition: transform 200ms; }
+.photo-card-action svg { transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1); }
 .photo-card:hover .photo-card-action svg { transform: translateX(4px); }
+
+/* Masonry photo tiles (photos/all + gallery detail) */
+.photo-card-wrap img {
+  transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.photo-card-wrap:hover img {
+  transform: scale(1.02);
+  box-shadow: 0 14px 32px -14px color-mix(in srgb, var(--color-ink) 30%, transparent);
+}
+
+/* Gallery cards on /galleries */
+.gallery-card {
+  transition: translate 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gallery-card:hover {
+  translate: 0 -2px;
+  box-shadow: 0 16px 40px -18px color-mix(in srgb, var(--color-ink) 25%, transparent);
+}
+.gallery-card img { transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1); }
+.gallery-card:hover img { transform: scale(1.05); }
+
+/* Category filter pills on /photos/all. State comes from aria-pressed +
+   JS-swapped classes, so hover colors must not rely on the removed classes. */
+.filter-btn {
+  transition: scale 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.filter-btn:hover {
+  border-color: var(--color-border-hover);
+  background-color: var(--color-surface);
+}
+.filter-btn[aria-pressed="true"]:hover {
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-primary-hover);
+}
+.filter-btn:active { scale: 0.97; }
+
+/* Lightbox controls: physical press feedback (script untouched) */
+#lightbox-close, #lightbox-prev, #lightbox-next {
+  transition: scale 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+#lightbox-close:active, #lightbox-prev:active, #lightbox-next:active { scale: 0.95; }
 
 .testimonial-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px 64px; margin-top: 48px; }
 .testimonial { padding-top: 24px; border-top: 1px solid var(--color-border); }
-.testimonial:first-child { grid-row: span 2; }
+.testimonial:first-child { grid-row: span 2; position: relative; }
+.testimonial:first-child::before {
+  content: "\201C";
+  position: absolute;
+  top: -0.32em;
+  left: -0.14em;
+  z-index: -1;
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 9vw, 7rem);
+  line-height: 1;
+  color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  pointer-events: none;
+}
 .testimonial blockquote { font-size: 18px; line-height: 1.6; }
 .testimonial:first-child blockquote { font-family: var(--font-display); font-size: clamp(24px, 2.3vw, 32px); line-height: 1.45; }
 .testimonial figcaption { margin-top: 24px; }
@@ -123,5 +286,6 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-reveal { opacity: 1; transform: none; }
   [data-animate-header], [data-hero-photographer], [data-hero-heading] span, [data-hero-ctas] > a { opacity: 1; transform: none; }
-  .public-site .group:hover img { transform: none; }
+  .showcase-grid > *, .service-list > *, .testimonial-grid > * { opacity: 1; transform: none; }
+  .public-site .group:hover img, .photo-card-wrap:hover img, .gallery-card:hover img { transform: none; }
 }

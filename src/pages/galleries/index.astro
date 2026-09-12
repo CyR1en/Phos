@@ -40,7 +40,7 @@ const ogDescription = config.portfolio?.og_description
         {galleries.map((gallery) => (
           <a
             href={`/galleries/${gallery.slug}/`}
-            class="group block rounded-lg overflow-hidden border border-border-light hover:border-border-hover transition-colors bg-canvas"
+            class="gallery-card block rounded-lg overflow-hidden border border-border-light hover:border-border-hover bg-canvas"
           >
             {gallery.cover && (
               <div class="aspect-[16/10] overflow-hidden bg-surface">
@@ -48,7 +48,7 @@ const ogDescription = config.portfolio?.og_description
                   src={gallery.cover}
                   alt={gallery.name}
                   loading="lazy"
-                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  class="w-full h-full object-cover"
                 />
               </div>
             )}

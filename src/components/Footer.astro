@@ -13,8 +13,16 @@ const ICONS: Record<string, string> = {
 ---
 
 <footer class="border-t border-border bg-canvas text-ink">
-  <div class="mx-auto max-w-7xl px-6 py-8 lg:px-8 flex items-center justify-between gap-4">
+  <div class="mx-auto max-w-7xl px-6 py-10 lg:px-8 flex flex-col items-center justify-between gap-6 sm:flex-row">
     <p class="text-xs text-muted">&copy; {year} <span data-config="about.photographer.name">{config.about.photographer?.name || ''}</span>. All rights reserved.</p>
+
+    <nav class="flex flex-wrap items-center justify-center gap-x-7 gap-y-2" aria-label="Footer">
+      <a href="/" class="text-sm text-muted hover:text-ink transition-colors">Home</a>
+      <a href="/galleries" class="text-sm text-muted hover:text-ink transition-colors">Galleries</a>
+      <a href="/photos/all" class="text-sm text-muted hover:text-ink transition-colors">Photos</a>
+      <a href="/about" class="text-sm text-muted hover:text-ink transition-colors">About</a>
+      <a href="/contact" class="text-sm text-muted hover:text-ink transition-colors">Contact</a>
+    </nav>
 
     {social.length > 0 && (
       <div class="flex gap-4">

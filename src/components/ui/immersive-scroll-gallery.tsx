@@ -386,7 +386,7 @@ export default function ImmersiveScrollGallery({
 				>
 					{(
 						<h2
-							className="text-ink text-2xl md:text-4xl font-thin py-4 font-display text-center [text-shadow:0_4px_8px_rgba(0,0,0,0.1)] dark:[text-shadow:0_0_20px_rgba(255,255,255,0.4)]"
+							className="text-ink text-2xl md:text-4xl font-thin py-4 font-display text-center"
 							style={{ lineHeight: 1.5 }}
 							data-config="home.immersiveGallery.text"
 						>

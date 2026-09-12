@@ -93,6 +93,7 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
+    font-feature-settings: "kern", "liga";
   }
   h1 { font-weight: 400; line-height: 1.05; font-size: clamp(48px, 8vw, 96px); }
   h2 { font-weight: 400; line-height: 1.1; font-size: clamp(36px, 5vw, 60px); }
@@ -173,8 +174,9 @@
 
 @utility animate-reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  transform: translateY(28px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 [data-visible].animate-reveal,
 .animate-reveal[data-visible],
@@ -276,6 +278,22 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Thin, theme-aware scrollbar on the public root scroller (token-driven, all
+   palettes). Scoped via :has() because viewport scrollbar styles must live on
+   <html>, and admin pages must keep native scrollbars. */
+html:has(> body.public-site) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-canvas);
+}
+html:has(> body.public-site)::-webkit-scrollbar { width: 10px; height: 10px; }
+html:has(> body.public-site)::-webkit-scrollbar-track { background: var(--color-canvas); }
+html:has(> body.public-site)::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 8px;
+  border: 2px solid var(--color-canvas);
+}
+html:has(> body.public-site)::-webkit-scrollbar-thumb:hover { background: var(--color-border-hover); }
 
 /* ATMOSPHERE — Subtle film grain on the public site body */
 @layer base {
