@@ -22,6 +22,7 @@ const THUMB_HEIGHT = 600
 const MOBILE_THUMB_WIDTH = 400
 const IMMERSIVE_WIDTH = 2200
 const IMMERSIVE_MOBILE_WIDTH = 1100
+const HD_SIZE = 3840
 const CONCURRENCY = 4
 
 async function ensureDir(dir) {
@@ -72,6 +73,32 @@ async function saveCache(cache) {
   await writeFile(CACHE_PATH, JSON.stringify(cache, null, 2))
 }
 
+function writeHd(input, hdPath) {
+  return sharp(input)
+    .resize(HD_SIZE, HD_SIZE, { fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toFile(hdPath)
+}
+
+// Responsive ladder used wherever a photo fills the screen (hero, lightbox).
+// Widths mirror how sharp sizes each variant; tiers that add no pixels are dropped.
+function buildSrcset(catSlug, name, width, height) {
+  if (!width || !height) return ''
+  const tiers = [
+    [`/photos/immersive-mobile/${catSlug}/${name}`, Math.min(width, IMMERSIVE_MOBILE_WIDTH)],
+    [`/photos/immersive/${catSlug}/${name}`, Math.min(width, IMMERSIVE_WIDTH)],
+    [`/photos/hd/${catSlug}/${name}`, Math.round(width * Math.min(1, HD_SIZE / Math.max(width, height)))],
+  ]
+  const candidates = []
+  let prevWidth = 0
+  for (const [url, w] of tiers) {
+    if (w <= prevWidth) continue
+    candidates.push(`${url} ${w}w`)
+    prevWidth = w
+  }
+  return candidates.join(', ')
+}
+
 async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
   const relPath = `${catSlug}/${file}`
   const srcStat = await stat(srcPath)
@@ -82,6 +109,7 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
   const mobileThumbPath = join(OUTPUT_DIR, 'thumbs-mobile', catSlug, thumbName)
   const immersivePath = join(OUTPUT_DIR, 'immersive', catSlug, thumbName)
   const immersiveMobilePath = join(OUTPUT_DIR, 'immersive-mobile', catSlug, thumbName)
+  const hdPath = join(OUTPUT_DIR, 'hd', catSlug, thumbName)
   const metaInfo = photoMeta[file] || {}
 
   const cached = cache.files[relPath]
@@ -95,6 +123,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
     existsSync(immersivePath) &&
     existsSync(immersiveMobilePath)
   ) {
+    // Backfill only the HD variant so existing libraries don't re-encode everything.
+    if (!existsSync(hdPath)) await writeHd(srcPath, hdPath)
     return {
       filename: file,
       title: metaInfo.title || titleize(parse(file).name),
@@ -104,6 +134,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
       thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
       immersive: `/photos/immersive/${catSlug}/${thumbName}`,
       immersiveMobile: `/photos/immersive-mobile/${catSlug}/${thumbName}`,
+      hd: `/photos/hd/${catSlug}/${thumbName}`,
+      srcset: buildSrcset(catSlug, thumbName, cached.width, cached.height),
       width: cached.width,
       height: cached.height,
       blur: cached.blur,
@@ -143,6 +175,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
       .resize(IMMERSIVE_MOBILE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toFile(immersiveMobilePath),
+
+    writeHd(srcBuf, hdPath),
   ])
 
   cache.files[relPath] = {
@@ -163,6 +197,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
     thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
     immersive: `/photos/immersive/${catSlug}/${thumbName}`,
     immersiveMobile: `/photos/immersive-mobile/${catSlug}/${thumbName}`,
+    hd: `/photos/hd/${catSlug}/${thumbName}`,
+    srcset: buildSrcset(catSlug, thumbName, imgMeta.width, imgMeta.height),
     width: imgMeta.width,
     height: imgMeta.height,
     blur,
@@ -228,11 +264,13 @@ async function processCategory(entry, cache) {
   const mobileThumbDir = join(OUTPUT_DIR, 'thumbs-mobile', catSlug)
   const immersiveDir = join(OUTPUT_DIR, 'immersive', catSlug)
   const immersiveMobileDir = join(OUTPUT_DIR, 'immersive-mobile', catSlug)
+  const hdDir = join(OUTPUT_DIR, 'hd', catSlug)
   await ensureDir(fullDir)
   await ensureDir(thumbDir)
   await ensureDir(mobileThumbDir)
   await ensureDir(immersiveDir)
   await ensureDir(immersiveMobileDir)
+  await ensureDir(hdDir)
 
   const photoMeta = meta.photos || {}
   const coverFile = meta.cover || files[0]
@@ -354,6 +392,8 @@ async function scanPhotos(sourceDir) {
           full: p.full,
           thumb: p.thumb,
           thumbMobile: p.thumbMobile,
+          hd: p.hd,
+          srcset: p.srcset,
           title: p.title,
           description: p.description,
           blur: p.blur,
@@ -401,6 +441,7 @@ async function main() {
         await rm(join(OUTPUT_DIR, 'thumbs-mobile', cat), { recursive: true, force: true }).catch(() => {})
         await rm(join(OUTPUT_DIR, 'immersive', cat), { recursive: true, force: true }).catch(() => {})
         await rm(join(OUTPUT_DIR, 'immersive-mobile', cat), { recursive: true, force: true }).catch(() => {})
+        await rm(join(OUTPUT_DIR, 'hd', cat), { recursive: true, force: true }).catch(() => {})
       }
     }
   }

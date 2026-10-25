@@ -3,6 +3,8 @@ export interface Props {
   heroPriority: Array<{
     full: string
     thumb: string
+    hd: string
+    srcset: string
     title: string
     description: string
     blur: string
@@ -18,12 +20,17 @@ import config from '@lib/config'
 
 const { heroPriority } = Astro.props
 const hasSlideshow = heroPriority.length > 1
-const first = heroPriority[0]
 const slideshowInterval = config.home.hero.slideshow_interval ?? 6000
 const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
+
+// The hero is a viewport-tall cover crop: when the viewport is narrower than the photo's
+// aspect ratio, the painted width follows the height rather than 100vw.
+function heroSizes(photo: { width: number | null; height: number | null }) {
+  if (!photo.width || !photo.height) return '100vw'
+  return `(max-aspect-ratio: ${photo.width}/${photo.height}) ${Math.ceil((photo.width / photo.height) * 100)}vh, 100vw`
+}
 ---
 
-{first?.thumb && <link rel="preload" href={first.thumb} as="image" fetchpriority="high" />}
 <section class="photo-hero relative flex items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval} style={`--hero-interval: ${slideshowInterval}ms`}>
   {heroPriority.length > 0 ? (
     <div class="absolute inset-0 z-0 hero-parallax pointer-events-none will-change-transform" id="hero-bg">
@@ -36,13 +43,24 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
           role="img"
           aria-label={photo.title}
         >
-          <img
-            src={photo.thumb}
-            data-full-src={photo.full}
-            alt={photo.title}
-            class="absolute inset-0 h-full w-full object-cover"
-            fetchpriority={i === 0 ? 'high' : 'low'}
-          />
+          {i === 0 ? (
+            <img
+              src={photo.hd}
+              srcset={photo.srcset}
+              sizes={heroSizes(photo)}
+              alt=""
+              class="absolute inset-0 h-full w-full object-cover"
+              fetchpriority="high"
+            />
+          ) : (
+            <img
+              data-src={photo.hd}
+              data-srcset={photo.srcset}
+              data-sizes={heroSizes(photo)}
+              alt=""
+              class="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
         </div>
       ))}
       <div class="absolute inset-0" style={`background: linear-gradient(to top, rgba(0,0,0,${overlayOpacity}) 0%, rgba(0,0,0,${overlayOpacity}) 10%, rgba(0,0,0,${overlayOpacity * 0.55}) 30%, rgba(0,0,0,${overlayOpacity * 0.08}) 45%, rgba(0,0,0,0) 55%);`} />
@@ -116,18 +134,6 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       document.addEventListener('astro:before-swap', () => observer.disconnect(), { once: true })
     }
 
-    if (slides.length > 0) {
-      // Lazy load full size images
-      slides.forEach((slide) => {
-        const img = slide.querySelector('img[data-full-src]') as HTMLImageElement | null
-        if (!img) return
-        const fullSrc = img.dataset.fullSrc
-        const fullImg = new Image()
-        fullImg.onload = () => { img.src = fullSrc || ''; img.removeAttribute('data-full-src') }
-        fullImg.src = fullSrc || ''
-      })
-    }
-
     const motionAllowed = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     if (motionAllowed) {
@@ -186,7 +192,25 @@ const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
       let current = 0
       let interval: ReturnType<typeof setInterval> | null = null
 
+      // Only the first slide's image is in the initial HTML; later slides are fetched
+      // one step ahead so they never compete with the slide on screen for bandwidth.
+      function warmSlide(index: number) {
+        const img = slides[index]?.querySelector('img[data-src]') as HTMLImageElement | null
+        if (!img) return
+        img.sizes = img.dataset.sizes || ''
+        img.srcset = img.dataset.srcset || ''
+        img.src = img.dataset.src || ''
+        img.removeAttribute('data-src')
+      }
+
+      if (motionAllowed) {
+        const firstImg = slides[0].querySelector('img')
+        firstImg?.decode().catch(() => {}).then(() => warmSlide(1))
+      }
+
       function showSlide(index: number) {
+        warmSlide(index)
+        if (motionAllowed) warmSlide((index + 1) % slides.length)
         slides.forEach((s, i) => {
           ;(s as HTMLElement).style.opacity = i === index ? '1' : '0'
           s.classList.toggle('is-active', i === index)

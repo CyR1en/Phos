@@ -4,6 +4,7 @@ export interface Photo {
   title: string
   full: string
   thumb: string
+  srcset: string
   width: number | null
   height: number | null
   blur: string
@@ -37,7 +38,7 @@ const serialized = JSON.stringify(photos)
     <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
   </button>
 
-  <div class="flex-1 min-h-0 w-full flex items-center justify-center p-4 sm:p-12">
+  <div id="lightbox-stage" class="flex-1 min-h-0 w-full flex items-center justify-center p-4 sm:p-12 [container-type:size]">
     <div class="relative max-h-full max-w-full flex items-center justify-center">
       <img id="lightbox-img" class="max-h-full max-w-full w-auto h-auto object-contain select-none rounded-xs cursor-zoom-in" src="" alt="" style="transition: opacity 0.3s ease, transform 0.3s ease" />
       <div id="lightbox-error" class="absolute inset-0 hidden flex-col items-center justify-center rounded-xs bg-black/60 text-white/60 text-sm">
@@ -64,6 +65,7 @@ const serialized = JSON.stringify(photos)
     if (!lightbox) return
 
     const img = document.getElementById('lightbox-img') as HTMLImageElement
+    const stage = document.getElementById('lightbox-stage')!
     const errorEl = document.getElementById('lightbox-error')!
     const titleEl = document.getElementById('lightbox-title')!
     const counterEl = document.getElementById('lightbox-counter')!
@@ -76,6 +78,7 @@ const serialized = JSON.stringify(photos)
     let transitioning = false
     let lastFocused: HTMLElement | null = null
     let isZoomed = false
+    let loadToken = 0
 
     function getPhotos(): any[] {
       try {
@@ -120,6 +123,64 @@ const serialized = JSON.stringify(photos)
       lastTap = currentTime
     })
 
+    // Lock the box to the photo's aspect ratio so the thumbnail and HD image paint at the
+    // same size; the stage is a size container, so this follows resizes on its own.
+    function fitImage(photo: any) {
+      if (photo.width && photo.height) {
+        img.style.aspectRatio = `${photo.width} / ${photo.height}`
+        img.style.width = `min(100cqw, 100cqh * ${photo.width / photo.height}, ${photo.width}px)`
+      } else {
+        img.style.aspectRatio = ''
+        img.style.width = ''
+      }
+    }
+
+    // The width fitImage resolves to, in CSS px, so srcset picks the right rendition.
+    function displayWidth(photo: any) {
+      const cs = getComputedStyle(stage)
+      const w = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      const h = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+      if (!photo.width || !photo.height) return Math.round(w)
+      return Math.round(Math.min(w, h * photo.width / photo.height, photo.width))
+    }
+
+    function setHdSource(el: HTMLImageElement, photo: any, sizes: string) {
+      if (!photo.srcset) { el.src = photo.full; return }
+      el.sizes = sizes
+      el.srcset = photo.srcset
+    }
+
+    // Paint the thumbnail (usually cached from the grid) straight away, then swap in the
+    // HD rendition once it has downloaded and decoded off-screen.
+    function loadPhoto(photo: any, data: any[], onShown: () => void) {
+      const token = ++loadToken
+      const isCurrent = () => token === loadToken
+      img.removeAttribute('srcset')
+      img.removeAttribute('sizes')
+      fitImage(photo)
+      img.src = photo.thumb
+      img.alt = photo.title
+      errorEl.classList.add('hidden')
+
+      img.decode().then(() => true, () => false).then((thumbShown) => {
+        if (!isCurrent()) return
+        if (thumbShown) onShown()
+        const sizes = `${displayWidth(photo)}px`
+        const hd = new Image()
+        setHdSource(hd, photo, sizes)
+        hd.decode().then(() => {
+          if (!isCurrent()) return
+          setHdSource(img, photo, sizes)
+          if (!thumbShown) onShown()
+          preloadAdjacent(data)
+        }, () => {
+          if (!isCurrent() || thumbShown) return
+          showError()
+          onShown()
+        })
+      })
+    }
+
     function open(idx: number) {
       const data = getPhotos()
       const photo = data[idx]
@@ -128,20 +189,15 @@ const serialized = JSON.stringify(photos)
       transitioning = false
       resetZoom()
       img.style.transform = 'none'
-      img.src = photo.full
-      img.alt = photo.title
-      errorEl.classList.add('hidden')
       updateMeta(photo, data)
 
-      img.onload = () => { img.style.opacity = '1'; preloadAdjacent(data) }
-      img.onerror = () => { img.style.opacity = '1'; showError() }
-
-      if (img.complete && img.naturalWidth) { img.style.opacity = '1'; preloadAdjacent(data) }
-
+      // Lay the stage out before loadPhoto measures it for `sizes`.
       lightbox!.classList.remove('hidden')
+      lightbox!.classList.add('flex')
+      loadPhoto(photo, data, () => { img.style.opacity = '1' })
+
       lastFocused = document.activeElement as HTMLElement | null
       ;requestAnimationFrame(() => {
-        lightbox!.classList.add('flex')
         closeBtn.focus()
         requestAnimationFrame(() => lightbox!.classList.add('lightbox-enter'))
 
@@ -155,6 +211,7 @@ const serialized = JSON.stringify(photos)
     }
 
     function close() {
+      loadToken++
       img.style.opacity = '0'
       resetZoom()
       img.style.transform = 'none'
@@ -206,30 +263,16 @@ const serialized = JSON.stringify(photos)
     function swapImage(photo: any, data: any[]) {
       resetZoom()
       img.style.transform = 'none'
-      img.src = photo.full
-      img.alt = photo.title
-      img.onload = () => { img.style.opacity = '1'; transitioning = false; preloadAdjacent(data) }
-      img.onerror = () => { showError(); img.style.opacity = '1'; transitioning = false }
-      if (img.complete && img.naturalWidth) {
-        img.style.opacity = '1'; transitioning = false; preloadAdjacent(data)
-      }
+      loadPhoto(photo, data, () => { img.style.opacity = '1'; transitioning = false })
     }
 
     function preloadAdjacent(data: any[]) {
-      document.querySelectorAll('link[rel="preload"][as="image"][data-lb]').forEach(el => el.remove())
       for (const i of [currentIndex - 1, currentIndex + 1]) {
-        if (i >= 0 && i < data.length) {
-          const link = document.createElement('link')
-          link.rel = 'preload'; link.as = 'image'
-          link.href = data[i].full
-          link.setAttribute('data-lb', '')
-          document.head.appendChild(link)
-        }
+        const photo = data[i]
+        if (!photo) continue
+        new Image().src = photo.thumb
+        setHdSource(new Image(), photo, `${displayWidth(photo)}px`)
       }
-    }
-
-    function cancelPreload() {
-      document.querySelectorAll('link[rel="preload"][as="image"][data-lb]').forEach(el => el.remove())
     }
 
     function prev() {
@@ -341,14 +384,8 @@ const serialized = JSON.stringify(photos)
         resetZoom()
         img.style.transform = 'none'
         img.style.opacity = '0'
-        img.src = photo.full
-        img.alt = photo.title
-        errorEl.classList.add('hidden')
         updateMeta(photo, data)
-        cancelPreload()
-        img.onload = () => { img.style.opacity = '1'; preloadAdjacent(data) }
-        img.onerror = () => { img.style.opacity = '1'; showError() }
-        if (img.complete && img.naturalWidth) { img.style.opacity = '1'; preloadAdjacent(data) }
+        loadPhoto(photo, data, () => { img.style.opacity = '1' })
       }
     }
   }

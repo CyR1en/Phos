@@ -197,6 +197,8 @@ export interface ManifestPhoto {
   full: string
   thumb: string
   thumbMobile: string
+  hd: string
+  srcset: string
   width: number | null
   height: number | null
   blur: string
@@ -220,6 +222,8 @@ export interface ManifestCategory {
 export interface HeroPriorityPhoto {
   full: string
   thumb: string
+  hd: string
+  srcset: string
   title: string
   description: string
   blur: string
