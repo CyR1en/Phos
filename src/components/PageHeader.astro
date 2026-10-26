@@ -29,7 +29,7 @@ const hasDetails = Boolean(description) || Astro.slots.has('actions')
   <div
     class:list={[
       containerClass,
-      'grid gap-6 opacity-0',
+      'grid gap-6',
       { 'lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-end': hasDetails },
     ]}
     data-animate-header

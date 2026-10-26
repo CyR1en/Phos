@@ -23,18 +23,18 @@
   display: block;
 }
 .photo-card-wrap img {
-  transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--duration-hover) var(--ease-out-expo);
 }
 .photo-card-wrap:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 4px;
 }
 .photo-card-wrap:focus-visible img {
-  transform: scale(1.02);
+  transform: scale(1.03);
 }
 @media (hover: hover) and (pointer: fine) {
   .photo-card-wrap:hover img {
-    transform: scale(1.02);
+    transform: scale(1.03);
   }
 }
 
@@ -43,5 +43,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .photo-card-wrap img { transition: none; }
   .photo-card-wrap:hover img, .photo-card-wrap:focus-visible img { transform: none; }
 }

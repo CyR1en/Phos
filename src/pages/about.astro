@@ -49,7 +49,7 @@ const ogDescription = config.about?.og_description
       'about-content relative min-w-0 flex-1 flex items-center',
       { 'px-6 lg:px-12 xl:px-16': aboutPhoto },
     ]}>
-      <div class="w-full opacity-0" data-animate-header>
+      <div class="w-full" data-animate-header>
         <p class="eyebrow">About</p>
         <h1 class="mt-6 text-h1 font-display text-ink" data-config="about.photographer.name">
           {config.about.photographer.name}
@@ -94,7 +94,7 @@ const ogDescription = config.about?.og_description
   {hasGear && (
     <section data-animate class="about-equipment animate-reveal">
       <div class="mx-auto max-w-text px-6 lg:px-8">
-        <div data-animate-header class="opacity-0">
+        <div data-animate-header>
           <p class="eyebrow">Equipment</p>
           <h2 class="mt-4 text-h2 font-display text-ink" data-config="about.gear.heading">
             {gearLabel}

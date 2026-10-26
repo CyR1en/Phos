@@ -46,7 +46,7 @@ function isActive(path: string) {
 ---
 
 <div id="header-sentinel" class="pointer-events-none absolute left-0 top-0 h-px w-full" aria-hidden="true"></div>
-<header class="sticky top-0 z-40 border-b border-border site-header">
+<header class="sticky top-0 z-40 border-b border-border site-header" transition:name="site-header" transition:animate="none">
   <nav class="mx-auto flex max-w-wide items-center justify-between px-6 lg:px-8 site-nav" aria-label="Primary">
     <a href="/" class="site-brand flex min-w-0 items-center gap-1.5" aria-label={brandName || 'Home'}>
       <div class="shrink-0">
@@ -68,11 +68,10 @@ function isActive(path: string) {
       )}
       <a href="/photos/all/" class="site-nav-link text-sm font-medium transition-colors" data-astro-prefetch="viewport" aria-current={isActive('/photos') ? 'page' : undefined}>Photos</a>
       <a href="/about" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/about') ? 'page' : undefined}>About</a>
-      <a href="/contact" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/contact') ? 'page' : undefined}>Contact</a>
     </div>
 
     <div class="flex shrink-0 items-center gap-3">
-      <a href="/contact" class="hidden lg:inline-flex site-button items-center rounded-pill bg-primary text-primary-text hover:bg-primary-hover">Get in touch</a>
+      <a href="/contact" class="hidden lg:inline-flex site-button items-center rounded-pill bg-primary text-primary-text hover:bg-primary-hover" aria-current={isActive('/contact') ? 'page' : undefined}>Get in touch</a>
       <ThemeToggle />
       <button id="menu-btn" type="button" class="flex h-11 w-11 items-center justify-center rounded-sm text-ink hover:bg-surface transition-colors lg:hidden" aria-label="Open menu" aria-controls="mobile-nav" aria-expanded="false">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -104,7 +103,7 @@ function isActive(path: string) {
       </svg>
     </button>
   </div>
-  <nav class="flex flex-col gap-2 px-6 pt-8">
+  <nav class="flex flex-col gap-2 px-6 pt-8" aria-label="Mobile">
     {hasGalleries && (
       <a href="/galleries" class:list={['rounded-sm px-4 py-3 text-sm font-medium transition-colors', isActive('/galleries') ? 'bg-surface text-ink font-semibold' : 'text-ink hover:bg-surface']} aria-current={isActive('/galleries') ? 'page' : undefined}>Galleries</a>
     )}
@@ -204,6 +203,8 @@ function isActive(path: string) {
       if (!mobileNav.open) finishClose()
     }, { signal })
     signal.addEventListener('abort', () => finishClose(false), { once: true })
+    // Remove the drawer before Astro captures the outgoing View Transition snapshot.
+    document.addEventListener('astro:after-preparation', () => finishClose(false), { signal })
     document.addEventListener('astro:before-swap', () => controller.abort(), { once: true, signal })
 
     finishClose(false)

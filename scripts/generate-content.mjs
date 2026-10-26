@@ -1,6 +1,6 @@
-import { readdir, stat, mkdir, readFile, writeFile, copyFile, rm, rename } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
-import { join, extname, parse, dirname } from 'node:path'
+import { readdir, stat, mkdir, readFile, writeFile, copyFile, rm, rename, unlink } from 'node:fs/promises'
+import { existsSync, realpathSync } from 'node:fs'
+import { join, extname, parse, dirname, resolve, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import sharp from 'sharp'
@@ -8,13 +8,16 @@ import yaml from 'yaml'
 import Database from 'better-sqlite3'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const ROOT = join(__dirname, '..')
+const DB_PATH = process.env.DB_PATH || join(ROOT, 'config', 'site.db')
 const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || (existsSync('/photos') ? '/photos' : join(__dirname, '..', 'photos'))
-const OUTPUT_DIR = join(__dirname, '..', 'public', 'photos')
-const CACHE_PATH = process.env.PHOTOS_CACHE_PATH || join(OUTPUT_DIR, '.cache.json')
+const PUBLIC_DIR = join(ROOT, 'public')
+const OUTPUT_DIR = join(PUBLIC_DIR, 'photos')
+const CACHE_PATH = resolveCachePath(process.env.PHOTOS_CACHE_PATH || join(dirname(DB_PATH), 'photos-cache.json'))
+const LEGACY_CACHE_PATH = join(OUTPUT_DIR, '.cache.json')
 const CACHE_VERSION = 2
 const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
 const GALLERIES_MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'galleries.json')
-const ROOT = join(__dirname, '..')
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff', '.bmp'])
 
@@ -39,6 +42,15 @@ const WEBP_QUALITY = { immersiveMobile: 80, w1600: 75, immersive: 84, w2880: 75,
 const OUTPUT_DIRS = { full: 'full', ...VARIANT_DIRS, avif: 'avif', heroPortrait: 'hero-portrait', og: 'og' }
 const PORTRAIT_SIZES = [[860, 1333], [1290, 2000]]
 const COVER_TIERS = ['thumb', 'immersiveMobile', 'immersive']
+
+function resolveCachePath(path) {
+  const absolute = resolve(path)
+  let existing = absolute
+  // Resolve symlinked ancestors too, including /var -> /private/var on macOS,
+  // so an override pointing at the legacy file is never mistaken for two files.
+  while (!existsSync(existing)) existing = dirname(existing)
+  return resolve(realpathSync(existing), relative(existing, absolute))
+}
 
 // Filenames may contain spaces or commas, either of which would split a srcset candidate;
 // percent-encode the file segment so the same URL is valid in src, href and srcset.
@@ -150,6 +162,24 @@ const limitEncode = createLimiter(CONCURRENCY)
 function pMap(items, fn, concurrency) {
   const limit = createLimiter(concurrency)
   return Promise.all(items.map((item) => limit(() => fn(item))))
+}
+
+async function migrateLegacyCache() {
+  if (CACHE_PATH === LEGACY_CACHE_PATH || !existsSync(LEGACY_CACHE_PATH)) return
+  if (existsSync(CACHE_PATH)) {
+    await rm(LEGACY_CACHE_PATH, { force: true })
+    console.log(`Removed legacy public photo cache at ${LEGACY_CACHE_PATH}; using ${CACHE_PATH}`)
+    return
+  }
+  await ensureDir(dirname(CACHE_PATH))
+  try {
+    await rename(LEGACY_CACHE_PATH, CACHE_PATH)
+  } catch (error) {
+    if (error.code !== 'EXDEV') throw error
+    await copyFile(LEGACY_CACHE_PATH, CACHE_PATH)
+    await unlink(LEGACY_CACHE_PATH)
+  }
+  console.log(`Migrated photo cache from ${LEGACY_CACHE_PATH} to ${CACHE_PATH}`)
 }
 
 async function loadCache() {
@@ -480,12 +510,13 @@ async function processCategory(dirName, cache, previousAssets) {
 
   const files = []
   for (const d of dirents) {
-    if (IMAGE_EXTENSIONS.has(extname(d.name).toLowerCase()) && !d.name.startsWith('.')) {
+    if (d.name.startsWith('.')) continue
+    if (IMAGE_EXTENSIONS.has(extname(d.name).toLowerCase())) {
       if (d.isSymbolicLink()) {
         console.warn(`[generate-content] Skipping symlink: ${join(entryPath, d.name)}`)
         continue
       }
-      files.push(d.name)
+      if (d.isFile()) files.push(d.name)
     }
   }
   files.sort()
@@ -569,11 +600,12 @@ async function scanPhotos(sourceDir, previousGalleries) {
 
   const slugToDir = {}
   for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue
     if (entry.isSymbolicLink()) {
       console.warn(`[generate-content] Skipping symlink: ${join(sourceDir, entry.name)}`)
       continue
     }
-    if (entry.isDirectory() && !entry.name.startsWith('.')) {
+    if (entry.isDirectory()) {
       slugToDir[slugify(entry.name)] = entry.name
     }
   }
@@ -662,6 +694,11 @@ async function scanPhotos(sourceDir, previousGalleries) {
 }
 
 async function main() {
+  if (CACHE_PATH === PUBLIC_DIR || CACHE_PATH.startsWith(`${PUBLIC_DIR}${sep}`)) {
+    console.warn(`[generate-content] Photo cache ${CACHE_PATH} is inside public/ and will be published; set PHOTOS_CACHE_PATH outside public/`)
+  }
+  await migrateLegacyCache()
+
   if (process.env.PHOS_SKIP_CONFIG_SYNC === '1') {
     console.log('Skipping site config sync (PHOS_SKIP_CONFIG_SYNC=1)')
   } else {
@@ -716,7 +753,6 @@ async function main() {
   let galleries = []
   let galleriesWritten = false
   try {
-    const DB_PATH = process.env.DB_PATH || join(ROOT, 'config', 'site.db')
     if (existsSync(DB_PATH)) {
       const db = new Database(DB_PATH, { readonly: true })
       db.pragma('foreign_keys = ON')

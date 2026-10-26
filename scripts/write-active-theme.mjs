@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { publicConfigJson } from '../lib/config-secrets.mjs'
 
 // The public bundle carries only the active palette. The admin's live preview (an iframe of the
 // public site) switches palettes without a rebuild, so every theme is also concatenated into a
@@ -7,6 +8,9 @@ const allThemesUrl = new URL('../public/themes-all.css', import.meta.url)
 const configUrl = new URL('../src/content/site-config.json', import.meta.url)
 const themesUrl = new URL('../src/styles/themes/', import.meta.url)
 const outputUrl = new URL('../src/styles/active-theme.css', import.meta.url)
+// The admin field editor needs the config's SHAPE for type inference; the build config itself
+// carries SMTP credentials and must never be inlined into a public /_assets bundle.
+const publicConfigUrl = new URL('../src/generated/site-config.public.json', import.meta.url)
 const config = JSON.parse(readFileSync(configUrl, 'utf8'))
 const themeFiles = readdirSync(themesUrl, { withFileTypes: true })
   .filter(entry => entry.isFile() && entry.name.endsWith('.css'))
@@ -101,6 +105,12 @@ try {
   content = `@import "./themes/${theme.slice('theme-'.length)}.css";\n`
 }
 if (writeChanged(outputUrl, content)) console.log(`Wrote active theme: ${theme}`)
+mkdirSync(new URL('../src/generated/', import.meta.url), { recursive: true })
+const publicConfig = publicConfigJson(config)
+writeChanged(publicConfigUrl, publicConfig)
+// The static copy under public/ (served by hosts without the admin proxy) must be stripped too,
+// even when the build skips the DB sync that would otherwise rewrite it.
+writeChanged(new URL('../public/site-config.json', import.meta.url), publicConfig)
 
 // Keep admin previews untrimmed so palette switching needs no rebuild.
 const allThemes = themeFiles

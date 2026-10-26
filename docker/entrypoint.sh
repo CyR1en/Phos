@@ -27,8 +27,9 @@ groupmod -g "$PGID" appuser
 chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config 2>/dev/null || true
 chmod 750 /config
 
+DB_PATH="${DB_PATH:-/config/site.db}"
 CONFIG_PATH="${CONFIG_PATH:-/config/site-config.json}"
-export CONFIG_PATH
+export DB_PATH CONFIG_PATH
 CONFIG_DEST="/app/src/content/site-config.json"
 
 # Persist default config if none exists
@@ -38,7 +39,7 @@ if [ ! -f "$CONFIG_PATH" ] && [ -f "$CONFIG_DEST" ]; then
 fi
 
 # Merge default config into persisted config (preserves user edits, adds new fields)
-node /app/scripts/merge-config.mjs "$CONFIG_DEST" "$CONFIG_PATH"
+su-exec appuser node /app/scripts/merge-config.mjs "$CONFIG_DEST" "$CONFIG_PATH"
 
 # Sync merged config to where Astro expects it
 su-exec appuser cp -f "$CONFIG_PATH" "$CONFIG_DEST"

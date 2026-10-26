@@ -1,0 +1,58 @@
+/* Restore the UA's plus-lighter blend in our root keyframes. Matching opacity
+   timing keeps their summed opacity at one throughout the page crossfade. */
+::view-transition-old(root) {
+  animation: phos-vt-out var(--duration-page) var(--ease-out-expo) both;
+}
+
+::view-transition-new(root) {
+  animation: phos-vt-in var(--duration-page) var(--ease-out-expo) both;
+}
+
+/* transition:animate="none" on the header already makes Astro disable the site-header group,
+   old and new animations in @layer astro; this only keeps the group stationary if that changes. */
+::view-transition-group(site-header) {
+  animation-duration: 0s;
+}
+
+/* Keep the header in the root snapshots for lightbox and theme transitions. */
+html:is(.lightbox-morphing, .theme-switching) .site-header {
+  view-transition-name: none;
+}
+
+/* Theme snapshots fade in place; only page navigation gets the rise. */
+html.theme-switching::view-transition-old(root) {
+  animation: phos-vt-out var(--duration-theme) var(--ease-in-out-sine) both;
+  transform: none;
+}
+
+html.theme-switching::view-transition-new(root) {
+  animation: phos-vt-fade-in var(--duration-theme) var(--ease-in-out-sine) both;
+  transform: none;
+}
+
+@keyframes phos-vt-out {
+  from { opacity: 1; mix-blend-mode: plus-lighter; }
+  to { opacity: 0; mix-blend-mode: plus-lighter; }
+}
+
+@keyframes phos-vt-in {
+  from { opacity: 0; transform: translateY(10px); mix-blend-mode: plus-lighter; }
+  to { opacity: 1; transform: translateY(0); mix-blend-mode: plus-lighter; }
+}
+
+@keyframes phos-vt-fade-in {
+  from { opacity: 0; mix-blend-mode: plus-lighter; }
+  to { opacity: 1; mix-blend-mode: plus-lighter; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(site-header),
+  ::view-transition-old(site-header),
+  ::view-transition-new(site-header),
+  html.theme-switching::view-transition-old(root),
+  html.theme-switching::view-transition-new(root) {
+    animation: none !important;
+  }
+}

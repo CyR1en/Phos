@@ -116,6 +116,10 @@
     color-scheme: dark;
   }
 
+  html:not(.dark) {
+    color-scheme: light;
+  }
+
   .dark h1, .dark h2 {
     letter-spacing: -0.015em;
   }

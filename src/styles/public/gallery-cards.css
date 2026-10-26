@@ -4,11 +4,11 @@
   outline-offset: 4px;
   border-radius: var(--radius-photo);
 }
-.gallery-card img { transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1); }
-.gallery-card:focus-visible img { transform: scale(1.02); }
+.gallery-card img { transition: transform var(--duration-hover) var(--ease-out-expo); }
+.gallery-card:focus-visible img { transform: scale(1.03); }
 
 @media (hover: hover) and (pointer: fine) {
-  .gallery-card:hover img { transform: scale(1.02); }
+  .gallery-card:hover img { transform: scale(1.03); }
 }
 
 @media (prefers-reduced-motion: reduce) {

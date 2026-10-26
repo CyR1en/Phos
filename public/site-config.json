@@ -139,14 +139,6 @@
       "heading": "Get in touch",
       "subheading": "",
       "submitBtn": "Send message"
-    },
-    "smtp": {
-      "host": "",
-      "port": 587,
-      "user": "",
-      "pass": "",
-      "fromEmail": "",
-      "toEmail": ""
     }
   },
   "notFound": {

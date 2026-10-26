@@ -66,9 +66,9 @@ body:has(.photo-hero) > main {
   height: 6px;
   border-radius: 999px;
   background: rgb(244 245 247 / .5);
-  transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width var(--duration-ui) var(--ease-out-expo),
+    background-color var(--duration-ui) var(--ease-out-expo),
+    transform var(--duration-ui) var(--ease-out-expo);
 }
 .hero-slide-control[aria-current='true']::after { width: 32px; background: #f4f5f7; }
 .hero-slide-control[data-hero-dot]:hover::after { background: rgb(244 245 247 / .9); transform: scale(1.3); }
@@ -78,7 +78,7 @@ body:has(.photo-hero) > main {
 .hero-pause[aria-pressed='true'] [data-hero-play-icon] { display: block; }
 .hero-credit { color: #f4f5f7; text-shadow: 0 1px 12px rgb(0 0 0 / .35); text-align: right; }
 .hero-credit:hover { color: #f4f5f7; text-decoration: underline; text-underline-offset: .35em; }
-.hero-slide { transition: opacity 1.4s cubic-bezier(0.37, 0, 0.63, 1); }
+.hero-slide { transition: opacity var(--duration-hero-crossfade) var(--ease-in-out-sine); }
 
 /* Keep the empty portfolio readable on the canvas in either theme. */
 .photo-hero[data-hero-empty] :is(.hero-heading, .hero-name, .hero-secondary) {
@@ -92,7 +92,7 @@ body:has(.photo-hero) > main {
   .photo-hero[data-ken-burns] .hero-slide { transform: scale(1.03); transform-origin: 30% 40%; }
   .photo-hero[data-ken-burns] .hero-slide:nth-child(even) { transform-origin: 70% 60%; }
   .photo-hero[data-ken-burns] .hero-slide.is-active {
-    animation: heroKenBurns calc(var(--hero-interval, 6000ms) + 1400ms) linear forwards;
+    animation: heroKenBurns calc(var(--hero-interval, var(--duration-hero-interval)) + var(--duration-hero-crossfade)) linear forwards;
   }
   .photo-hero[data-ken-burns][data-hero-paused='true'] .hero-slide { animation-play-state: paused; }
   @supports (animation-timeline: scroll()) {

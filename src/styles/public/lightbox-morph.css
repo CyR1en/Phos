@@ -1,6 +1,6 @@
 ::view-transition-group(lb-photo) {
-  animation-duration: 460ms;
-  animation-timing-function: cubic-bezier(.32, .72, 0, 1);
+  animation-duration: var(--duration-lightbox-morph);
+  animation-timing-function: var(--ease-sheet);
 }
 
 ::view-transition-old(lb-photo),
@@ -16,7 +16,7 @@ html.lightbox-morph-closing::view-transition-old(lb-photo) {
 }
 
 html.lightbox-morph-closing::view-transition-new(lb-photo) {
-  animation: lb-late-in 460ms cubic-bezier(.32, .72, 0, 1) both;
+  animation: lb-late-in var(--duration-lightbox-morph) var(--ease-sheet) both;
 }
 
 @keyframes lb-late-in {
@@ -24,9 +24,16 @@ html.lightbox-morph-closing::view-transition-new(lb-photo) {
   100% { opacity: 1; }
 }
 
-html.lightbox-morphing::view-transition-old(root),
+/* More specific than the page rules in transitions.css, and imported later:
+   replace the rise with paired fades for the entire lightbox morph. */
+html.lightbox-morphing::view-transition-old(root) {
+  animation: phos-vt-out var(--duration-lightbox-root) var(--ease-out-expo) both;
+  transform: none;
+}
+
 html.lightbox-morphing::view-transition-new(root) {
-  animation-duration: 200ms;
+  animation: phos-vt-fade-in var(--duration-lightbox-root) var(--ease-out-expo) both;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

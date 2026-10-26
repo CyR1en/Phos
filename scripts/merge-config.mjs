@@ -2,11 +2,11 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deepMerge } from '../lib/merge.mjs'
+import { publicConfigJson } from '../lib/config-secrets.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
-const DB_PATH = process.env.DB_PATH || join(ROOT, 'config', 'site.db')
 const SOURCE_JSON = process.argv[2] || join(ROOT, 'src', 'content', 'site-config.json')
 const DEST_JSON = process.argv[3] || join(ROOT, 'src', 'content', 'site-config.json')
 
@@ -20,8 +20,10 @@ function readJSON(p) {
 
 async function readFromSqlite() {
   const mod = await import('../lib/db.mjs')
-  const { assembleConfig } = mod
-  return assembleConfig()
+  const { assembleConfig, hasOwnerConfig } = mod
+  // A brand-new database has no owner config yet; preserve the persisted JSON instead of
+  // overwriting it with empty defaults. Migrated or admin-saved databases are authoritative.
+  return hasOwnerConfig() ? assembleConfig() : null
 }
 
 async function main() {
@@ -41,10 +43,10 @@ async function main() {
   writeFileSync(DEST_JSON, JSON.stringify(merged, null, 2), 'utf-8')
   console.log(`Wrote merged config to ${DEST_JSON}`)
 
-  // Also write to public/ so the main site can fetch /site-config.json in dev mode
+  // Only the build-time/persisted config keeps credentials; public/ is served as-is.
   const publicDir = join(ROOT, 'public')
   if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true })
-  writeFileSync(join(publicDir, 'site-config.json'), JSON.stringify(merged, null, 2), 'utf-8')
+  writeFileSync(join(publicDir, 'site-config.json'), publicConfigJson(merged), 'utf-8')
   console.log(`Wrote merged config to ${join(publicDir, 'site-config.json')}`)
 }
 

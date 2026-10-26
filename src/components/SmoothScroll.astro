@@ -29,7 +29,6 @@
         headers.unobserve(header)
         if (header.dataset.animated) return
         header.dataset.animated = 'true'
-        header.classList.remove('opacity-0')
         if (motionQuery.matches) return
         Array.from(header.children).forEach((child, i) => {
           child.animate([
@@ -50,7 +49,6 @@
       if (header.dataset.animated) return
       if (motionQuery.matches) {
         header.dataset.animated = 'true'
-        header.classList.remove('opacity-0')
         return
       }
       headers.observe(header)

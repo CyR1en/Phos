@@ -31,6 +31,7 @@ COPY --from=builder /app/tsconfig.json ./
 COPY --from=builder /app/admin ./admin
 
 COPY docker/nginx.conf.template /app/docker/nginx.conf.template
+COPY docker/nginx-security-headers.conf /app/docker/nginx-security-headers.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 
 RUN deluser node && delgroup node; \

@@ -1,0 +1,35 @@
+<!-- Hero.astro: three synthetic slides expose warming order; image URLs are test-only. -->
+<section class="photo-hero" data-hero-interval="6000" aria-roledescription="carousel" aria-label="Featured photographs">
+  <div id="hero-bg">
+    <div class="hero-slide is-active" data-hero-slide="0" data-hero-label="First" data-hero-credit-text="Street Photography" data-hero-credit-href="/photos/all/?cat=street" role="img" aria-label="First">
+      <picture>
+        <source media="(max-aspect-ratio: 4/5)" type="image/avif" srcset="/photos/hero-portrait/first.avif 860w" sizes="100vw">
+        <source media="(max-aspect-ratio: 4/5)" type="image/webp" srcset="/photos/hero-portrait/first.webp 860w" sizes="100vw">
+        <source type="image/avif" srcset="/photos/avif/first.avif 2200w" sizes="100vw">
+        <img src="/photos/immersive/first.webp" srcset="/photos/immersive/first.webp 2200w" sizes="100vw" alt="" fetchpriority="high" style="object-position: 34% 50%">
+      </picture>
+    </div>
+    <div class="hero-slide" data-hero-slide="1" data-hero-label="Second" data-hero-credit-text="Wedding Photography" data-hero-credit-href="/photos/all/?cat=wedding" aria-hidden="true">
+      <picture>
+        <source media="(max-aspect-ratio: 4/5)" type="image/avif" data-srcset="/photos/hero-portrait/second.avif 860w" data-sizes="100vw">
+        <source media="(max-aspect-ratio: 4/5)" type="image/webp" data-srcset="/photos/hero-portrait/second.webp 860w" data-sizes="100vw">
+        <source type="image/avif" data-srcset="/photos/avif/second.avif 2200w" data-sizes="100vw">
+        <img data-src="/photos/immersive/second.webp" data-srcset="/photos/immersive/second.webp 2200w" data-sizes="100vw" alt="">
+      </picture>
+    </div>
+    <div class="hero-slide" data-hero-slide="2" data-hero-label="Third" data-hero-credit-text="Third · Credit" data-hero-credit-href="/photos/all/?cat=third" aria-hidden="true">
+      <picture>
+        <source media="(max-aspect-ratio: 4/5)" type="image/avif" data-srcset="/photos/hero-portrait/third.avif 860w" data-sizes="100vw">
+        <source type="image/avif" data-srcset="/photos/avif/third.avif 2200w" data-sizes="100vw">
+        <img data-src="/photos/immersive/third.webp" data-srcset="/photos/immersive/third.webp 2200w" data-sizes="100vw" alt="">
+      </picture>
+    </div>
+  </div>
+  <div class="hero-controls" role="group" aria-label="Slideshow controls">
+    <button type="button" data-hero-dot="0" aria-current="true" aria-label="Show photo 1 of 3"></button>
+    <button type="button" data-hero-dot="1" aria-label="Show photo 2 of 3"></button>
+    <button type="button" data-hero-dot="2" aria-label="Show photo 3 of 3"></button>
+    <button type="button" class="hero-pause" aria-pressed="false" aria-label="Pause slideshow"></button>
+  </div>
+  <a data-hero-credit href="/photos/all/?cat=street">Street Photography</a>
+</section>

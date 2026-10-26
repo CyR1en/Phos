@@ -6,6 +6,7 @@ import {
   writeFile,
   readFile,
   readdir,
+  realpath,
   stat,
   rm,
   utimes,
@@ -19,6 +20,7 @@ import { dirname, join, relative } from 'node:path'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { repoRoot } from './helpers/bundle.mjs'
+import { stripSecrets } from '../lib/config-secrets.mjs'
 
 // Tier-specific expectations: change this table and the selections together when the
 // generator adds a rendition. All width descriptors must match the actual output.
@@ -60,6 +62,19 @@ const coverWidths = (w, h) => widths(w, h, COVER_TIERS)
 const gridWidths = (w, h) => widths(w, h, GRID_TIERS)
 const stageWidths = (w, h) => widths(w, h, STAGE_TIERS)
 
+test('stripSecrets removes the whole contact.smtp block without mutating input or other keys', () => {
+  const input = { site: { title: 'Test' }, contact: { format: { heading: 'Hello' }, smtp: { host: 'private.invalid', port: 587, user: 'user', pass: 'secret', fromEmail: 'private@invalid' } }, extra: [1, { keep: true }] }
+  const before = structuredClone(input)
+  const result = stripSecrets(input)
+  assert.deepEqual(input, before, 'input remains unchanged')
+  assert.ok(!Object.hasOwn(result.contact, 'smtp'), 'the complete SMTP object is absent')
+  const expected = structuredClone(before); delete expected.contact.smtp
+  assert.deepEqual(result, expected, 'all other keys survive')
+  result.contact.format.heading = 'Changed'
+  assert.equal(input.contact.format.heading, 'Hello', 'retained nested objects are cloned')
+  assert.deepEqual(stripSecrets({ site: { title: 'No contact' } }), { site: { title: 'No contact' } })
+})
+
 test('isolated content generator', { timeout: 180000 }, async (t) => {
   let sharp
   try {
@@ -75,7 +90,8 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     }
     assert.fail(message + '; install sharp, or explicitly opt out with PHOS_ALLOW_NO_SHARP=1')
   }
-  const ROOT = await mkdtemp(join(tmpdir(), 'phos-pipeline-'))
+  // Canonicalize macOS /var aliases so subprocess diagnostics use the same paths.
+  const ROOT = await realpath(await mkdtemp(join(tmpdir(), 'phos-pipeline-')))
   t.after(() => rm(ROOT, { recursive: true, force: true }))
   assert.notEqual(ROOT, repoRoot)
   await mkdir(join(ROOT, 'scripts'), { recursive: true })
@@ -953,6 +969,74 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
         hash(await readFile(path)) === before.hash && (await stat(path)).mtimeMs === before.mtimeMs)
     }
   }
+  // These final probes use one tiny source, so exercising the default cache path
+  // adds milliseconds rather than re-encoding the fidelity matrix. All earlier
+  // runs retain their explicit PHOTOS_CACHE_PATH and their existing snapshots.
+  const cacheSource = join(ROOT, 'cache-contract-photos')
+  const cacheDb = join(ROOT, 'state/cache-contract/site.db')
+  const defaultCache = join(dirname(cacheDb), 'photos-cache.json')
+  const legacyCache = join(OUT, '.cache.json')
+  const cacheEnv = { PHOTOS_SOURCE: cacheSource, PHOTOS_CACHE_PATH: '', DB_PATH: cacheDb }
+  await mkdir(join(cacheSource, 'Probe'), { recursive: true })
+  await mkdir(dirname(cacheDb), { recursive: true })
+  await cp(join(ROOT, 'config/site.db'), cacheDb)
+  await sharp({ create: { width: 64, height: 40, channels: 3, background: '#426a7e' } })
+    .png().toFile(join(cacheSource, 'Probe/seed.png'))
+  await rm(legacyCache, { force: true })
+
+  await t.test('default photo cache is written next to DB_PATH when PHOTOS_CACHE_PATH is empty', async () => {
+    assert.ok(!existsSync(defaultCache))
+    run('11-default-cache-path', cacheEnv)
+    assert.ok(existsSync(defaultCache), 'photos-cache.json beside the configured DB')
+    assert.ok(!existsSync(legacyCache), 'no hidden public cache is created')
+    assert.ok(!existsSync(join(ROOT, 'config/photos-cache.json')), 'does not silently use the default DB directory')
+    const cache = await json(defaultCache)
+    assert.equal(cache.version, CACHE_VERSION)
+    assert.ok(cache.files['probe/seed.png'])
+  })
+
+  await t.test('legacy public cache moves beside DB_PATH with its content and warm assets preserved', async () => {
+    const preserved = { ...await json(defaultCache), migrationEvidence: 'preserve arbitrary cache metadata' }
+    const before = images(await snapshot())
+    await writeFile(legacyCache, JSON.stringify(preserved, null, 2))
+    await rm(defaultCache)
+    const migration = run('12-legacy-cache-migration', cacheEnv)
+    const lines = migration.stdout.split(/\r?\n/).filter(line => /(?:Migrated photo cache|Removed legacy public photo cache)/.test(line))
+    assert.deepEqual(lines, [`Migrated photo cache from ${legacyCache} to ${defaultCache}`], 'exactly one migration log line')
+    assert.ok(!existsSync(legacyCache), 'legacy public/photos/.cache.json was moved')
+    assert.ok(existsSync(defaultCache), 'new cache exists beside DB_PATH')
+    assert.deepEqual(await json(defaultCache), preserved, 'cache content survives migration')
+    assert.deepEqual(diff(before, images(await snapshot()), 'mtimeMs'), [], 'migration keeps a warm cache warm')
+  })
+
+  await t.test('explicit PHOTOS_CACHE_PATH overrides the DB-adjacent cache path', async () => {
+    const override = join(ROOT, 'state/explicit/photos.json')
+    const defaultBefore = await readFile(defaultCache, 'utf8')
+    const warm = await json(defaultCache)
+    await mkdir(dirname(override), { recursive: true })
+    await writeFile(override, JSON.stringify(warm, null, 2))
+    const before = images(await snapshot())
+    const result = run('13-explicit-cache-path', { ...cacheEnv, PHOTOS_CACHE_PATH: override })
+    assert.ok(existsSync(override), 'explicit cache path exists')
+    assert.equal(await readFile(defaultCache, 'utf8'), defaultBefore, 'default cache is untouched')
+    assert.deepEqual(await json(override), warm, 'explicit warm cache is read and preserved')
+    assert.deepEqual(diff(before, images(await snapshot()), 'mtimeMs'), [], 'explicit cache keeps images warm')
+    assert.ok(!existsSync(legacyCache))
+    assert.equal(result.stdout.split(/\r?\n/).filter(line => /(?:Migrated photo cache|Removed legacy public photo cache)/.test(line)).length, 0)
+  })
+
+  await t.test('when new and legacy caches coexist the legacy file is removed and logged once', async () => {
+    const current = await json(defaultCache)
+    const before = images(await snapshot())
+    await writeFile(legacyCache, JSON.stringify({ version: CACHE_VERSION, files: {}, legacyOnly: true }))
+    const result = run('14-both-cache-paths', cacheEnv)
+    assert.ok(!existsSync(legacyCache), 'obsolete public cache is removed')
+    assert.deepEqual(await json(defaultCache), current, 'new cache wins over legacy contents')
+    assert.deepEqual(diff(before, images(await snapshot()), 'mtimeMs'), [], 'warm images are untouched')
+    const lines = result.stdout.split(/\r?\n/).filter(line => /(?:Migrated photo cache|Removed legacy public photo cache)/.test(line))
+    assert.deepEqual(lines, [`Removed legacy public photo cache at ${legacyCache}; using ${defaultCache}`], 'exactly one removal log line')
+  })
+
   const groups = Map.groupBy(checks, (item) => item.id.split('.')[0])
   for (const [name, assertions] of groups) {
     await t.test(name + ' (' + assertions.length + ' assertions)', () => {

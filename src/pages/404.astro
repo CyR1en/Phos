@@ -7,7 +7,7 @@ const ogDescription = config.notFound?.og_description
 
 <BaseLayout title={ogTitle} description={ogDescription}>
   <section class="mx-auto flex min-h-[80vh] max-w-wide flex-col items-start justify-center px-6 lg:px-8">
-    <div data-animate-header class="opacity-0 flex flex-col items-start">
+    <div data-animate-header class="flex flex-col items-start">
       <p class="eyebrow">Error 404</p>
       <h1 class="mt-6 font-display text-h1 text-ink" data-config="notFound.heading">{config.notFound.heading}</h1>
       <p class="mt-6 text-lead text-body-muted max-w-[52ch]" data-config="notFound.message">{config.notFound.message}</p>
@@ -21,3 +21,9 @@ const ogDescription = config.notFound?.og_description
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  h1 {
+    font-size: clamp(36px, 7vw, 72px);
+  }
+</style>

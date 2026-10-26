@@ -18,7 +18,7 @@ const ogDescription = config.contact?.og_description
       { 'grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20': hasSmtp },
     ]}>
       <div class:list={['min-w-0', { 'max-w-text': !hasSmtp }]}>
-        <div data-animate-header class="opacity-0">
+        <div data-animate-header>
           <p class="eyebrow">Contact</p>
           <h1 class="mt-4 text-h1 font-display text-ink" data-config="contact.format.heading">{heading}</h1>
           <p class="mt-6 text-lead text-body-muted max-w-[44ch]" data-config="contact.format.subheading">

@@ -1,7 +1,9 @@
 /* Public-site styles, one file per concern. Import order is the cascade order
    for equal-specificity rules, so keep it stable. Each file carries its own
    mobile and reduced-motion overrides at the end. */
+@import "./public/motion-tokens.css";
 @import "./public/base.css";
+@import "./public/transitions.css";
 @import "./public/header.css";
 @import "./public/buttons.css";
 @import "./public/sections.css";

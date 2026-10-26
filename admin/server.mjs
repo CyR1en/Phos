@@ -7,6 +7,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import nodemailer from 'nodemailer'
 import { assembleConfig, writeFullConfig, getMeta, getPluginConfig, setPluginConfig, getGalleries, getGallery, createGallery, updateGallery, deleteGallery, setGalleryPhotos } from '../lib/db.mjs'
 import { deepMerge } from '../lib/merge.mjs'
+import { stripSecrets, publicConfigJson } from '../lib/config-secrets.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -115,18 +116,6 @@ function escapeHtml(s) {
 // Strip CR/LF to prevent header injection
 function stripCrlf(s) {
   return String(s).replace(/[\r\n]/g, '')
-}
-
-// Remove sensitive fields (SMTP credentials) from a config object before
-// serving it to unauthenticated clients. Returns a deep clone — the original
-// config returned by assembleConfig() is never mutated.
-function stripSecrets(config) {
-  const clone = JSON.parse(JSON.stringify(config))
-  if (clone?.contact?.smtp) {
-    delete clone.contact.smtp.pass
-    delete clone.contact.smtp.user
-  }
-  return clone
 }
 
 const ALLOWED_CONFIG_KEYS = new Set(['site', 'home', 'about', 'contact', 'notFound', 'portfolio'])
@@ -354,8 +343,8 @@ createServer(async (req, res) => {
     const baseline = deepMerge(defaults, current)
     const merged = deepMerge(baseline, body)
     writeFullConfig(merged)
-    // Also write to public/ so the main site can fetch /site-config.json at runtime
-    writeFileSync(join(ROOT, 'public', 'site-config.json'), JSON.stringify(merged, null, 2))
+    // Static hosts serve public/ directly, so never persist credentials there.
+    writeFileSync(join(ROOT, 'public', 'site-config.json'), publicConfigJson(merged))
 
     const oldPhotos = baseline?.home?.hero?.photos || []
     const newPhotos = merged?.home?.hero?.photos || []

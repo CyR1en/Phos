@@ -12,6 +12,7 @@ const extensions = new Set([
 
 async function* walk(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.name.startsWith('.')) continue
     const path = join(directory, entry.name)
     if (entry.isDirectory()) yield* walk(path)
     else if (entry.isFile()) yield path

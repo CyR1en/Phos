@@ -233,6 +233,13 @@ public/photos/
 
 # Local SQLite database
 config/
+*.db
+*.db-wal
+*.db-shm
+
+# Photo cache when DB_PATH points outside config/
+photos-cache.json
+photos-cache.json.tmp
 
 # Local AppData (bind mount source for Docker dev/testing)
 AppData/

@@ -4,10 +4,22 @@ import { existsSync } from 'node:fs'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import postcss from 'postcss'
+import { makeEnv } from './helpers/dom.mjs'
+import { fixture } from './helpers/runtime.mjs'
+import { accessibleName, formControlName } from './helpers/accessibility.mjs'
+import { assertFixtureContract } from './helpers/fixture-contracts.mjs'
+import { nginxBlocks, dockerCopiesFile } from './helpers/nginx.mjs'
 
 const repoRoot = fileURLToPath(new URL('../', import.meta.url))
 const dist = join(repoRoot, 'dist')
 const heavy = /HSStaticMethods|lenis|framer|\.hs-/i
+
+function documentBody(html) {
+  const env = makeEnv()
+  env.parseHTML(html.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1] || html, env.document.body)
+  return env.document.body
+}
 
 async function files(dir) {
   const entries = await readdir(dir, { withFileTypes: true })
@@ -101,6 +113,8 @@ test('built site contracts', {
   let redirects = 0
   let anchors = 0
   const publicStyles = new Set()
+  const publicCssUrls = new Set()
+  const publicInlineStyles = new Set()
 
   for (const path of publicHtml) {
     const name = relative(dist, path)
@@ -114,6 +128,11 @@ test('built site contracts', {
       continue
     }
     pages++
+    const dom = documentBody(body)
+    for (const attrs of tags(body, 'link')) {
+      if ((attrs.get('rel') || '').split(/\s+/).includes('stylesheet')) publicCssUrls.add(attrs.get('href'))
+    }
+    for (const [, css] of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)) publicInlineStyles.add(css)
     for (const [, raw] of body.matchAll(/<[a-z][\w:-]*\b([^>]*)>/gi)) {
       const attrs = attributes(raw)
       for (const field of ['src', 'srcset', 'href', 'content', 'data-src', 'data-srcset']) {
@@ -122,6 +141,60 @@ test('built site contracts', {
     }
     const tiles = tags(body, 'a').filter((attrs) => attrs.has('data-index'))
     anchors += tiles.length
+    await t.test(name + ': skip link and focusable main', () => {
+      const first = dom.children[0]
+      assert.equal(first?.getAttribute('href'), '#main')
+      assert.ok(first.classList.contains('skip-link'))
+      assert.ok(first.textContent.trim())
+      assert.equal(dom.querySelectorAll('main').length, 1)
+      assert.equal(dom.querySelectorAll('#main').length, 1)
+      assert.equal(dom.querySelector('main').id, 'main')
+      assert.equal(dom.querySelector('main').getAttribute('tabindex'), '-1')
+    })
+    await t.test(name + ': browser color metadata', () => {
+      const metas = tags(body, 'meta')
+      assert.equal(metas.find(attrs => attrs.get('name') === 'color-scheme')?.get('content'), 'light dark')
+      const colors = metas.filter(attrs => attrs.get('name') === 'theme-color')
+      assert.equal(colors.length, 2)
+      for (const scheme of ['light', 'dark']) {
+        const color = colors.find(attrs => new RegExp(`\\(\\s*prefers-color-scheme\\s*:\\s*${scheme}\\s*\\)`).test(attrs.get('media') || ''))
+        assert.ok(color?.get('content')?.trim(), scheme + ' theme-color is nonempty')
+      }
+    })
+    await t.test(name + ': images, interactive controls and links have accessible names', () => {
+      for (const image of dom.querySelectorAll('img')) assert.ok(image.hasAttribute('alt'), image.getAttribute('src'))
+      for (const element of dom.querySelectorAll('button, a')) {
+        assert.ok(accessibleName(element, dom).trim(), element.id || element.getAttribute('href') || 'unnamed button')
+      }
+      for (const control of dom.querySelectorAll('input, select, textarea')) {
+        if (control.getAttribute('type') === 'hidden') continue
+        assert.ok(formControlName(control, dom).trim(), control.id || 'unlabelled ' + control.localName)
+      }
+    })
+    await t.test(name + ': reveal markup stays visible without JS', () => {
+      assert.equal(dom.querySelectorAll('[data-reveal-pending]').length, 0, 'SSR never opts into pending reveals')
+      for (const element of dom.querySelectorAll('[data-animate-header], .animate-reveal, .photo-card-wrap, [data-hero-slide="0"] img')) {
+        assert.ok(!element.classList.contains('opacity-0'), element.localName + '.' + element.className)
+        assert.doesNotMatch(element.getAttribute('style') || '', /(?:^|;)\s*opacity\s*:\s*0(?:\.0*)?\s*(?:!important\s*)?(?:;|$)/i)
+      }
+    })
+    await t.test(name + ': desktop Contact removed and drawer Contact retained', () => {
+      const header = dom.querySelector('.site-header')
+      const drawer = dom.querySelector('#mobile-nav')
+      assert.ok(header && drawer)
+      assert.ok(header.querySelectorAll('a').every(anchor => anchor.textContent.trim() !== 'Contact'))
+      assert.ok(drawer.querySelectorAll('nav a').some(anchor => anchor.textContent.trim() === 'Contact'))
+    })
+    await t.test(name + ': photo OG dimensions', t => {
+      const metas = tags(body, 'meta')
+      const images = metas.filter(attrs => attrs.get('property') === 'og:image')
+      if (!images.length) return t.skip('no og:image on this page (no page image and site.og.image is empty)')
+      for (const og of images) {
+        if (!new URL(og.get('content'), 'https://phos.test').pathname.startsWith('/photos/og/')) continue
+        assert.equal(metas.find(attrs => attrs.get('property') === 'og:image:width')?.get('content'), '1200')
+        assert.equal(metas.find(attrs => attrs.get('property') === 'og:image:height')?.get('content'), '630')
+      }
+    })
     await t.test(name + ': public layout and photo tiles', () => {
       assert.equal([...body.matchAll(/<h1\b/gi)].length, 1, 'exactly one h1')
       assert.equal(tags(body, 'html')[0]?.get('data-theme'), expectedTheme, 'html bakes the configured theme')
@@ -241,13 +314,154 @@ test('built site contracts', {
       assert.ok(prefetch.length <= 3, `${prefetch.length} viewport prefetches exceeds 3`)
       for (const attrs of prefetch) assert.doesNotMatch(attrs.get('href') || '', /\?cat=/)
     })
-    await t.test(name + ': OG images use generated crops', () => {
+    await t.test(name + ': OG images use generated crops', t => {
       // og:image in baked HTML is the evidence of PUBLIC_SITE_URL at build time.
-      for (const attrs of tags(body, 'meta').filter((attrs) => attrs.get('property') === 'og:image')) {
+      const images = tags(body, 'meta').filter(attrs => attrs.get('property') === 'og:image')
+      if (!images.length) return t.skip('no og:image on this page (no page image and site.og.image is empty)')
+      for (const attrs of images) {
         assert.match(attrs.get('content') || '', /\/photos\/og\//)
       }
     })
   }
+
+  await t.test('component fixtures match corresponding built behaviour attributes and nesting', async () => {
+    // Retain page boundaries: an attribute on another page/element cannot hide drift.
+    const builtPages = []
+    for (const path of publicHtml) {
+      const html = markup(await readFile(path, 'utf8'))
+      if (tags(html, 'meta').some(attrs => attrs.get('http-equiv') === 'refresh')) continue
+      const env = makeEnv()
+      env.parseHTML(html.match(/<head\b[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] || '', env.document.head)
+      const dom = documentBody(html)
+      builtPages.push({ name: relative(dist, path), head: env.document.head, body: dom })
+    }
+    for (const name of ['header', 'hero', 'reveals', 'photo-grid', 'theme-toggle', 'head', 'preview-bindings']) {
+      assertFixtureContract(name, documentBody(await fixture(name)), builtPages)
+    }
+  })
+
+  // Parse each linked public asset once, plus Astro's inline transition styles.
+  // PostCSS walks nested @layer/@media rules without confusing declarations and selectors.
+  const bundledCss = (await Promise.all([...publicCssUrls].map(assetText))).join('\n')
+  const publicCss = [bundledCss, ...publicInlineStyles].join('\n')
+  const bundleRoot = postcss.parse(bundledCss)
+  const cssRoot = postcss.parse(publicCss)
+  await t.test('public reveal opacity rules are gated by js', () => {
+    let checked = 0
+    cssRoot.walkRules(rule => {
+      if (!rule.nodes.some(node => node.type === 'decl' && node.prop === 'opacity' && /^0(?:\.0+)?$/.test(node.value))) return
+      for (const selector of rule.selectors) {
+        if (!/\.animate-reveal\b|\[data-animate-header\]|\.service-list\b|\.testimonial-grid\b/.test(selector)) continue
+        checked++
+        assert.match(selector, /\.js(?![\w-])/, selector)
+      }
+    })
+    assert.ok(checked > 0, 'at least one gated reveal opacity rule is emitted')
+    assert.ok(!/@media\s*\(\s*scripting\s*:\s*none\s*\)/.test(publicCss), '@media (scripting: none) is absent')
+  })
+  await t.test('public CSS defines motion tokens and bounds literal cubic-bezier calls', () => {
+    // This inspects CSS declarations only; WAAPI easing literals in JS are out of scope.
+    const definitions = []
+    cssRoot.walkDecls(/^--ease-/, declaration => definitions.push(declaration.prop))
+    const literalCount = [...publicCss.matchAll(/cubic-bezier\(/g)].length
+    t.diagnostic(`${literalCount} literal cubic-bezier( calls; ${definitions.length} --ease-* definitions in distinct public CSS assets`)
+    for (const name of ['--ease-out-expo', '--ease-sheet', '--ease-in-out-sine', '--ease-exit', '--duration-ui', '--duration-hover', '--duration-reveal']) {
+      const found = []
+      cssRoot.walkDecls(name, declaration => found.push(declaration))
+      assert.ok(found.length, name + ' is defined')
+    }
+    assert.ok(literalCount <= definitions.length + 2, `${literalCount} literal curves exceeds ${definitions.length} easing definitions + 2`)
+  })
+  await t.test('header and root View Transitions include reduced-motion fallback', () => {
+    assert.ok(/view-transition-name\s*:\s*site-header\b/.test(publicCss), 'compiled CSS names site-header')
+    for (const phase of ['old', 'new']) {
+      const selector = `::view-transition-${phase}(root)`
+      const rules = []
+      cssRoot.walkRules(rule => { if (rule.selector.includes(selector)) rules.push(rule) })
+      assert.ok(rules.length, selector + ' rule exists')
+      assert.ok(rules.some(rule => {
+        let reduced = false
+        for (let parent = rule.parent; parent; parent = parent.parent) {
+          if (parent.type === 'atrule' && parent.name === 'media' && /prefers-reduced-motion\s*:\s*reduce/.test(parent.params)) reduced = true
+        }
+        return reduced && rule.nodes.some(node => node.type === 'decl' &&
+          ((node.prop === 'animation' || node.prop === 'animation-name') && node.value === 'none' ||
+            node.prop === 'animation-duration' && /^0(?:s|ms)$/.test(node.value)))
+      }), selector + ' is disabled under reduced motion')
+    }
+  })
+
+  const hasDecl = (rule, prop, value) => rule.nodes.some(node => node.type === 'decl' && node.prop === prop && value.test(node.value))
+  const rulesMatching = (root, predicate) => { const rules = []; root.walkRules(rule => { if (predicate(rule)) rules.push(rule) }); return rules }
+  await t.test('persistent header snapshots disable old and new animations', () => {
+    // transition:animate="none" makes Astro emit these rules unconditionally in its inline <style>;
+    // the bundle's reduced-motion rules use the same selectors, so they must not satisfy this test.
+    const inlineRoot = postcss.parse([...publicInlineStyles].join('\n'))
+    const unconditional = (rule) => {
+      for (let node = rule.parent; node && node.type !== 'root'; node = node.parent) {
+        if (node.type === 'atrule' && /prefers-reduced-motion/.test(node.params || '')) return false
+      }
+      return true
+    }
+    const headerRules = (phase) => rulesMatching(inlineRoot, rule => unconditional(rule) && rule.selector.includes(`::view-transition-${phase}(site-header)`))
+    const disabled = (rule) => hasDecl(rule, 'animation', /^none$/) || hasDecl(rule, 'animation-name', /^none$/)
+    assert.ok(headerRules('old').some(rule => disabled(rule) && hasDecl(rule, 'opacity', /^0$/)),
+      'old site-header snapshot is hidden without animation (transition:animate="none" on the header)')
+    assert.ok(headerRules('new').some(disabled), 'new site-header snapshot has no animation')
+    inlineRoot.walkRules(rule => {
+      if (!rule.selector.includes('site-header')) return
+      rule.walkDecls(/^animation/, decl => assert.doesNotMatch(decl.value, /astroFade|astroSlide/, rule.selector + ' uses an Astro default animation'))
+    })
+  })
+  await t.test('morph and theme transitions opt the header out of named snapshots', () => {
+    assert.ok(rulesMatching(bundleRoot, rule => ['.lightbox-morphing', '.theme-switching', '.site-header'].every(part => rule.selector.includes(part)))
+      .some(rule => hasDecl(rule, 'view-transition-name', /^none$/)))
+  })
+  await t.test('every phos-vt keyframe endpoint blends plus-lighter', () => {
+    const frames = []
+    cssRoot.walkAtRules(/^(?:-webkit-)?keyframes$/, frame => { if (/^phos-vt/.test(frame.params)) frames.push(frame) })
+    assert.ok(frames.length, 'public CSS has phos-vt keyframes')
+    for (const frame of frames) for (const endpoint of [/^(?:from|0%)$/, /^(?:to|100%)$/]) {
+      const rules = frame.nodes.filter(node => node.type === 'rule' && node.selectors.some(selector => endpoint.test(selector.trim())))
+      assert.ok(rules.length && rules.every(rule => hasDecl(rule, 'mix-blend-mode', /^plus-lighter$/)), frame.params + ': ' + endpoint)
+    }
+  })
+  await t.test('skip-link focus CSS moves the link on-screen', () => {
+    const base = rulesMatching(bundleRoot, rule => rule.selectors.some(selector => /\.skip-link$/.test(selector)))
+    const focus = rulesMatching(bundleRoot, rule => /\.skip-link:focus(?:-visible)?\b/.test(rule.selector))
+    assert.ok(base.length && focus.length, 'base and focus skip-link rules exist')
+    const positionProps = /^(?:transform|translate|top|left|right|bottom|inset(?:-.*)?)$/
+    assert.ok(focus.some(rule => rule.nodes.some(node => node.type === 'decl' && positionProps.test(node.prop) &&
+      base.some(before => before.nodes.some(old => old.type === 'decl' && old.prop === node.prop && old.value !== node.value)) &&
+      /^(?:none|0(?:[a-z%]*)(?:[ ,]+0(?:[a-z%]*))?|translate[XY]?\(0(?:[a-z%]*)\))$/.test(node.value))), 'focus resets the offscreen position')
+  })
+  await t.test('main focus target clears outline and scrolls below the sticky header', () => {
+    assert.ok(rulesMatching(bundleRoot, rule => rule.selectors.includes('#main')).some(rule => hasDecl(rule, 'scroll-margin-top', /\S/)))
+    assert.ok(rulesMatching(bundleRoot, rule => rule.selectors.includes('#main:focus')).some(rule => hasDecl(rule, 'outline', /^none$/)))
+  })
+  await t.test('public CSS defines light and dark canvas colors', () => {
+    assert.ok(rulesMatching(bundleRoot, rule => rule.selectors.some(selector => /^(?::root|\.public-site|html)$/.test(selector)))
+      .some(rule => hasDecl(rule, '--color-canvas', /\S/)), 'root canvas token')
+    assert.ok(rulesMatching(bundleRoot, rule => /\.dark\b/.test(rule.selector)).some(rule => hasDecl(rule, '--color-canvas', /\S/)), 'dark canvas token')
+  })
+  await t.test('public light root explicitly uses color-scheme light', () => {
+    assert.ok(rulesMatching(bundleRoot, rule => /html:not\(\.dark\)/.test(rule.selector)).some(rule => hasDecl(rule, 'color-scheme', /^light$/)))
+  })
+
+  await t.test('dist publishes no hidden paths', async () => {
+    assert.deepEqual(all.map(path => relative(dist, path)).filter(path => path.split('/').some(part => part.startsWith('.'))), [])
+  })
+  await t.test('dist JS, JSON and HTML contain no SMTP block', async () => {
+    for (const path of all.filter(path => /\.(?:js|json|html)$/.test(path))) {
+      assert.equal(/\bsmtp["']?\s*:\s*\{/.test(await readFile(path, 'utf8')), false, relative(dist, path) + ': no SMTP object')
+    }
+  })
+  await t.test('TSX components never import raw site-config JSON', async () => {
+    for (const path of (await files(join(repoRoot, 'src'))).filter(path => path.endsWith('.tsx'))) {
+      const source = await readFile(path, 'utf8')
+      assert.doesNotMatch(source, /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["'][^"']*content\/site-config\.json["']/, relative(repoRoot, path))
+    }
+  })
 
   await t.test('admin stylesheet contains all theme families', async () => {
     const themes = (await files(join(repoRoot, 'src/styles/themes'))).filter((path) => path.endsWith('.css'))
@@ -292,6 +506,44 @@ test('built site contracts', {
     t.diagnostic(`${references.size} distinct photo references checked in dist/ or public/`)
   })
   const nginx = (await readFile(join(repoRoot, 'docker/nginx.conf.template'), 'utf8')).replace(/#.*$/gm, '')
+  await t.test('nginx rejects hidden paths at server level and before photo regex locations', t => {
+    const locations = nginxBlocks(nginx).filter(block => /^location\b/.test(block.header))
+    const hidden = locations.find(block => /^location\s+~\*?\s/.test(block.header) && block.header.includes('/\\.') && /(?:return\s+40[34]|deny\s+all)\s*;/.test(block.body))
+    const photo = locations.find(block => /avif|webp|jpe?g/.test(block.header))
+    assert.ok(hidden, 'hidden-path regex location accepts quoted patterns and well-known exemption')
+    assert.ok(photo && hidden.index < photo.index, 'hidden regex precedes the image extension regex')
+    const server = nginxBlocks(nginx).find(block => block.header === 'server')
+    assert.ok(server, 'server block exists')
+    const guard = nginxBlocks(server.body).find(block => block.depth === 0 && /^if\s*\(\s*\$uri\s+~/.test(block.header) &&
+      block.header.includes('/\\.') && /(?:return\s+40[34]|deny\s+all)\s*;/.test(block.body))
+    assert.ok(guard, 'server-level hidden URL guard also protects ^~ prefixes')
+    t.diagnostic('server hidden-path guard ' + (guard.header.includes('(?!well-known/)') ? 'exempts /.well-known/' : 'has no /.well-known/ exemption'))
+  })
+  await t.test('nginx security includes exist and are copied by Dockerfile', async () => {
+    assert.ok(existsSync(join(repoRoot, 'docker/nginx-security-headers.conf')))
+    const dockerfile = (await readFile(join(repoRoot, 'Dockerfile'), 'utf8')).replace(/#.*$/gm, '')
+    const includes = [...nginx.matchAll(/\binclude\s+\/app\/docker\/([^;\s]+)\s*;/g)].map(([, file]) => file)
+    assert.ok(includes.includes('nginx-security-headers.conf'))
+    for (const file of new Set(includes)) {
+      assert.ok(!file.includes('..') && existsSync(join(repoRoot, 'docker', file)), file + ' exists')
+      assert.ok(dockerCopiesFile(dockerfile, file), file + ' is copied into /app/docker by Dockerfile')
+    }
+  })
+  await t.test('nginx locations that add headers retain all five security headers', async () => {
+    const required = ['X-Frame-Options', 'X-Content-Type-Options', 'Referrer-Policy', 'Strict-Transport-Security', 'Permissions-Policy']
+    const snippet = (await readFile(join(repoRoot, 'docker/nginx-security-headers.conf'), 'utf8')).replace(/#.*$/gm, '')
+    const headers = text => new Set([...text.matchAll(/\badd_header\s+([\w-]+)\b/g)].map(([, name]) => name.toLowerCase()))
+    for (const name of required) assert.ok(headers(snippet).has(name.toLowerCase()), 'security snippet: ' + name)
+    const locations = nginxBlocks(nginx).filter(block => /^location\b/.test(block.header))
+    for (const location of locations.filter(block => /\badd_header\b/.test(block.body))) {
+      if (/\binclude\s+\/app\/docker\/nginx-security-headers\.conf\s*;/.test(location.body)) continue
+      for (const name of required) assert.ok(headers(location.body).has(name.toLowerCase()), location.header + ': ' + name)
+    }
+    const root = locations.find(block => /^location\s+\/$/.test(block.header))
+    assert.ok(root)
+    assert.match(root.body, /add_header\s+X-Frame-Options\s+["']?SAMEORIGIN["']?\s/)
+    assert.ok(headers(root.body).has('content-security-policy'), 'public HTML keeps CSP')
+  })
   await t.test('nginx uses an extension regex for photos, never a prefix block', () => {
     assert.doesNotMatch(nginx, /\blocation\s+(?:\^~\s+)?\/photos\/\s*\{/)
     assert.match(nginx, /\blocation\s+~\*?\s+[^\n{]*\\\.[^\n{]*(?:avif|webp|jpe?g)[^\n{]*\{/,

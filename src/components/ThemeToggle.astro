@@ -1,58 +1,89 @@
 ---
 ---
 
-<button id="theme-toggle" class="flex h-11 w-11 items-center justify-center rounded-pill text-ink hover:bg-surface transition-colors" aria-label="Toggle theme">
-  <svg id="sun-icon" class="hidden size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+<button id="theme-toggle" type="button" class="flex h-11 w-11 items-center justify-center rounded-pill text-ink hover:bg-surface transition-colors" aria-label="Theme: auto. Switch to light">
+  <svg id="sun-icon" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
     <circle cx="12" cy="12" r="5" />
     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
   </svg>
-  <svg id="moon-icon" class="hidden size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+  <svg id="moon-icon" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
     <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
   </svg>
-  <svg id="auto-icon" class="hidden size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+  <svg id="auto-icon" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
     <circle cx="12" cy="12" r="9" />
     <text x="12" y="16" text-anchor="middle" font-size="12" font-weight="bold" fill="currentColor" stroke="none">A</text>
   </svg>
 </button>
+<span id="theme-toggle-status" class="sr-only" role="status" aria-live="polite"></span>
+
+<style is:global>
+  #theme-toggle svg { display: none; }
+  html[data-theme-mode="light"] #sun-icon,
+  html[data-theme-mode="dark"] #moon-icon,
+  html:not([data-theme-mode="light"]):not([data-theme-mode="dark"]) #auto-icon { display: block; }
+</style>
 
 <script>
+  type ThemeMode = 'light' | 'dark' | 'auto'
+  const states = ['light', 'dark', 'auto'] as const
+  const mq = window.matchMedia('(prefers-color-scheme: dark)')
   let mqBound = false
+  let themeTransitions = 0
+
+  function getMode(): ThemeMode {
+    let stored: string | null = null
+    try {
+      stored = localStorage.getItem('theme')
+    } catch {
+      stored = document.documentElement.getAttribute('data-theme-mode')
+    }
+    return stored === 'light' || stored === 'dark' ? stored : 'auto'
+  }
+
+  function applyTheme(mode: ThemeMode) {
+    const root = document.documentElement
+    root.setAttribute('data-theme-mode', mode)
+    root.classList.toggle('dark', mode === 'auto' ? mq.matches : mode === 'dark')
+    const next = states[(states.indexOf(mode) + 1) % states.length]
+    document.getElementById('theme-toggle')?.setAttribute('aria-label', `Theme: ${mode}. Switch to ${next}`)
+
+    const color = mode === 'auto' ? '' : getComputedStyle(root).getPropertyValue('--color-canvas').trim()
+    document.querySelectorAll('meta[name="theme-color"][data-theme-color-default]').forEach(meta => {
+      meta.setAttribute('content', color || meta.getAttribute('data-theme-color-default') || '')
+    })
+  }
+
+  function setMode(mode: ThemeMode) {
+    try { localStorage.setItem('theme', mode) } catch {}
+    const root = document.documentElement
+    root.setAttribute('data-theme-mode', mode)
+    const status = document.getElementById('theme-toggle-status')
+    if (status) status.textContent = `Theme: ${mode}`
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!document.startViewTransition || reducedMotion) {
+      applyTheme(mode)
+      return
+    }
+
+    themeTransitions++
+    root.classList.add('theme-switching')
+    const finish = () => {
+      themeTransitions--
+      if (themeTransitions === 0) root.classList.remove('theme-switching')
+    }
+    try {
+      const transition = document.startViewTransition(() => applyTheme(mode))
+      void transition.ready.catch(() => {})
+      void transition.finished.then(finish, finish)
+    } catch {
+      finish()
+      applyTheme(mode)
+    }
+  }
 
   function setupThemeToggle() {
     const btn = document.getElementById('theme-toggle')
-    const sun = document.getElementById('sun-icon')
-    const moon = document.getElementById('moon-icon')
-    const auto = document.getElementById('auto-icon')
-    if (!btn || !sun || !moon || !auto) return
-
-    const states = ['light', 'dark', 'auto'] as const
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-
-    type ThemeMode = 'light' | 'dark' | 'auto'
-
-    function updateIcons(mode: ThemeMode) {
-      sun!.classList.toggle('hidden', mode !== 'light')
-      moon!.classList.toggle('hidden', mode !== 'dark')
-      auto!.classList.toggle('hidden', mode !== 'auto')
-    }
-
-    function applyTheme(mode: ThemeMode) {
-      if (mode === 'auto') {
-        document.documentElement.classList.toggle('dark', mq.matches)
-      } else {
-        document.documentElement.classList.toggle('dark', mode === 'dark')
-      }
-      updateIcons(mode)
-    }
-
-    function getMode(): ThemeMode {
-      return (localStorage.getItem('theme') as ThemeMode) || 'auto'
-    }
-
-    function setMode(mode: ThemeMode) {
-      localStorage.setItem('theme', mode)
-      applyTheme(mode)
-    }
+    if (!btn) return
 
     if (!mqBound) {
       mq.addEventListener('change', function () {

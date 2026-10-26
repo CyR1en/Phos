@@ -64,7 +64,7 @@ const { photos, wrapperClass } = Astro.props
     clip-path: inset(6% 0 0 0);
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  @media (prefers-reduced-motion: reduce), print {
     .photo-card-wrap {
       opacity: 1 !important;
       clip-path: none !important;

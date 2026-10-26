@@ -5,10 +5,10 @@
   flex-shrink: 0;
   background-color: transparent;
   border-bottom-color: transparent;
-  transition: background-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    -webkit-backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color var(--duration-ui) var(--ease-out-expo),
+    border-color var(--duration-ui) var(--ease-out-expo),
+    backdrop-filter var(--duration-ui) var(--ease-out-expo),
+    -webkit-backdrop-filter var(--duration-ui) var(--ease-out-expo);
 }
 body:has(.photo-hero) .site-header {
   margin-bottom: calc(-1 * var(--site-header-height));
@@ -64,8 +64,8 @@ body:has(.photo-hero[data-hero-empty]) .site-header:not(.is-scrolled) {
   background: var(--color-brand-accent);
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--duration-ui) var(--ease-out-expo),
+    background-color var(--duration-ui) var(--ease-out-expo);
 }
 .site-nav-link:not([aria-current="page"]):hover::after {
   transform: scaleX(1);
@@ -73,6 +73,10 @@ body:has(.photo-hero[data-hero-empty]) .site-header:not(.is-scrolled) {
 }
 .site-nav-link[aria-current="page"]::after { transform: scaleX(1); }
 
+.mobile-nav,
+.mobile-nav::backdrop {
+  --drawer-duration: 450ms;
+}
 .mobile-nav {
   position: fixed;
   inset: 0 0 0 auto;
@@ -87,7 +91,7 @@ body:has(.photo-hero[data-hero-empty]) .site-header:not(.is-scrolled) {
   background: var(--color-canvas);
   color: var(--color-ink);
   translate: 100% 0;
-  transition: translate 450ms cubic-bezier(.32, .72, 0, 1);
+  transition: translate var(--drawer-duration) var(--ease-sheet);
 }
 .mobile-nav[open] { translate: 0 0; }
 .mobile-nav[open][data-opening],
@@ -95,7 +99,7 @@ body:has(.photo-hero[data-hero-empty]) .site-header:not(.is-scrolled) {
 .mobile-nav::backdrop {
   background: rgb(0 0 0 / .35);
   opacity: 1;
-  transition: opacity 450ms cubic-bezier(.32, .72, 0, 1);
+  transition: opacity var(--drawer-duration) var(--ease-sheet);
 }
 .mobile-nav[data-opening]::backdrop,
 .mobile-nav[data-closing]::backdrop { opacity: 0; }
@@ -112,9 +116,31 @@ body:has(.photo-hero[data-hero-empty]) .site-header:not(.is-scrolled) {
 
 /* Without scripting nothing ever adds .is-scrolled, so the light-ink floating state would
    persist down the whole page; let the header scroll away with the hero instead. */
-@media (scripting: none) {
-  body:has(.photo-hero) .site-header { position: static; }
+html:not(.js) body:has(.photo-hero) .site-header { position: static; }
+
+/* A body-level sibling inherits the public palette, including over the photo hero. */
+.public-site > .skip-link {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: .625rem 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  transform: translateY(calc(-100% - max(1rem, env(safe-area-inset-top)) - .5rem));
+  transition: transform var(--duration-ui) var(--ease-out-expo);
 }
+.public-site > .skip-link:focus-visible { transform: translateY(0); }
+
+#main { scroll-margin-top: var(--site-header-height); }
+#main:focus { outline: none; }
+
+html:not(.js) #theme-toggle { display: none; }
+html[data-preview] #theme-toggle { display: none; }
 
 /* viewport-fit=cover (needed for the lightbox insets) lets the page run under notches in landscape. */
 .site-nav { padding-inline: max(1.5rem, env(safe-area-inset-left)) max(1.5rem, env(safe-area-inset-right)); }
