@@ -1,0 +1,20 @@
+/* Photo tiles on /photos/all and gallery detail pages. */
+.photo-card-wrap img {
+  transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.photo-card-wrap:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+.photo-card-wrap:focus-visible img {
+  transform: scale(1.02);
+}
+@media (hover: hover) and (pointer: fine) {
+  .photo-card-wrap:hover img {
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-card-wrap:hover img, .photo-card-wrap:focus-visible img { transform: none; }
+}

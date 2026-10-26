@@ -1,0 +1,46 @@
+/* Transparent over the page top, frosted glass once scrolled.
+   .is-scrolled is toggled by the #header-sentinel IntersectionObserver in Header.astro. */
+.site-header {
+  background-color: transparent;
+  border-bottom-color: transparent;
+  transition: background-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    -webkit-backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.site-header.is-scrolled {
+  background-color: color-mix(in srgb, var(--color-canvas) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom-color: var(--color-border);
+}
+.site-nav { height: var(--site-header-height); }
+.site-brand { min-width: 32px; }
+.site-brand svg { display: block; height: 28px; width: auto; }
+.site-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--site-header-height);
+  white-space: nowrap;
+  color: var(--color-muted);
+}
+.site-nav-link:hover, .site-nav-link[aria-current="page"] { color: var(--color-ink); }
+.site-nav-link::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.site-nav-link:not([aria-current="page"]):hover::after {
+  transform: scaleX(1);
+  background: var(--color-ink);
+}
+.site-nav-link[aria-current="page"]::after { transform: scaleX(1); }

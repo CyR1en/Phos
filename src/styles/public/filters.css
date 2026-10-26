@@ -1,0 +1,17 @@
+/* Category filter pills on /photos/all. State comes from aria-pressed +
+   JS-swapped classes, so hover colors must not rely on the removed classes. */
+.filter-btn {
+  transition: scale 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.filter-btn:hover {
+  border-color: var(--color-border-hover);
+  background-color: var(--color-surface);
+}
+.filter-btn[aria-pressed="true"]:hover {
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-primary-hover);
+}
+.filter-btn:active { scale: 0.97; }

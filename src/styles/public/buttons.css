@@ -1,0 +1,18 @@
+.site-button {
+  min-height: 44px;
+  gap: 12px;
+  padding: 12px 24px;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.25;
+  /* translate/scale (not transform) so framer-motion inline transforms don't block the press feedback */
+  transition: translate 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    scale 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.site-button:hover {
+  translate: 0 -1px;
+}
+.site-button:active { scale: .98; }
+.site-button svg { flex-shrink: 0; width: 16px; height: 16px; }

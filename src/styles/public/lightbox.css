@@ -1,0 +1,6 @@
+/* Lightbox controls: physical press feedback (script untouched) */
+#lightbox-close, #lightbox-prev, #lightbox-next {
+  transition: scale 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+#lightbox-close:active, #lightbox-prev:active, #lightbox-next:active { scale: 0.95; }
