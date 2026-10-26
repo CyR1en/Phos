@@ -4,6 +4,5 @@
 
 interface Window {
   HSStaticMethods?: { autoInit: () => void }
-  __updateLightboxData?: (data: unknown[]) => void
   __lenis?: import('lenis').Lenis
 }

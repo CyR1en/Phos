@@ -16,3 +16,8 @@
 .contact-invitation .site-button { margin-top: 32px; }
 .public-site footer { margin-top: 0; }
 .public-site footer > div { min-height: 112px; flex-wrap: wrap; }
+
+.public-site footer > div { padding-inline: max(1.5rem, env(safe-area-inset-left)) max(1.5rem, env(safe-area-inset-right)); }
+@media (min-width: 1024px) {
+  .public-site footer > div { padding-inline: max(2rem, env(safe-area-inset-left)) max(2rem, env(safe-area-inset-right)); }
+}

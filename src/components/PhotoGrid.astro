@@ -4,6 +4,8 @@ import PhotoCard from '@components/PhotoCard.astro'
 interface Photo {
   filename: string
   title: string
+  titleIsAuto?: boolean
+  description?: string
   full: string
   thumb: string
   thumbMobile: string
@@ -34,11 +36,13 @@ const { photos, wrapperClass } = Astro.props
       data-astro-reload
       data-astro-prefetch="false"
       aria-haspopup="dialog"
-      aria-label={`View ${photo.title}`}
+      aria-label={photo.titleIsAuto ? `View photo ${i + 1}` : `View ${photo.title}`}
     >
       <PhotoCard
         filename={photo.filename}
         title={photo.title}
+        titleIsAuto={photo.titleIsAuto}
+        description={photo.description}
         thumb={photo.thumb}
         thumbMobile={photo.thumbMobile}
         gridSrcset={photo.gridSrcset}

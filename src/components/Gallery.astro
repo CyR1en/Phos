@@ -4,6 +4,8 @@ import PhotoGrid from '@components/PhotoGrid.astro'
 export interface Photo {
   filename: string
   title: string
+  titleIsAuto?: boolean
+  description?: string
   full: string
   thumb: string
   thumbMobile: string

@@ -82,7 +82,7 @@ const tileSizes = (span: number) => [
               data-astro-reload
               data-astro-prefetch="false"
               aria-haspopup="dialog"
-              aria-label={`View ${photo.title}`}
+              aria-label={photo.titleIsAuto ? `View photo ${index + 1}` : `View ${photo.title}`}
               class="selected-work-tile col-span-full block overflow-hidden rounded-photo"
               style={`aspect-ratio: ${width} / ${height}; --selected-span: ${span}; --selected-start: ${start}; --selected-row: ${row}`}
             >
@@ -94,7 +94,7 @@ const tileSizes = (span: number) => [
                 height={photo.height ?? undefined}
                 loading="lazy"
                 decoding="async"
-                alt={photo.title}
+                alt={photo.titleIsAuto ? (photo.description || 'Photograph') : photo.title}
                 style={photo.blur ? `background-image: url('${photo.blur}'); background-size: cover; background-position: center` : undefined}
               />
             </a>

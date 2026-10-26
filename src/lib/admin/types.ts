@@ -196,6 +196,7 @@ export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
 export interface ManifestPhoto {
   filename: string
   title: string
+  titleIsAuto: boolean
   description: string
   focus: string | null
   full: string
@@ -233,6 +234,7 @@ export interface HeroPriorityPhoto {
   hd: string
   srcset: string
   title: string
+  titleIsAuto: boolean
   description: string
   focus: string | null
   blur: string

@@ -1,14 +1,17 @@
 ---
-export interface Photo {
-  filename: string
-  title: string
-  full: string
-  thumb: string
-  srcset: string
-  width: number | null
-  height: number | null
-  blur: string
+import type { LightboxPhoto } from '../scripts/lightbox/types'
+
+interface Photo extends Record<string, any> {
+  filename?: string
   category?: string
+  title?: string
+  titleIsAuto?: boolean
+  description?: string
+  thumb?: string
+  srcset?: string
+  full?: string
+  width?: number | null
+  height?: number | null
 }
 
 export interface Props {
@@ -16,403 +19,63 @@ export interface Props {
 }
 
 const { photos } = Astro.props
-const serialized = JSON.stringify(photos)
+const list: LightboxPhoto[] = photos.map((photo) => ({
+  filename: photo.filename ?? '',
+  category: photo.category,
+  title: photo.title ?? '',
+  titleIsAuto: photo.titleIsAuto,
+  description: photo.description,
+  thumb: photo.thumb ?? '',
+  srcset: photo.srcset ?? '',
+  full: photo.srcset ? undefined : photo.full,
+  width: photo.width ?? null,
+  height: photo.height ?? null,
+}))
+const json = JSON.stringify(list).replace(/</g, '\\u003c')
 ---
 
-<div
-  id="lightbox"
-  class="fixed inset-0 z-50 hidden flex-col bg-black/95 backdrop-blur-sm"
-  role="dialog"
-  aria-modal="true"
-  aria-label="Image lightbox"
->
-  <button id="lightbox-close" class="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-pill bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Close lightbox">
-    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+<dialog id="lightbox" class="lightbox" aria-label="Photo viewer" tabindex="-1">
+  <button id="lightbox-close" class="lightbox-button" type="button" aria-label="Close photo viewer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
   </button>
 
-  <button id="lightbox-prev" class="absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-white/10 p-3 text-white hover:bg-white/20 transition-colors sm:flex" aria-label="Previous image">
-    <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+  <button id="lightbox-prev" class="lightbox-button" type="button" aria-label="Previous photo" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
-  <button id="lightbox-next" class="absolute right-4 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-pill bg-white/10 p-3 text-white hover:bg-white/20 transition-colors sm:flex" aria-label="Next image">
-    <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+  <button id="lightbox-next" class="lightbox-button" type="button" aria-label="Next photo" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
   </button>
 
-  <div id="lightbox-stage" class="flex-1 min-h-0 w-full flex items-center justify-center p-4 sm:p-12 [container-type:size]">
-    <div class="relative max-h-full max-w-full flex items-center justify-center">
-      <img id="lightbox-img" class="max-h-full max-w-full w-auto h-auto object-contain select-none rounded-xs cursor-zoom-in" src="" alt="" style="transition: opacity 0.3s ease, transform 0.3s ease" />
-      <div id="lightbox-error" class="absolute inset-0 hidden flex-col items-center justify-center rounded-xs bg-black/60 text-white/60 text-sm">
-        <span>Failed to load image</span>
-      </div>
-      <!-- Swipe hint for mobile -->
-      <div id="swipe-hint" class="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none opacity-0 transition-opacity duration-1000 sm:hidden">
-        <svg class="size-8 text-white/30 -translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
-        <svg class="size-8 text-white/30 translate-x-1" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18l6-6-6-6"/></svg>
-      </div>
+  <button id="lightbox-zoom" class="lightbox-button" type="button" aria-pressed="false" aria-label="Zoom">
+    <span data-zoom-in-icon aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M10.5 7.5v6m-3-3h6"/></svg>
+    </span>
+    <span data-zoom-out-icon aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M7.5 10.5h6"/></svg>
+    </span>
+  </button>
+
+  <div id="lightbox-stage">
+    <img id="lightbox-img-a" class="lightbox-layer" alt="" draggable="false" />
+    <img id="lightbox-img-b" class="lightbox-layer" alt="" draggable="false" aria-hidden="true" />
+    <div id="lightbox-error" hidden><span>Failed to load image</span></div>
+  </div>
+
+  <div class="lightbox-caption">
+    <div class="lightbox-caption-text">
+      <div id="lightbox-title" hidden></div>
+      <div id="lightbox-description" hidden></div>
     </div>
+    <div id="lightbox-counter"></div>
   </div>
-
-  <div class="w-full bg-black/60 border-t border-white/10 py-4 px-6 flex flex-col items-center justify-center text-center select-none z-10">
-    <div id="lightbox-title" class="text-sm font-medium text-white/90 max-w-2xl truncate"></div>
-    <div id="lightbox-counter" class="text-xs text-white/50 mt-1"></div>
-  </div>
-  <div id="lightbox-data" style="display:none" set:text={serialized} />
-</div>
+  <div id="lightbox-live" class="lightbox-live" aria-live="polite" aria-atomic="true"></div>
+  <script type="application/json" id="lightbox-data" set:html={json} />
+</dialog>
 
 <script>
-  function initLightbox() {
-    // Clean up previous global listeners even when the next page has no lightbox.
-    const oldClickHandler = (window as any).__lightboxClickHandler
-    if (oldClickHandler) document.removeEventListener('click', oldClickHandler, true)
-    const oldKeyHandler = (window as any).__lightboxKeyHandler
-    if (oldKeyHandler) document.removeEventListener('keydown', oldKeyHandler)
-    document.body.style.removeProperty('overflow')
+  import { initLightbox } from '../scripts/lightbox/index'
 
-    const lightbox = document.getElementById('lightbox')
-    if (!lightbox) return
-
-    const img = document.getElementById('lightbox-img') as HTMLImageElement
-    const stage = document.getElementById('lightbox-stage')!
-    const errorEl = document.getElementById('lightbox-error')!
-    const titleEl = document.getElementById('lightbox-title')!
-    const counterEl = document.getElementById('lightbox-counter')!
-    const closeBtn = document.getElementById('lightbox-close') as HTMLButtonElement
-    const prevBtn = document.getElementById('lightbox-prev') as HTMLButtonElement
-    const nextBtn = document.getElementById('lightbox-next') as HTMLButtonElement
-    const swipeHint = document.getElementById('swipe-hint')
-
-    let currentIndex = 0
-    let transitioning = false
-    let lastFocused: HTMLElement | null = null
-    let isZoomed = false
-    let loadToken = 0
-
-    function getPhotos(): any[] {
-      try {
-        const el = document.getElementById('lightbox-data')
-        if (!el || !el.textContent) return []
-        return JSON.parse(el.textContent)
-      } catch { return [] }
-    }
-
-    function getFocusableElements(): HTMLElement[] {
-      const all = [closeBtn, prevBtn, nextBtn]
-      return all.filter(btn => !btn.classList.contains('hidden') && btn.offsetParent !== null)
-    }
-
-    function toggleZoom(e?: Event) {
-      if (e) e.preventDefault()
-      isZoomed = !isZoomed
-      if (isZoomed) {
-        img.classList.add('scale-150', 'cursor-zoom-out')
-        img.classList.remove('cursor-zoom-in')
-      } else {
-        img.classList.remove('scale-150', 'cursor-zoom-out')
-        img.classList.add('cursor-zoom-in')
-      }
-    }
-
-    function resetZoom() {
-      isZoomed = false
-      img.classList.remove('scale-150', 'cursor-zoom-out')
-      img.classList.add('cursor-zoom-in')
-    }
-
-    img.addEventListener('dblclick', (e) => toggleZoom(e))
-
-    let lastTap = 0
-    img.addEventListener('touchend', (e) => {
-      const currentTime = new Date().getTime()
-      const tapLength = currentTime - lastTap
-      if (tapLength < 300 && tapLength > 0) {
-        toggleZoom(e)
-      }
-      lastTap = currentTime
-    })
-
-    // Lock the box to the photo's aspect ratio so the thumbnail and HD image paint at the
-    // same size; the stage is a size container, so this follows resizes on its own.
-    function fitImage(photo: any) {
-      if (photo.width && photo.height) {
-        img.style.aspectRatio = `${photo.width} / ${photo.height}`
-        img.style.width = `min(100cqw, 100cqh * ${photo.width / photo.height}, ${photo.width}px)`
-      } else {
-        img.style.aspectRatio = ''
-        img.style.width = ''
-      }
-    }
-
-    // The width fitImage resolves to, in CSS px, so srcset picks the right rendition.
-    function displayWidth(photo: any) {
-      const cs = getComputedStyle(stage)
-      const w = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
-      const h = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
-      if (!photo.width || !photo.height) return Math.round(w)
-      return Math.round(Math.min(w, h * photo.width / photo.height, photo.width))
-    }
-
-    function setHdSource(el: HTMLImageElement, photo: any, sizes: string) {
-      if (!photo.srcset) { el.src = photo.full; return }
-      el.sizes = sizes
-      el.srcset = photo.srcset
-    }
-
-    // Paint the thumbnail (usually cached from the grid) straight away, then swap in the
-    // HD rendition once it has downloaded and decoded off-screen.
-    function loadPhoto(photo: any, data: any[], onShown: () => void) {
-      const token = ++loadToken
-      const isCurrent = () => token === loadToken
-      img.removeAttribute('srcset')
-      img.removeAttribute('sizes')
-      fitImage(photo)
-      img.src = photo.thumb
-      img.alt = photo.title
-      errorEl.classList.add('hidden')
-
-      img.decode().then(() => true, () => false).then((thumbShown) => {
-        if (!isCurrent()) return
-        if (thumbShown) onShown()
-        const sizes = `${displayWidth(photo)}px`
-        const hd = new Image()
-        setHdSource(hd, photo, sizes)
-        hd.decode().then(() => {
-          if (!isCurrent()) return
-          setHdSource(img, photo, sizes)
-          if (!thumbShown) onShown()
-          preloadAdjacent(data)
-        }, () => {
-          if (!isCurrent() || thumbShown) return
-          showError()
-          onShown()
-        })
-      })
-    }
-
-    function open(idx: number) {
-      const data = getPhotos()
-      const photo = data[idx]
-      if (!photo) return
-      currentIndex = idx
-      transitioning = false
-      resetZoom()
-      img.style.transform = 'none'
-      updateMeta(photo, data)
-
-      // Lay the stage out before loadPhoto measures it for `sizes`.
-      lightbox!.classList.remove('hidden')
-      lightbox!.classList.add('flex')
-      loadPhoto(photo, data, () => { img.style.opacity = '1' })
-
-      lastFocused = document.activeElement as HTMLElement | null
-      ;requestAnimationFrame(() => {
-        closeBtn.focus()
-        requestAnimationFrame(() => lightbox!.classList.add('lightbox-enter'))
-
-        if (swipeHint) {
-          swipeHint.style.opacity = '1'
-          setTimeout(() => { swipeHint.style.opacity = '0' }, 2000)
-        }
-      })
-      ;(window as any).__lenis?.stop()
-      document.body.style.overflow = 'hidden'
-    }
-
-    function close() {
-      loadToken++
-      img.style.opacity = '0'
-      resetZoom()
-      img.style.transform = 'none'
-      lightbox!.classList.remove('lightbox-enter')
-      lightbox!.classList.add('lightbox-exit')
-      if (lastFocused) { lastFocused.focus(); lastFocused = null }
-      setTimeout(() => {
-        if (!lightbox!.classList.contains('hidden')) {
-          lightbox!.classList.add('hidden')
-          lightbox!.classList.remove('flex', 'lightbox-exit')
-          document.body.style.removeProperty('overflow')
-          ;(window as any).__lenis?.start()
-        }
-      }, 200)
-    }
-
-    function showError() { errorEl.classList.remove('hidden') }
-
-    function updateMeta(photo: any, data: any[]) {
-      titleEl.textContent = photo.title
-      counterEl.textContent = `${currentIndex + 1} / ${data.length}`
-      prevBtn.classList.toggle('hidden', currentIndex === 0)
-      nextBtn.classList.toggle('hidden', currentIndex === data.length - 1)
-    }
-
-    function transitionTo(photo: any, data: any[]) {
-      if (transitioning || !photo) return
-      transitioning = true
-      resetZoom()
-      img.style.transform = 'none'
-      img.style.opacity = '0'
-      errorEl.classList.add('hidden')
-      updateMeta(photo, data)
-
-      function onFadeOut(e: TransitionEvent) {
-        if (e && e.propertyName !== 'opacity') return
-        img.removeEventListener('transitionend', onFadeOut)
-        swapImage(photo, data)
-      }
-
-      const dur = parseFloat(getComputedStyle(img).transitionDuration) * 1000 || 300
-      if (dur < 10 || img.style.opacity === '0') {
-        swapImage(photo, data)
-      } else {
-        img.addEventListener('transitionend', onFadeOut)
-      }
-    }
-
-    function swapImage(photo: any, data: any[]) {
-      resetZoom()
-      img.style.transform = 'none'
-      loadPhoto(photo, data, () => { img.style.opacity = '1'; transitioning = false })
-    }
-
-    function preloadAdjacent(data: any[]) {
-      for (const i of [currentIndex - 1, currentIndex + 1]) {
-        const photo = data[i]
-        if (!photo) continue
-        new Image().src = photo.thumb
-        setHdSource(new Image(), photo, `${displayWidth(photo)}px`)
-      }
-    }
-
-    function prev() {
-      const data = getPhotos()
-      if (currentIndex > 0) { currentIndex--; transitionTo(data[currentIndex], data) }
-    }
-
-    function next() {
-      const data = getPhotos()
-      if (currentIndex < data.length - 1) { currentIndex++; transitionTo(data[currentIndex], data) }
-    }
-
-    // Tiles are real links to the original file. Astro's <ClientRouter /> also listens for
-    // document clicks (bubble phase) and would otherwise navigate to the JPEG, so this handler
-    // runs in the capture phase and claims the click first; the tiles also carry
-    // data-astro-reload so the router leaves them alone even if ordering changes.
-    const clickHandler = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-      const btn = (e.target as HTMLElement).closest('[data-index]') as HTMLElement | null
-      if (!btn) return
-      const idx = parseInt(btn.dataset.index || '', 10)
-      const data = getPhotos()
-      if (!isNaN(idx) && idx >= 0 && idx < data.length) {
-        e.preventDefault()
-        open(idx)
-      }
-    }
-    document.addEventListener('click', clickHandler, true)
-    ;(window as any).__lightboxClickHandler = clickHandler
-
-    closeBtn.addEventListener('click', close)
-    prevBtn.addEventListener('click', prev)
-    nextBtn.addEventListener('click', next)
-
-    const keyHandler = (e: KeyboardEvent) => {
-      if (lightbox!.classList.contains('hidden')) return
-      if (e.key === 'Escape') { e.preventDefault(); close() }
-      if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }
-      if (e.key === 'ArrowRight') { e.preventDefault(); next() }
-      if (e.key === 'Tab') {
-        const focusable = getFocusableElements()
-        if (focusable.length === 0) {
-          e.preventDefault()
-          return
-        }
-        const first = focusable[0]
-        const last = focusable[focusable.length - 1]
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            last.focus()
-            e.preventDefault()
-          }
-        } else {
-          if (document.activeElement === last) {
-            first.focus()
-            e.preventDefault()
-          }
-        }
-      }
-    }
-    document.addEventListener('keydown', keyHandler)
-    ;(window as any).__lightboxKeyHandler = keyHandler
-
-    document.addEventListener('astro:before-swap', () => {
-      if (!lightbox.classList.contains('hidden')) {
-        loadToken++
-        lightbox.classList.add('hidden')
-        lightbox.classList.remove('flex', 'lightbox-enter', 'lightbox-exit')
-        ;(window as any).__lenis?.start()
-      }
-      document.body.style.removeProperty('overflow')
-      document.removeEventListener('click', clickHandler, true)
-      document.removeEventListener('keydown', keyHandler)
-    }, { once: true })
-
-    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) close() })
-
-    let tx = 0, ty = 0
-    let isSwiping = false
-
-    lightbox.addEventListener('touchstart', (e) => {
-      if (transitioning || e.touches.length > 1) return
-      tx = e.touches[0].clientX
-      ty = e.touches[0].clientY
-      isSwiping = true
-      img.style.transition = 'none'
-    }, { passive: true })
-
-    lightbox.addEventListener('touchmove', (e) => {
-      if (!isSwiping || isZoomed) return
-      const dx = e.touches[0].clientX - tx
-      const dy = e.touches[0].clientY - ty
-      if (Math.abs(dx) > Math.abs(dy)) {
-        img.style.transform = `translateX(${dx * 0.5}px)`
-      }
-    }, { passive: true })
-
-    lightbox.addEventListener('touchend', (e) => {
-      if (!isSwiping) return
-      isSwiping = false
-      const dx = e.changedTouches[0].clientX - tx
-      const dy = e.changedTouches[0].clientY - ty
-
-      img.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
-      img.style.transform = 'none'
-
-      if (!isZoomed && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0) {
-          prev()
-        } else {
-          next()
-        }
-      }
-    }, { passive: true })
-
-    ;(window as any).__updateLightboxData = (data: any[]) => {
-      const el = document.getElementById('lightbox-data')
-      if (el) el.textContent = JSON.stringify(data)
-      currentIndex = 0
-      if (!lightbox!.classList.contains('hidden') && data.length > 0) {
-        const photo = data[0]
-        resetZoom()
-        img.style.transform = 'none'
-        img.style.opacity = '0'
-        updateMeta(photo, data)
-        loadPhoto(photo, data, () => { img.style.opacity = '1' })
-      }
-    }
-  }
-
-  // Run immediately for initial load
   initLightbox()
-
-  // Run on subsequent navigations
   document.addEventListener('astro:after-swap', initLightbox)
 </script>

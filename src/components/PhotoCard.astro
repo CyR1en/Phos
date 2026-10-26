@@ -2,6 +2,8 @@
 export interface Props {
   filename: string
   title: string
+  titleIsAuto?: boolean
+  description?: string
   thumb: string
   thumbMobile: string
   gridSrcset?: string
@@ -13,7 +15,7 @@ export interface Props {
   category?: string
 }
 
-const { title, thumb, gridSrcset, width, height, blur, index } = Astro.props
+const { title, titleIsAuto, description, thumb, gridSrcset, width, height, blur, index } = Astro.props
 const ratio = width && height ? width / height : 1.5
 const desktopSize = Math.min(Math.round(ratio * 400), 1696)
 const tabletSize = Math.min(Math.round(ratio * 24), 100)
@@ -29,7 +31,7 @@ const imageStyle = blur ? `background: url('${blur}') center / cover no-repeat` 
   width={width ?? undefined}
   height={height ?? undefined}
   style={imageStyle}
-  alt={title}
+  alt={titleIsAuto ? (description || 'Photograph') : title}
   loading={index < 3 ? 'eager' : 'lazy'}
   fetchpriority={index === 0 ? 'high' : undefined}
   decoding="async"

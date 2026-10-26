@@ -188,22 +188,6 @@
   transform: translateY(0);
 }
 
-.lightbox-enter {
-  animation: lightboxIn 0.25s ease-out both;
-}
-.lightbox-exit {
-  animation: lightboxOut 0.2s ease-in both;
-}
-
-@keyframes lightboxIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes lightboxOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
 .hero-parallax {
   transform: translate3d(0, 0, 0);
   will-change: transform;

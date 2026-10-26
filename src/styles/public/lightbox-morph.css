@@ -1,0 +1,40 @@
+::view-transition-group(lb-photo) {
+  animation-duration: 460ms;
+  animation-timing-function: cubic-bezier(.32, .72, 0, 1);
+}
+
+::view-transition-old(lb-photo),
+::view-transition-new(lb-photo) {
+  animation: none;
+  mix-blend-mode: normal;
+  height: 100%;
+  object-fit: contain;
+}
+
+html.lightbox-morph-closing::view-transition-old(lb-photo) {
+  opacity: 1;
+}
+
+html.lightbox-morph-closing::view-transition-new(lb-photo) {
+  animation: lb-late-in 460ms cubic-bezier(.32, .72, 0, 1) both;
+}
+
+@keyframes lb-late-in {
+  0%, 40% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+html.lightbox-morphing::view-transition-old(root),
+html.lightbox-morphing::view-transition-new(root) {
+  animation-duration: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(lb-photo),
+  ::view-transition-old(lb-photo),
+  ::view-transition-new(lb-photo),
+  html.lightbox-morphing::view-transition-old(root),
+  html.lightbox-morphing::view-transition-new(root) {
+    animation: none !important;
+  }
+}

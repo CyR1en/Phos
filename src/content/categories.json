@@ -19,6 +19,7 @@
         {
           "filename": "sample-01.jpg",
           "title": "Outdoor Ceremony",
+          "titleIsAuto": false,
           "description": "",
           "focus": null,
           "full": "/photos/full/wedding/sample-01.jpg",
@@ -37,6 +38,7 @@
         {
           "filename": "sample-02.jpg",
           "title": "Golden Hour Embrace",
+          "titleIsAuto": false,
           "description": "",
           "focus": null,
           "full": "/photos/full/wedding/sample-02.jpg",
@@ -55,6 +57,7 @@
         {
           "filename": "sample-03.jpg",
           "title": "Sample 03",
+          "titleIsAuto": true,
           "description": "",
           "focus": null,
           "full": "/photos/full/wedding/sample-03.jpg",
@@ -73,6 +76,7 @@
         {
           "filename": "sample-04.jpg",
           "title": "Sample 04",
+          "titleIsAuto": true,
           "description": "",
           "focus": null,
           "full": "/photos/full/wedding/sample-04.jpg",
@@ -91,6 +95,7 @@
         {
           "filename": "sample-05.jpg",
           "title": "Sample 05",
+          "titleIsAuto": true,
           "description": "",
           "focus": null,
           "full": "/photos/full/wedding/sample-05.jpg",
@@ -109,6 +114,7 @@
         {
           "filename": "sample-06.jpg",
           "title": "Sample 06",
+          "titleIsAuto": true,
           "description": "",
           "focus": null,
           "full": "/photos/full/wedding/sample-06.jpg",
@@ -145,6 +151,7 @@
         {
           "filename": "sample-01.jpg",
           "title": "Toyota Supra",
+          "titleIsAuto": false,
           "description": "Yellow Supra in the showroom",
           "focus": null,
           "full": "/photos/full/cars/sample-01.jpg",
@@ -163,6 +170,7 @@
         {
           "filename": "sample-02.jpg",
           "title": "Pagani Utopia",
+          "titleIsAuto": false,
           "description": "Exquisite hypercar detail shot",
           "focus": null,
           "full": "/photos/full/cars/sample-02.jpg",
@@ -181,6 +189,7 @@
         {
           "filename": "sample-03.jpg",
           "title": "City Cruise",
+          "titleIsAuto": false,
           "description": "Silver sports car in Hamburg",
           "focus": null,
           "full": "/photos/full/cars/sample-03.jpg",
@@ -199,6 +208,7 @@
         {
           "filename": "sample-04.jpg",
           "title": "Sample 04",
+          "titleIsAuto": true,
           "description": "",
           "focus": null,
           "full": "/photos/full/cars/sample-04.jpg",
@@ -217,6 +227,7 @@
         {
           "filename": "sample-05.jpg",
           "title": "Sample 05",
+          "titleIsAuto": true,
           "description": "",
           "focus": null,
           "full": "/photos/full/cars/sample-05.jpg",
@@ -253,6 +264,7 @@
         {
           "filename": "sample-01.jpg",
           "title": "Natural Light Portrait",
+          "titleIsAuto": false,
           "description": "Studio portrait with natural lighting",
           "focus": null,
           "full": "/photos/full/portrait/sample-01.jpg",
@@ -271,6 +283,7 @@
         {
           "filename": "sample-02.jpg",
           "title": "Editorial Style",
+          "titleIsAuto": false,
           "description": "Modern fashion portrait",
           "focus": null,
           "full": "/photos/full/portrait/sample-02.jpg",
@@ -289,6 +302,7 @@
         {
           "filename": "sample-03.jpg",
           "title": "Floral Elegance",
+          "titleIsAuto": false,
           "description": "Artistic portrait in floral dress",
           "focus": null,
           "full": "/photos/full/portrait/sample-03.jpg",
@@ -307,6 +321,7 @@
         {
           "filename": "sample-04.jpg",
           "title": "Golden Hour Glow",
+          "titleIsAuto": false,
           "description": "Warm environmental portrait",
           "focus": null,
           "full": "/photos/full/portrait/sample-04.jpg",
@@ -325,6 +340,7 @@
         {
           "filename": "sample-05.jpg",
           "title": "Hands & Grace",
+          "titleIsAuto": false,
           "description": "Elegant studio pose",
           "focus": null,
           "full": "/photos/full/portrait/sample-05.jpg",
@@ -351,6 +367,7 @@
       "hd": "/photos/hd/wedding/sample-04.webp",
       "srcset": "/photos/immersive-mobile/wedding/sample-04.webp 1100w, /photos/immersive/wedding/sample-04.webp 2200w, /photos/hd/wedding/sample-04.webp 3840w",
       "title": "Sample 04",
+      "titleIsAuto": true,
       "description": "",
       "focus": null,
       "blur": "data:image/webp;base64,UklGRmIAAABXRUJQVlA4IFYAAADQAwCdASoUAA0APxFysFAsJqSisAgBgCIJYwDCgCHahtCaqOY9VQAA/qnsdLpHSdz8XflHlmnrytfcUU21ofG7nXKoxfOJFuWp6yGOqQgicivedNAAAA==",
@@ -367,6 +384,7 @@
       "hd": "/photos/hd/wedding/sample-06.webp",
       "srcset": "/photos/immersive-mobile/wedding/sample-06.webp 1100w, /photos/immersive/wedding/sample-06.webp 2200w, /photos/hd/wedding/sample-06.webp 3840w",
       "title": "Sample 06",
+      "titleIsAuto": true,
       "description": "",
       "focus": null,
       "blur": "data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAAAwBACdASoUAA0APxFwsFAsJiSisAgBgCIJZACdMoMjbD9xkdR/8ZqbuoAA+5mtYjMjc9T9HGRgwRsbCAqFiPHHfFaDy4HJY9RTZLW/peRc2oxVC8DgYb5OMyXMZDhi9TjE3fLkZ08jsBOZ+Ko0mGEV5sXVnCPV1oR3///UiEJUSCwx32Zpo5HNwTAAAA==",

@@ -264,6 +264,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
   return {
     filename: file,
     title: metaInfo.title || titleize(parse(file).name),
+    // Captions hide filename-derived titles and show authored descriptions.
+    titleIsAuto: !metaInfo.title,
     description: metaInfo.description || '',
     focus: normaliseFocus(metaInfo.focus, `${srcPath} (_meta.yaml photos.${file}.focus)`),
     full: photoUrl('full', catSlug, file),
@@ -458,6 +460,7 @@ async function scanPhotos(sourceDir) {
           hd: p.hd,
           srcset: p.srcset,
           title: p.title,
+          titleIsAuto: p.titleIsAuto,
           description: p.description,
           focus: p.focus,
           blur: p.blur,

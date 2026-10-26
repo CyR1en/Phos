@@ -78,3 +78,10 @@ body:has(.photo-hero[data-hero-empty]) .site-header:not(.is-scrolled) {
 @media (scripting: none) {
   body:has(.photo-hero) .site-header { position: static; }
 }
+
+/* viewport-fit=cover (needed for the lightbox insets) lets the page run under notches in landscape. */
+.site-nav { padding-inline: max(1.5rem, env(safe-area-inset-left)) max(1.5rem, env(safe-area-inset-right)); }
+#mobile-nav { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); }
+@media (min-width: 1024px) {
+  .site-nav { padding-inline: max(2rem, env(safe-area-inset-left)) max(2rem, env(safe-area-inset-right)); }
+}

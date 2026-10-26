@@ -6,6 +6,7 @@ export interface Props {
     hd: string
     srcset: string
     title: string
+    titleIsAuto?: boolean
     description: string
     blur: string
     width: number | null
@@ -43,7 +44,11 @@ function heroSizes(photo: { width: number | null; height: number | null }) {
 
 function photoCredit(photo: Props['heroPriority'][number]) {
   const title = photo.title.trim()
-  const hasTitle = title && !/^Sample \d+$/i.test(title) && !/^(DSC|IMG)[ _-]?\d+/i.test(title)
+  // Older manifests lack title provenance, so retain their filename heuristic.
+  const titleIsAuto = photo.titleIsAuto === undefined
+    ? /^Sample \d+$/i.test(title) || /^(DSC|IMG)[ _-]?\d+/i.test(title)
+    : photo.titleIsAuto
+  const hasTitle = title && !titleIsAuto
   return [photo.categoryName, hasTitle ? title : ''].filter(Boolean).join(' · ')
 }
 ---
