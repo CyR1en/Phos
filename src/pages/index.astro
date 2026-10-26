@@ -74,7 +74,11 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
     if (sectionName === 'showcase' && config.home.showcase?.enabled !== false) {
       return (() => {
         const showcase = config.home.showcase || { heading: 'Showcase', items: [] }
-        const items = (showcase.items || []).map((item: any) => {
+        const configured = showcase.items || []
+        const sourceItems = configured.length === 0
+          ? categories.map((c: any) => ({ type: 'category', slug: c.slug }))
+          : configured
+        const items = sourceItems.map((item: any) => {
           if (item.type === 'gallery') {
             const gal = galleries.find((g: any) => g.slug === item.slug)
             if (!gal) return null
@@ -83,8 +87,9 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
               slug: gal.slug,
               description: gal.description,
               cover: gal.cover,
-              coverWidth: null,
-              coverHeight: null,
+              coverSrcset: gal.coverSrcset || '',
+              coverWidth: gal.coverWidth ?? null,
+              coverHeight: gal.coverHeight ?? null,
               photoCount: gal.photoCount,
               blur: gal.coverBlur,
               link: `/galleries/${gal.slug}/`,
@@ -93,13 +98,14 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
               displayDescription: item.description !== undefined ? item.description : undefined,
             }
           }
-          const cat = categories.find((c: any) => c.slug === item.slug)
+          const cat: any = categories.find((c: any) => c.slug === item.slug)
           if (!cat) return null
           return {
             name: cat.name,
             slug: cat.slug,
             description: cat.description,
             cover: cat.cover,
+            coverSrcset: cat.coverSrcset || '',
             coverWidth: cat.coverWidth,
             coverHeight: cat.coverHeight,
             photoCount: cat.photoCount,
@@ -111,6 +117,8 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
           }
         }).filter(Boolean)
 
+        if (items.length === 0) return null
+
         return (
           <section id="showcase" class="showcase-section" aria-labelledby="showcase-heading">
             <div class="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
@@ -121,30 +129,25 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
                 <a href="/photos/all/" class="showcase-browse">Browse all photos</a>
               </div>
 
-              {items.length > 0 ? (
-                <div class="showcase-list">
-                  {items.map((item: any) => (
-                    <CategoryCard
-                      name={item.name}
-                      slug={item.slug}
-                      description={item.description}
-                      cover={item.cover}
-                      coverWidth={item.coverWidth}
-                      coverHeight={item.coverHeight}
-                      photoCount={item.photoCount}
-                      blur={item.blur}
-                      link={item.link}
-                      displayTitle={item.displayTitle}
-                      displayDescription={item.displayDescription}
-                      actionLabel={item.actionLabel}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div class="mt-12 py-24 text-center">
-                  <p class="text-lg text-muted">No showcase items configured. Add categories or galleries in the admin.</p>
-                </div>
-              )}
+              <div class="showcase-list">
+                {items.map((item: any) => (
+                  <CategoryCard
+                    name={item.name}
+                    slug={item.slug}
+                    description={item.description}
+                    cover={item.cover}
+                    coverSrcset={item.coverSrcset || undefined}
+                    coverWidth={item.coverWidth}
+                    coverHeight={item.coverHeight}
+                    photoCount={item.photoCount}
+                    blur={item.blur}
+                    link={item.link}
+                    displayTitle={item.displayTitle}
+                    displayDescription={item.displayDescription}
+                    actionLabel={item.actionLabel}
+                  />
+                ))}
+              </div>
             </div>
           </section>
         )

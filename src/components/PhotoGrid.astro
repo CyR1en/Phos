@@ -7,6 +7,7 @@ interface Photo {
   full: string
   thumb: string
   thumbMobile: string
+  gridSrcset?: string
   width: number | null
   height: number | null
   blur: string
@@ -23,12 +24,22 @@ const { photos, wrapperClass } = Astro.props
 
 <div class="columns-1 sm:columns-3 gap-8">
   {photos.map((photo, i) => (
-    <div class:list={['mb-8 cursor-pointer break-inside-avoid photo-card-wrap', wrapperClass]} data-category={photo.category || undefined} data-index={i}>
+    <a
+      href={photo.full}
+      class:list={['photo-card-wrap mb-8 block break-inside-avoid overflow-hidden rounded-lg shadow-sm', wrapperClass]}
+      data-category={photo.category || undefined}
+      data-index={i}
+      data-astro-reload
+      data-astro-prefetch="false"
+      aria-haspopup="dialog"
+      aria-label={`View ${photo.title}`}
+    >
       <PhotoCard
         filename={photo.filename}
         title={photo.title}
         thumb={photo.thumb}
         thumbMobile={photo.thumbMobile}
+        gridSrcset={photo.gridSrcset}
         full={photo.full}
         width={photo.width}
         height={photo.height}
@@ -36,7 +47,7 @@ const { photos, wrapperClass } = Astro.props
         index={i}
         category={photo.category}
       />
-    </div>
+    </a>
   ))}
 </div>
 
@@ -45,12 +56,21 @@ const { photos, wrapperClass } = Astro.props
     opacity: 0;
     transform: translateY(32px);
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .photo-card-wrap {
+      opacity: 1;
+      transform: none;
+    }
+  }
 </style>
 
 <script>
   import { inView, animate } from 'framer-motion/dom'
 
   function initPhotoGrid() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
     const cards = document.querySelectorAll('.photo-card-wrap')
     cards.forEach((card) => {
       if ((card as HTMLElement).dataset.animated) return
@@ -69,7 +89,7 @@ const { photos, wrapperClass } = Astro.props
             delay: delay,
           }
         )
-      }, { margin: "0px 0px -50px 0px" })
+      }, { margin: '0px 0px -50px 0px' })
     })
   }
 

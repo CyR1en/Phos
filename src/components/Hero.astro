@@ -18,6 +18,15 @@ export interface Props {
 
 import config from '@lib/config'
 
+let galleries: any[] = []
+try {
+  const gals = await import('@lib/galleries').then(m => m.default || m)
+  galleries = gals.galleries || []
+} catch {
+  galleries = []
+}
+const hasGalleries = galleries.length > 0
+
 const { heroPriority } = Astro.props
 const hasSlideshow = heroPriority.length > 1
 const slideshowInterval = config.home.hero.slideshow_interval ?? 6000
@@ -83,7 +92,7 @@ function heroSizes(photo: { width: number | null; height: number | null }) {
       </h1>
       <div data-hero-ctas class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-start">
         <a
-          href="/galleries"
+          href={hasGalleries ? '/galleries' : '/photos/all/'}
           class="site-button hero-primary inline-flex items-center justify-center rounded-pill text-sm w-full sm:w-auto opacity-0"
         >
           <span data-config="home.hero.cta1">{config.home.hero.cta1}</span>

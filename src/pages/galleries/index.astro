@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
+import manifest from '@lib/categories'
 import config from '@lib/config'
 
 let galleries: any[] = []
@@ -10,6 +11,33 @@ try {
   galleries = []
 }
 
+const cards = galleries.length > 0
+  ? galleries.map((gallery) => ({
+    href: `/galleries/${gallery.slug}/`,
+    name: gallery.name,
+    description: gallery.description,
+    cover: gallery.cover,
+    coverSrcset: gallery?.coverSrcset,
+    coverWidth: gallery?.coverWidth,
+    coverHeight: gallery?.coverHeight,
+    blur: gallery.coverBlur,
+    photoCount: gallery.photoCount,
+  }))
+  : (manifest.categories || []).map((category: any) => ({
+    href: `/photos/all/?cat=${category.slug}`,
+    name: category.name,
+    description: category.description,
+    cover: category.cover,
+    coverSrcset: category?.coverSrcset,
+    coverWidth: category?.coverWidth,
+    coverHeight: category?.coverHeight,
+    blur: category.coverBlur,
+    photoCount: category.photoCount,
+  }))
+
+const cardSizes = '(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 128px) / 3), (min-width: 640px) calc((100vw - 80px) / 2), calc(100vw - 48px)'
+
+const subtitle = galleries.length > 0 ? 'Curated collections that tell stories' : 'Browse the work by category'
 const ogTitle = config.portfolio?.og_title || 'Portfolio'
 const ogDescription = config.portfolio?.og_description
 ---
@@ -19,12 +47,12 @@ const ogDescription = config.portfolio?.og_description
     <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 opacity-0" data-animate-header>
       <p class="font-mono text-xs uppercase tracking-wider text-muted">Portfolio</p>
       <h1 class="mt-4 font-display text-ink">Galleries</h1>
-      <p class="mt-4 text-lg text-body-muted leading-relaxed">Curated collections that tell stories</p>
+      <p class="mt-4 text-lg text-body-muted leading-relaxed">{subtitle}</p>
     </div>
   </section>
 
   <section class="mx-auto max-w-7xl px-6 pb-16 lg:pb-24 lg:px-8">
-    {galleries.length === 0 ? (
+    {cards.length === 0 ? (
       <div class="py-24 text-center">
         <p class="text-lg text-muted mb-6">No galleries yet.</p>
         <a
@@ -37,28 +65,36 @@ const ogDescription = config.portfolio?.og_description
       </div>
     ) : (
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {galleries.map((gallery) => (
+        {cards.map((card) => (
           <a
-            href={`/galleries/${gallery.slug}/`}
+            href={card.href}
             class="gallery-card block rounded-lg overflow-hidden border border-border-light hover:border-border-hover bg-canvas"
           >
-            {gallery.cover && (
-              <div class="aspect-[16/10] overflow-hidden bg-surface">
+            {card.cover && (
+              <div
+                class="aspect-[16/10] overflow-hidden bg-surface bg-cover bg-center"
+                style={card.blur ? `background-image:url('${card.blur}')` : undefined}
+              >
                 <img
-                  src={gallery.cover}
-                  alt={gallery.name}
+                  src={card.cover}
+                  srcset={card.coverSrcset || undefined}
+                  sizes={card.coverSrcset ? cardSizes : undefined}
+                  width={card.coverWidth || undefined}
+                  height={card.coverHeight || undefined}
+                  alt={card.name}
                   loading="lazy"
+                  decoding="async"
                   class="w-full h-full object-cover"
                 />
               </div>
             )}
             <div class="p-6">
-              <h2 class="font-display text-xl text-ink">{gallery.name}</h2>
-              {gallery.description && (
-                <p class="mt-2 text-sm text-body-muted line-clamp-2">{gallery.description}</p>
+              <h2 class="font-display text-xl text-ink">{card.name}</h2>
+              {card.description && (
+                <p class="mt-2 text-sm text-body-muted line-clamp-2">{card.description}</p>
               )}
               <p class="mt-4 text-xs text-muted">
-                {gallery.photoCount} photo{gallery.photoCount !== 1 ? 's' : ''}
+                {card.photoCount} photo{card.photoCount !== 1 ? 's' : ''}
               </p>
             </div>
           </a>

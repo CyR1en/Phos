@@ -287,16 +287,24 @@ const serialized = JSON.stringify(photos)
 
     // Remove old global listeners to prevent duplicates
     const oldClickHandler = (window as any).__lightboxClickHandler
-    if (oldClickHandler) document.removeEventListener('click', oldClickHandler)
-    
+    if (oldClickHandler) document.removeEventListener('click', oldClickHandler, true)
+
+    // Tiles are real links to the original file. Astro's <ClientRouter /> also listens for
+    // document clicks (bubble phase) and would otherwise navigate to the JPEG, so this handler
+    // runs in the capture phase and claims the click first; the tiles also carry
+    // data-astro-reload so the router leaves them alone even if ordering changes.
     const clickHandler = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
       const btn = (e.target as HTMLElement).closest('[data-index]') as HTMLElement | null
       if (!btn) return
       const idx = parseInt(btn.dataset.index || '', 10)
       const data = getPhotos()
-      if (!isNaN(idx) && idx >= 0 && idx < data.length) open(idx)
+      if (!isNaN(idx) && idx >= 0 && idx < data.length) {
+        e.preventDefault()
+        open(idx)
+      }
     }
-    document.addEventListener('click', clickHandler)
+    document.addEventListener('click', clickHandler, true)
     ;(window as any).__lightboxClickHandler = clickHandler
 
     closeBtn.addEventListener('click', close)

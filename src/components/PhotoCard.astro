@@ -4,6 +4,7 @@ export interface Props {
   title: string
   thumb: string
   thumbMobile: string
+  gridSrcset?: string
   full: string
   width: number | null
   height: number | null
@@ -12,15 +13,23 @@ export interface Props {
   category?: string
 }
 
-const { filename, title, thumb, thumbMobile } = Astro.props
+const { title, thumb, gridSrcset, width, height, blur, index } = Astro.props
+const imageStyle = [
+  width && height ? `aspect-ratio: ${width} / ${height}` : undefined,
+  blur ? `background: url('${blur}') center / cover no-repeat` : undefined,
+].filter(Boolean).join('; ') || undefined
 ---
 
 <img
-  class="w-full h-auto object-cover rounded-lg shadow-sm"
+  class="block w-full h-auto"
   src={thumb}
-  srcset={`${thumbMobile} 400w, ${thumb} 800w`}
-  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+  srcset={gridSrcset || undefined}
+  sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 128px) / 3), (min-width: 640px) calc((100vw - 112px) / 3), calc(100vw - 48px)"
+  width={width ?? undefined}
+  height={height ?? undefined}
+  style={imageStyle}
   alt={title}
-  loading="lazy"
+  loading={index < 3 ? 'eager' : 'lazy'}
+  fetchpriority={index === 0 ? 'high' : undefined}
   decoding="async"
 />

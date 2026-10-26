@@ -199,6 +199,7 @@ export interface ManifestPhoto {
   thumbMobile: string
   hd: string
   srcset: string
+  gridSrcset: string
   width: number | null
   height: number | null
   blur: string
@@ -210,6 +211,7 @@ export interface ManifestCategory {
   name: string
   description: string
   cover: string
+  coverSrcset: string
   coverWidth: number | null
   coverHeight: number | null
   coverBlur: string
@@ -240,5 +242,20 @@ export interface CategoriesManifest {
 }
 
 export interface GalleriesManifest {
-  galleries: Gallery[]
+  galleries: ManifestGallery[]
+}
+
+export interface ManifestGallery {
+  slug: string
+  name: string
+  description: string
+  cover: string | null
+  coverFull: string | null
+  coverBlur: string
+  coverSrcset: string
+  coverWidth: number | null
+  coverHeight: number | null
+  order: number
+  photoCount: number
+  photos: (ManifestPhoto & { category: string })[]
 }

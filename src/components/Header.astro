@@ -4,6 +4,15 @@ import config from '@lib/config'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { extname, join } from 'node:path'
 
+let galleries: any[] = []
+try {
+  const gals = await import('@lib/galleries').then(m => m.default || m)
+  galleries = gals.galleries || []
+} catch {
+  galleries = []
+}
+const hasGalleries = galleries.length > 0
+
 const publicDir = join(process.cwd(), 'public')
 const publicFiles = existsSync(publicDir) ? readdirSync(publicDir) : []
 const logoFile = publicFiles.find(f => f === 'logo.svg')
@@ -54,8 +63,10 @@ function isActive(path: string) {
 
     <div class="hidden items-center gap-7 lg:flex">
       <a href="/" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/') ? "page" : undefined}>Home</a>
-      <a href="/galleries" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/galleries') ? "page" : undefined}>Galleries</a>
-      <a href="/photos/all" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/photos') ? "page" : undefined}>Photos</a>
+      {hasGalleries && (
+        <a href="/galleries" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/galleries') ? "page" : undefined}>Galleries</a>
+      )}
+      <a href="/photos/all/" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/photos') ? "page" : undefined}>Photos</a>
       <a href="/about" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/about') ? "page" : undefined}>About</a>
       <a href="/contact" class="site-nav-link text-sm font-medium transition-colors" aria-current={isActive('/contact') ? "page" : undefined}>Contact</a>
     </div>
@@ -95,8 +106,10 @@ function isActive(path: string) {
   </div>
   <nav class="flex flex-col gap-2 px-6 pt-8">
     <a href="/" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Home</a>
-    <a href="/galleries" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/galleries') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Galleries</a>
-    <a href="/photos/all" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/photos') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Photos</a>
+    {hasGalleries && (
+      <a href="/galleries" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/galleries') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Galleries</a>
+    )}
+    <a href="/photos/all/" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/photos') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Photos</a>
     <a href="/about" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/about') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>About</a>
     <a href="/contact" class:list={["rounded-sm px-4 py-3 text-sm font-medium transition-colors", isActive('/contact') ? "bg-primary/10 text-primary font-semibold" : "text-ink hover:bg-surface"]}>Contact</a>
   </nav>

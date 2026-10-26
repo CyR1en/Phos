@@ -291,8 +291,17 @@
 .photo-card-wrap img {
   transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.photo-card-wrap:hover img {
+.photo-card-wrap:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+.photo-card-wrap:focus-visible img {
   transform: scale(1.02);
+}
+@media (hover: hover) and (pointer: fine) {
+  .photo-card-wrap:hover img {
+    transform: scale(1.02);
+  }
 }
 
 /* Gallery cards on /galleries */
@@ -383,7 +392,7 @@
   .animate-reveal { opacity: 1; transform: none; }
   [data-animate-header], [data-hero-photographer], [data-hero-heading] span, [data-hero-ctas] > a { opacity: 1; transform: none; }
   .service-list > *, .testimonial-grid > * { opacity: 1; transform: none; }
-  .public-site .group:hover img, .photo-card-wrap:hover img, .gallery-card:hover img,
+  .public-site .group:hover img, .photo-card-wrap:hover img, .photo-card-wrap:focus-visible img, .gallery-card:hover img,
   .photo-card:focus-visible .photo-card-image img,
   .photo-card:hover .photo-card-arrow svg, .photo-card:focus-visible .photo-card-arrow svg,
   .photo-card:active .photo-card-action { transform: none; }

@@ -11,6 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || (existsSync('/photos') ? '/photos' : join(__dirname, '..', 'photos'))
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'photos')
 const CACHE_PATH = process.env.PHOTOS_CACHE_PATH || join(OUTPUT_DIR, '.cache.json')
+const CACHE_VERSION = 2
 const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
 const GALLERIES_MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'galleries.json')
 const ROOT = join(__dirname, '..')
@@ -18,11 +19,24 @@ const ROOT = join(__dirname, '..')
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff', '.bmp'])
 
 const THUMB_WIDTH = 800
-const THUMB_HEIGHT = 600
 const MOBILE_THUMB_WIDTH = 400
 const IMMERSIVE_WIDTH = 2200
 const IMMERSIVE_MOBILE_WIDTH = 1100
 const HD_SIZE = 3840
+const VARIANT_DIRS = {
+  thumb: 'thumbs',
+  thumbMobile: 'thumbs-mobile',
+  immersiveMobile: 'immersive-mobile',
+  immersive: 'immersive',
+  hd: 'hd',
+}
+const COVER_TIERS = ['thumb', 'immersiveMobile', 'immersive']
+
+// Filenames may contain spaces or commas, either of which would split a srcset candidate;
+// percent-encode the file segment so the same URL is valid in src, href and srcset.
+function photoUrl(dir, catSlug, fileName) {
+  return `/photos/${dir}/${catSlug}/${encodeURIComponent(fileName)}`
+}
 // sharp runs on libuv's threadpool, so more photos in flight than it has threads only costs memory.
 const CONCURRENCY = Number(process.env.UV_THREADPOOL_SIZE) || 4
 
@@ -74,36 +88,44 @@ function pMap(items, fn, concurrency) {
 
 async function loadCache() {
   try {
-    return JSON.parse(await readFile(CACHE_PATH, 'utf-8'))
+    const cache = JSON.parse(await readFile(CACHE_PATH, 'utf-8'))
+    if (cache.version === CACHE_VERSION && cache.files) return cache
   } catch {
-    return { version: 1, files: {} }
+    // Missing or invalid caches are regenerated below.
   }
+  return { version: CACHE_VERSION, files: {} }
 }
 
 async function saveCache(cache) {
   await ensureDir(OUTPUT_DIR)
-  await writeFile(CACHE_PATH, JSON.stringify(cache, null, 2))
+  await writeFile(CACHE_PATH, JSON.stringify({ ...cache, version: CACHE_VERSION }, null, 2))
+}
+
+function getOrientedDimensions(metadata) {
+  if (metadata.autoOrient) return metadata.autoOrient
+  const swapDimensions = metadata.orientation >= 5 && metadata.orientation <= 8
+  return {
+    width: swapDimensions ? metadata.height : metadata.width,
+    height: swapDimensions ? metadata.width : metadata.height,
+  }
 }
 
 function writeHd(image, hdPath) {
   return image
     .resize(HD_SIZE, HD_SIZE, { fit: 'inside', withoutEnlargement: true })
+    .withIccProfile('srgb')
     .webp({ quality: 82 })
     .toFile(hdPath)
 }
 
-// Responsive ladder used wherever a photo fills the screen (hero, lightbox).
-// Widths mirror how sharp sizes each variant; tiers that add no pixels are dropped.
-function buildSrcset(catSlug, name, width, height) {
-  if (!width || !height) return ''
-  const tiers = [
-    [`/photos/immersive-mobile/${catSlug}/${name}`, Math.min(width, IMMERSIVE_MOBILE_WIDTH)],
-    [`/photos/immersive/${catSlug}/${name}`, Math.min(width, IMMERSIVE_WIDTH)],
-    [`/photos/hd/${catSlug}/${name}`, Math.round(width * Math.min(1, HD_SIZE / Math.max(width, height)))],
-  ]
+// Use encoded widths for every responsive ladder; tiers that add no pixels are dropped.
+function buildSrcset(catSlug, name, variants, tiers = ['immersiveMobile', 'immersive', 'hd']) {
+  const sizes = tiers
+    .map((tier) => [photoUrl(VARIANT_DIRS[tier], catSlug, name), variants[tier].w])
+    .sort((a, b) => a[1] - b[1])
   const candidates = []
   let prevWidth = 0
-  for (const [url, w] of tiers) {
+  for (const [url, w] of sizes) {
     if (w <= prevWidth) continue
     candidates.push(`${url} ${w}w`)
     prevWidth = w
@@ -128,6 +150,7 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
   let cached = cache.files[relPath]
   if (
     cached &&
+    Object.keys(VARIANT_DIRS).every((tier) => cached.variants?.[tier]?.w > 0 && cached.variants[tier].h > 0) &&
     cached.mtimeMs === srcStat.mtimeMs &&
     cached.size === srcStat.size &&
     outputs.full.has(file) &&
@@ -137,21 +160,26 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
     outputs.immersiveMobile.has(thumbName)
   ) {
     // Backfill only the HD variant so existing libraries don't re-encode everything.
-    if (!outputs.hd.has(thumbName)) await limitEncode(() => writeHd(sharp(srcPath), hdPath))
+    if (!outputs.hd.has(thumbName)) {
+      const hd = await limitEncode(() => writeHd(sharp(srcPath).rotate(), hdPath))
+      cached.variants.hd = { w: hd.width, h: hd.height }
+    }
   } else {
     cached = cache.files[relPath] = await limitEncode(async () => {
       const srcBuf = await readFile(srcPath)
-      const imgMeta = await sharp(srcBuf).metadata().then(m => ({ width: m.width, height: m.height, format: m.format }))
+      const imgMeta = await sharp(srcBuf).metadata()
+      const { width, height } = getOrientedDimensions(imgMeta)
 
       // Decode the source once at HD size; every smaller variant resizes these pixels
       // instead of decoding the full-resolution file again.
       const { data, info } = await sharp(srcBuf)
+        .rotate()
         .resize(HD_SIZE, HD_SIZE, { fit: 'inside', withoutEnlargement: true })
         .raw()
         .toBuffer({ resolveWithObject: true })
       const pixels = () => sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
 
-      const [blur] = await Promise.all([
+      const [blur, , thumb, thumbMobile, immersive, immersiveMobile, hd] = await Promise.all([
         pixels()
           .resize(20, null, { fit: 'inside' })
           .webp({ quality: 30 })
@@ -162,22 +190,26 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
         copyFile(srcPath, fullPath),
 
         pixels()
-          .resize(THUMB_WIDTH, THUMB_HEIGHT, { fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 82 })
+          .resize(THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+          .sharpen({ sigma: 0.5 })
+          .webp({ quality: 82, smartSubsample: true })
           .toFile(thumbPath),
 
         pixels()
           .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 75 })
+          .sharpen({ sigma: 0.5 })
+          .webp({ quality: 75, smartSubsample: true })
           .toFile(mobileThumbPath),
 
         pixels()
           .resize(IMMERSIVE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+          .withIccProfile('srgb')
           .webp({ quality: 84 })
           .toFile(immersivePath),
 
         pixels()
           .resize(IMMERSIVE_MOBILE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+          .withIccProfile('srgb')
           .webp({ quality: 80 })
           .toFile(immersiveMobilePath),
 
@@ -187,10 +219,17 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
       return {
         mtimeMs: srcStat.mtimeMs,
         size: srcStat.size,
-        width: imgMeta.width,
-        height: imgMeta.height,
+        width,
+        height,
         blur,
         format: imgMeta.format,
+        variants: {
+          thumb: { w: thumb.width, h: thumb.height },
+          thumbMobile: { w: thumbMobile.width, h: thumbMobile.height },
+          immersiveMobile: { w: immersiveMobile.width, h: immersiveMobile.height },
+          immersive: { w: immersive.width, h: immersive.height },
+          hd: { w: hd.width, h: hd.height },
+        },
       }
     })
   }
@@ -199,13 +238,14 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
     filename: file,
     title: metaInfo.title || titleize(parse(file).name),
     description: metaInfo.description || '',
-    full: `/photos/full/${catSlug}/${file}`,
-    thumb: `/photos/thumbs/${catSlug}/${thumbName}`,
-    thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
-    immersive: `/photos/immersive/${catSlug}/${thumbName}`,
-    immersiveMobile: `/photos/immersive-mobile/${catSlug}/${thumbName}`,
-    hd: `/photos/hd/${catSlug}/${thumbName}`,
-    srcset: buildSrcset(catSlug, thumbName, cached.width, cached.height),
+    full: photoUrl('full', catSlug, file),
+    thumb: photoUrl(VARIANT_DIRS.thumb, catSlug, thumbName),
+    thumbMobile: photoUrl(VARIANT_DIRS.thumbMobile, catSlug, thumbName),
+    immersive: photoUrl(VARIANT_DIRS.immersive, catSlug, thumbName),
+    immersiveMobile: photoUrl(VARIANT_DIRS.immersiveMobile, catSlug, thumbName),
+    hd: photoUrl(VARIANT_DIRS.hd, catSlug, thumbName),
+    srcset: buildSrcset(catSlug, thumbName, cached.variants),
+    gridSrcset: buildSrcset(catSlug, thumbName, cached.variants, ['thumbMobile', 'thumb', 'immersiveMobile']),
     width: cached.width,
     height: cached.height,
     blur: cached.blur,
@@ -266,6 +306,28 @@ async function processCategory(dirName, cache) {
   )
   const outputs = { full, thumbs, thumbsMobile, immersive, immersiveMobile, hd }
 
+  // Outputs for photos that no longer exist in the source folder are pruned BEFORE encoding.
+  // Doing it afterwards would, on case-insensitive filesystems (macOS APFS), delete the file a
+  // case-only rename just regenerated, because `A.webp` and `a.webp` share one directory entry.
+  const expectedWebp = new Set(files.map((f) => `${parse(f).name}.webp`))
+  const currentFiles = new Set(files)
+  const stale = []
+  for (const [key, dir, expected] of [
+    ['full', fullDir, currentFiles],
+    ['thumbs', thumbDir, expectedWebp],
+    ['thumbsMobile', mobileThumbDir, expectedWebp],
+    ['immersive', immersiveDir, expectedWebp],
+    ['immersiveMobile', immersiveMobileDir, expectedWebp],
+    ['hd', hdDir, expectedWebp],
+  ]) {
+    for (const name of outputs[key]) {
+      if (expected.has(name)) continue
+      stale.push(join(dir, name))
+      outputs[key].delete(name)
+    }
+  }
+  await Promise.all(stale.map((p) => rm(p, { force: true }).catch(() => {})))
+
   const photoMeta = meta.photos || {}
   const coverFile = meta.cover || files[0]
 
@@ -274,14 +336,20 @@ async function processCategory(dirName, cache) {
     files.map((file) => processPhoto(join(entryPath, file), catSlug, file, photoMeta, outputs, cache))
   )
 
+  // Every cover field derives from the photo that actually exists; a stale `cover:` in
+  // _meta.yaml falls back to the first photo instead of emitting URLs that 404.
   const coverPhoto = photos.find((p) => p.filename === coverFile) || photos[0]
+  if (meta.cover && coverPhoto.filename !== meta.cover) {
+    console.warn(`[generate-content] ${dirName}/_meta.yaml cover "${meta.cover}" not found; using ${coverPhoto.filename}`)
+  }
 
   return {
     slug: catSlug,
     name: meta.name || titleize(dirName),
     description: meta.description || '',
-    cover: `/photos/thumbs/${catSlug}/${parse(coverFile).name}.webp`,
-    coverFull: `/photos/full/${catSlug}/${coverFile}`,
+    cover: coverPhoto.thumb,
+    coverFull: coverPhoto.full,
+    coverSrcset: buildSrcset(catSlug, `${parse(coverPhoto.filename).name}.webp`, cache.files[`${catSlug}/${coverPhoto.filename}`].variants, COVER_TIERS),
     coverWidth: coverPhoto?.width || null,
     coverHeight: coverPhoto?.height || null,
     coverBlur: coverPhoto?.blur || '',
@@ -298,7 +366,7 @@ async function scanPhotos(sourceDir) {
     entries = await readdir(sourceDir, { withFileTypes: true })
   } catch {
     console.warn(`Warning: photos directory not found at ${sourceDir}`)
-    return { categories: [], heroPriority: [] }
+    return { categories: [], heroPriority: [], cache: { version: CACHE_VERSION, files: {} } }
   }
 
   const cache = await loadCache()
@@ -373,7 +441,7 @@ async function scanPhotos(sourceDir) {
 
   await saveCache(cache)
 
-  return { categories, heroPriority }
+  return { categories, heroPriority, cache }
 }
 
 async function main() {
@@ -385,7 +453,7 @@ async function main() {
   }
 
   console.log('Scanning photos directory...')
-  const { categories, heroPriority } = await scanPhotos(PHOTOS_SOURCE)
+  const { categories, heroPriority, cache } = await scanPhotos(PHOTOS_SOURCE)
 
   if (categories.length === 0) {
     console.log('No photos found. Place photos in the photos/ directory.')
@@ -467,7 +535,8 @@ async function main() {
           const [catSlug, ...fileParts] = coverRef.split('/')
           const coverFile = fileParts.join('/')
           const cat = categoryMap.get(catSlug)
-          if (cat) coverPhoto = cat.photos.find(ph => ph.filename === coverFile) || null
+          const photo = cat?.photos.find(ph => ph.filename === coverFile)
+          if (photo) coverPhoto = { ...photo, category: catSlug }
         }
         if (!coverPhoto && photos.length > 0) coverPhoto = photos[0]
 
@@ -478,6 +547,11 @@ async function main() {
           cover: coverPhoto?.thumb || null,
           coverFull: coverPhoto?.full || null,
           coverBlur: coverPhoto?.blur || '',
+          coverSrcset: coverPhoto
+            ? buildSrcset(coverPhoto.category, `${parse(coverPhoto.filename).name}.webp`, cache.files[`${coverPhoto.category}/${coverPhoto.filename}`].variants, COVER_TIERS)
+            : '',
+          coverWidth: coverPhoto?.width || null,
+          coverHeight: coverPhoto?.height || null,
           order: g.order_num,
           photoCount: photos.length,
           photos,

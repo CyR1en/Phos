@@ -59,7 +59,7 @@ const ogDescription = config.contact?.og_description
               )}
             </div>
 
-            <div id="form-status" class="sm:col-span-2 hidden rounded-sm text-sm p-4"></div>
+            <div id="form-status" role="status" aria-live="polite" class="sm:col-span-2 rounded-sm text-sm sr-only"></div>
           </form>
 
           <script>
@@ -70,7 +70,8 @@ const ogDescription = config.contact?.og_description
 
             form.addEventListener('submit', async (e) => {
               e.preventDefault()
-              status.className = 'sm:col-span-2 hidden rounded-sm text-sm p-4'
+              status.className = 'sm:col-span-2 rounded-sm text-sm sr-only'
+              status.textContent = ''
               btn.disabled = true
               const labelEl = btn.querySelector('span')
               if (labelEl) labelEl.textContent = 'Sending...'
@@ -106,16 +107,18 @@ const ogDescription = config.contact?.og_description
               }
             })
           </script>
-        ) : (
-          <div class="mt-12 rounded-sm border border-border p-6 text-sm text-body-muted">
-            Contact form is not configured yet. Configure SMTP settings in the admin dashboard to enable it.
-            {email && (
-              <p class="mt-2">
-                Reach out directly at <a href={`mailto:${email}`} class="text-info underline underline-offset-2 hover:no-underline">{email}</a>
-              </p>
-            )}
+        ) : email ? (
+          <div class="mt-12">
+            <a href={`mailto:${email}`}
+              class="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors"
+            >Email me
+              <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <p class="mt-4 text-sm text-body-muted">
+              Reach out directly at <a href={`mailto:${email}`} class="text-info underline underline-offset-2 hover:no-underline">{email}</a>
+            </p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   </section>

@@ -1,5 +1,15 @@
 ---
 import config from '@lib/config'
+
+let galleries: any[] = []
+try {
+  const gals = await import('@lib/galleries').then(m => m.default || m)
+  galleries = gals.galleries || []
+} catch {
+  galleries = []
+}
+const hasGalleries = galleries.length > 0
+
 const year = new Date().getFullYear()
 const social = (config.site.social || []).filter(s => s.platform && s.url)
 
@@ -18,8 +28,10 @@ const ICONS: Record<string, string> = {
 
     <nav class="flex flex-wrap items-center justify-center gap-x-7 gap-y-2" aria-label="Footer">
       <a href="/" class="text-sm text-muted hover:text-ink transition-colors">Home</a>
-      <a href="/galleries" class="text-sm text-muted hover:text-ink transition-colors">Galleries</a>
-      <a href="/photos/all" class="text-sm text-muted hover:text-ink transition-colors">Photos</a>
+      {hasGalleries && (
+        <a href="/galleries" class="text-sm text-muted hover:text-ink transition-colors">Galleries</a>
+      )}
+      <a href="/photos/all/" class="text-sm text-muted hover:text-ink transition-colors">Photos</a>
       <a href="/about" class="text-sm text-muted hover:text-ink transition-colors">About</a>
       <a href="/contact" class="text-sm text-muted hover:text-ink transition-colors">Contact</a>
     </nav>

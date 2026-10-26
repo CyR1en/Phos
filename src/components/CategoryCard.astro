@@ -4,6 +4,7 @@ export interface Props {
   slug: string
   description: string
   cover: string | null
+  coverSrcset?: string
   coverWidth: number | null
   coverHeight: number | null
   photoCount: number
@@ -14,7 +15,7 @@ export interface Props {
   actionLabel?: string
 }
 
-const { name, slug, description, cover, coverWidth, coverHeight, photoCount, blur, link, displayTitle, displayDescription, actionLabel = 'View photos' } = Astro.props
+const { name, slug, description, cover, coverSrcset, coverWidth, coverHeight, photoCount, blur, link, displayTitle, displayDescription, actionLabel = 'View photos' } = Astro.props
 const cardTitle = displayTitle || name
 const cardDescription = displayDescription !== undefined ? displayDescription : description
 const cardLink = link || `/photos/all/?cat=${slug}`
@@ -34,6 +35,8 @@ const cardLink = link || `/photos/all/?cat=${slug}`
         {cover ? (
           <img
             src={cover}
+            srcset={coverSrcset || undefined}
+            sizes={coverSrcset ? '(min-width: 1600px) calc((1216px - 80px) * 33 / 53 - 12px), (min-width: 1280px) calc((1216px - 5vw) * 33 / 53 - 12px), (min-width: 1024px) calc((95vw - 64px) * 33 / 53 - 12px), (min-width: 768px) calc((95vw - 48px) * 33 / 53 - 12px), calc(100vw - 44px)' : undefined}
             alt=""
             loading="lazy"
             fetchpriority="low"
