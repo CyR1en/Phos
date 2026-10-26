@@ -16,6 +16,10 @@ export interface Props {
 
 const { title, description, image, page, type = 'website' } = Astro.props
 
+const themeFiles = Object.keys(import.meta.glob('../styles/themes/*.css'))
+const themes = new Set(themeFiles.map(path => `theme-${path.slice(path.lastIndexOf('/') + 1, -4)}`))
+const theme = themes.has(config.site.theme) ? config.site.theme : 'theme-gallery'
+
 const pageTitle = title && title !== config.site.title
   ? (config.site.title ? `${title} | ${config.site.title}` : title)
   : (config.site.title || 'Photography')
@@ -50,7 +54,7 @@ const imageMimeType = (url: string | undefined) => {
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-theme={config.site.theme || 'theme-gallery'}>
+<html lang="en" data-theme={theme}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -107,25 +111,66 @@ const imageMimeType = (url: string | undefined) => {
             .catch(function() {});
         }
 
-        // Re-apply the correct theme after Astro client-side navigation swaps <html> attrs
-        document.addEventListener('astro:after-swap', function() {
-          // If we already have the live theme cached, apply it synchronously (no flicker)
-          if (_liveTheme) {
-            document.documentElement.setAttribute('data-theme', _liveTheme);
-          }
-          // Then fetch fresh config to pick up any changes + re-bind data-config elements
-          fetchAndApply();
-        });
+        // Public theme changes take effect after the next build, which the admin can trigger.
+        // Only admin preview uses live config; public pages keep their baked theme and text.
+        function isPreview() {
+          return window.self !== window.top || new URLSearchParams(location.search).has('preview')
+        }
 
-        fetchAndApply();
+        function applyParentTheme() {
+          try {
+            if (window.self === window.top) return null
+            var p = window.parent.document.documentElement
+            var t = p.getAttribute('data-theme')
+            if (t) document.documentElement.setAttribute('data-theme', t)
+            document.documentElement.classList.toggle('dark', p.classList.contains('dark'))
+            return t
+          } catch (e) {}
+          return null
+        }
+
+        if (isPreview()) {
+          applyParentTheme()
+          // The public bundle ships one palette; the preview may switch to any of them.
+          if (!document.querySelector('link[data-themes-all]')) {
+            var themesWritten = false
+            if (document.readyState === 'loading') {
+              try {
+                document.write('<link rel="stylesheet" href="/themes-all.css" data-themes-all>')
+                themesWritten = true
+              } catch (e) {}
+            }
+            if (!themesWritten) {
+              var allThemes = document.createElement('link')
+              allThemes.rel = 'stylesheet'
+              allThemes.href = '/themes-all.css'
+              allThemes.setAttribute('data-themes-all', '')
+              document.head.appendChild(allThemes)
+            }
+          }
+          document.addEventListener('astro:before-swap', function(e) {
+            var head = e.newDocument && e.newDocument.head
+            if (!head || head.querySelector('link[data-themes-all]')) return
+            var next = e.newDocument.createElement('link')
+            next.rel = 'stylesheet'
+            next.href = '/themes-all.css'
+            next.setAttribute('data-themes-all', '')
+            head.appendChild(next)
+          })
+          // Re-apply the correct theme after Astro client-side navigation swaps <html> attrs.
+          document.addEventListener('astro:after-swap', function() {
+            if (!isPreview()) return
+            var theme = applyParentTheme() || _liveTheme
+            if (theme) {
+              document.documentElement.setAttribute('data-theme', theme)
+            }
+            fetchAndApply()
+          })
+
+          fetchAndApply()
+        }
 
         function applyConfig(cfg) {
-          // Apply colour theme from live config (so admin theme choice takes effect)
-          if (cfg.site && cfg.site.theme) {
-            _liveTheme = cfg.site.theme;
-            document.documentElement.setAttribute('data-theme', cfg.site.theme);
-          }
-
           // Sync dark-mode class so it matches the current theme state
           try {
             var dm = localStorage.getItem('theme');
@@ -135,6 +180,13 @@ const imageMimeType = (url: string | undefined) => {
               document.documentElement.classList.remove('dark');
             }
           } catch(e) {}
+
+          // The admin's unsaved palette choice takes precedence over live config.
+          var theme = applyParentTheme() || (cfg.site && cfg.site.theme)
+          if (theme) {
+            _liveTheme = theme
+            document.documentElement.setAttribute('data-theme', theme)
+          }
 
           // Only apply data-config bindings if the page has them
           if (document.querySelector('[data-config]') === null) return;
@@ -182,14 +234,5 @@ const imageMimeType = (url: string | undefined) => {
     </main>
     <Footer />
 
-    <script>
-      import 'preline';
-      if (window.HSStaticMethods) {
-        window.HSStaticMethods.autoInit();
-      }
-      document.addEventListener('astro:page-load', () => {
-        window.HSStaticMethods?.autoInit();
-      });
-    </script>
   </body>
 </html>

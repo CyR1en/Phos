@@ -77,7 +77,7 @@ const tileSizes = (span: number) => [
 
           return (
             <a
-              href={photo.full}
+              href={photo.hd || photo.full}
               data-index={index}
               data-astro-reload
               data-astro-prefetch="false"

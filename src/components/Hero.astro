@@ -5,6 +5,10 @@ export interface Props {
     thumb: string
     hd: string
     srcset: string
+    srcsetAvif?: string
+    heroSrc?: string
+    heroPortrait?: { srcset: string; srcsetAvif: string } | null
+    ogImage?: string
     title: string
     titleIsAuto?: boolean
     description: string
@@ -65,7 +69,7 @@ function photoCredit(photo: Props['heroPriority'][number]) {
 >
   {heroPriority.length > 0 ? (
     <>
-      <div class:list={['absolute inset-0 z-0 pointer-events-none', parallax && 'hero-parallax']} id="hero-bg">
+      <div class="absolute inset-0 z-0 pointer-events-none" id="hero-bg">
         {heroPriority.map((photo, i) => (
           <div
             class:list={['absolute inset-0 bg-cover bg-center hero-slide', i === 0 && 'is-active']}
@@ -79,24 +83,34 @@ function photoCredit(photo: Props['heroPriority'][number]) {
             aria-hidden={i === 0 ? undefined : 'true'}
           >
             {i === 0 ? (
-              <img
-                src={photo.hd}
-                srcset={photo.srcset}
-                sizes={heroSizes(photo)}
-                alt=""
-                class="absolute inset-0 h-full w-full object-cover"
-                style={photo.focus ? `object-position: ${photo.focus}` : undefined}
-                fetchpriority="high"
-              />
+              <picture>
+                {photo.heroPortrait && <source media="(max-aspect-ratio: 4/5)" type="image/avif" srcset={photo.heroPortrait.srcsetAvif} sizes={heroSizes({ width: 1290, height: 2000 })} />}
+                {photo.heroPortrait && <source media="(max-aspect-ratio: 4/5)" type="image/webp" srcset={photo.heroPortrait.srcset} sizes={heroSizes({ width: 1290, height: 2000 })} />}
+                {photo.srcsetAvif && <source type="image/avif" srcset={photo.srcsetAvif} sizes={heroSizes(photo)} />}
+                <img
+                  src={photo.heroSrc || photo.hd}
+                  srcset={photo.srcset}
+                  sizes={heroSizes(photo)}
+                  alt=""
+                  class="absolute inset-0 h-full w-full object-cover"
+                  style={photo.focus ? `object-position: ${photo.focus}` : undefined}
+                  fetchpriority="high"
+                />
+              </picture>
             ) : (
-              <img
-                data-src={photo.hd}
-                data-srcset={photo.srcset}
-                data-sizes={heroSizes(photo)}
-                alt=""
-                class="absolute inset-0 h-full w-full object-cover"
-                style={photo.focus ? `object-position: ${photo.focus}` : undefined}
-              />
+              <picture>
+                {photo.heroPortrait && <source media="(max-aspect-ratio: 4/5)" type="image/avif" data-srcset={photo.heroPortrait.srcsetAvif} data-sizes={heroSizes({ width: 1290, height: 2000 })} />}
+                {photo.heroPortrait && <source media="(max-aspect-ratio: 4/5)" type="image/webp" data-srcset={photo.heroPortrait.srcset} data-sizes={heroSizes({ width: 1290, height: 2000 })} />}
+                {photo.srcsetAvif && <source type="image/avif" data-srcset={photo.srcsetAvif} data-sizes={heroSizes(photo)} />}
+                <img
+                  data-src={photo.heroSrc || photo.hd}
+                  data-srcset={photo.srcset}
+                  data-sizes={heroSizes(photo)}
+                  alt=""
+                  class="absolute inset-0 h-full w-full object-cover"
+                  style={photo.focus ? `object-position: ${photo.focus}` : undefined}
+                />
+              </picture>
             )}
           </div>
         ))}
@@ -118,6 +132,7 @@ function photoCredit(photo: Props['heroPriority'][number]) {
         <a
           href={hasGalleries ? '/galleries' : '/photos/all/'}
           class="site-button hero-primary inline-flex items-center justify-center rounded-pill text-sm"
+          data-astro-prefetch="viewport"
         >
           <span data-config="home.hero.cta1">{config.home.hero.cta1}</span>
           <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
@@ -159,8 +174,6 @@ function photoCredit(photo: Props['heroPriority'][number]) {
 </section>
 
 <script>
-  import { animate } from 'framer-motion/dom'
-
   let cleanupHero: (() => void) | undefined
 
   function initHero() {
@@ -175,7 +188,6 @@ function photoCredit(photo: Props['heroPriority'][number]) {
     const controls = heroSection.querySelector<HTMLElement>('.hero-controls')
     const pauseButton = heroSection.querySelector<HTMLButtonElement>('.hero-pause')
     const credit = heroSection.querySelector<HTMLAnchorElement>('[data-hero-credit]')
-    const heroBg = heroSection.querySelector<HTMLElement>('#hero-bg')
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const controller = new AbortController()
     const { signal } = controller
@@ -192,8 +204,8 @@ function photoCredit(photo: Props['heroPriority'][number]) {
     let fading = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let finishFade: (() => void) | undefined
-    let reveal: ReturnType<typeof animate> | undefined
-    let removeParallax: (() => void) | undefined
+    let reveal: Animation | undefined
+    let cancelWarmSlide: (() => void) | undefined
 
     const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
@@ -203,12 +215,21 @@ function photoCredit(photo: Props['heroPriority'][number]) {
     }
 
     function warmSlide(index: number) {
-      const img = slides[index]?.querySelector<HTMLImageElement>('img[data-src]')
+      const slide = slides[index]
+      const img = slide?.querySelector<HTMLImageElement>('img[data-src]')
       if (!img) return
+      slide.querySelectorAll<HTMLSourceElement>('source[data-srcset]').forEach(source => {
+        source.sizes = source.dataset.sizes || ''
+        source.srcset = source.dataset.srcset || ''
+        source.removeAttribute('data-srcset')
+        source.removeAttribute('data-sizes')
+      })
       img.sizes = img.dataset.sizes || ''
       img.srcset = img.dataset.srcset || ''
       img.src = img.dataset.src || ''
       img.removeAttribute('data-src')
+      img.removeAttribute('data-srcset')
+      img.removeAttribute('data-sizes')
     }
 
     function stop() {
@@ -339,14 +360,32 @@ function photoCredit(photo: Props['heroPriority'][number]) {
           firstImg.style.opacity = '1'
           return
         }
-        reveal = animate(firstImg, { opacity: [0, 1] }, { duration: 0.9, ease: [0.16, 1, 0.3, 1] })
+        reveal = firstImg.animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: 900,
+          easing: 'cubic-bezier(.16,1,.3,1)',
+          fill: 'both',
+        })
+        firstImg.style.removeProperty('opacity')
       })
     }
 
-    if (slides.length > 1 && motionAllowed) {
-      void decodeImage(firstImg, 800).then(() => {
-        if (!disposed && motionAllowed) warmSlide(1)
-      })
+    if (slides.length > 1 && motionAllowed && firstImg) {
+      const scheduleWarmSlide = () => {
+        if (disposed || !motionAllowed) return
+        const warmNext = () => {
+          cancelWarmSlide = undefined
+          if (!disposed && motionAllowed) warmSlide(1)
+        }
+        if (typeof window.requestIdleCallback === 'function') {
+          const id = window.requestIdleCallback(warmNext)
+          cancelWarmSlide = () => window.cancelIdleCallback(id)
+        } else {
+          const id = window.setTimeout(warmNext, 1500)
+          cancelWarmSlide = () => window.clearTimeout(id)
+        }
+      }
+      if (firstImg.complete && firstImg.naturalWidth > 0) scheduleWarmSlide()
+      else firstImg.addEventListener('load', scheduleWarmSlide, { once: true, signal })
     }
 
     dots.forEach(dot => {
@@ -385,10 +424,9 @@ function photoCredit(photo: Props['heroPriority'][number]) {
     motionQuery.addEventListener('change', () => {
       motionAllowed = !motionQuery.matches
       if (!motionAllowed) {
-        reveal?.stop()
+        reveal?.cancel()
         firstImg?.style.removeProperty('opacity')
         finishFade?.()
-        heroBg?.style.removeProperty('transform')
       }
       updatePlayback()
     }, { signal })
@@ -399,34 +437,15 @@ function photoCredit(photo: Props['heroPriority'][number]) {
     })
     observer.observe(heroSection)
 
-    // No scroll subscription or promoted image layer unless parallax is opted in.
-    if (heroBg && heroSection.hasAttribute('data-parallax') && motionAllowed) {
-      const device = navigator as Navigator & { deviceMemory?: number }
-      const isLowEnd = (navigator.hardwareConcurrency || 4) <= 2 || (device.deviceMemory || 4) <= 2
-      const lenis = window.__lenis
-      if (!isLowEnd && lenis) {
-        let lastY = 0
-        const onLenisScroll = () => {
-          if (!heroVisible || !motionAllowed) return
-          const y = lenis.animatedScroll * 0.4
-          if (Math.abs(y - lastY) < 0.1) return
-          lastY = y
-          heroBg.style.transform = `translate3d(0, ${y}px, 0)`
-        }
-        lenis.on('scroll', onLenisScroll)
-        removeParallax = () => lenis.off('scroll', onLenisScroll)
-      }
-    }
-
     updatePlayback()
     cleanupHero = () => {
       disposed = true
       requestVersion++
       stop()
+      cancelWarmSlide?.()
       finishFade?.()
-      reveal?.stop()
+      reveal?.cancel()
       firstImg?.style.removeProperty('opacity')
-      removeParallax?.()
       observer.disconnect()
       controller.abort()
     }

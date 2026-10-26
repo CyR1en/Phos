@@ -11,10 +11,18 @@ const gearList = gear.equipment || []
 const hasGear = gearList.length > 0
 const bio = config.about.photographer?.bio || ''
 const BIO_WORD_LIMIT = 250
-const bioWords = bio.split(/\s+/).filter(Boolean)
-const bioExceedsLimit = bioWords.length > BIO_WORD_LIMIT
-const truncatedBio = bioExceedsLimit ? bioWords.slice(0, BIO_WORD_LIMIT).join(' ') : ''
-const remainingBio = bioExceedsLimit ? bioWords.slice(BIO_WORD_LIMIT).join(' ') : ''
+const bioParagraphs = bio.split(/\r?\n\s*\r?\n/).map(para => para.trim()).filter(Boolean)
+let bioWordCount = 0
+let visibleParagraphCount = 0
+for (const paragraph of bioParagraphs) {
+  const paragraphWords = paragraph.split(/\s+/).length
+  if (visibleParagraphCount > 0 && bioWordCount + paragraphWords > BIO_WORD_LIMIT) break
+  bioWordCount += paragraphWords
+  visibleParagraphCount++
+}
+const truncatedBio = bioParagraphs.slice(0, visibleParagraphCount)
+const remainingBio = bioParagraphs.slice(visibleParagraphCount)
+const bioExceedsLimit = remainingBio.length > 0
 const cta = config.about.call_to_action
 const ogTitle = config.about?.og_title || 'About'
 const ogDescription = config.about?.og_description
@@ -54,30 +62,25 @@ const ogDescription = config.about?.og_description
             {bioExceedsLimit ? (
               <>
                 <div id="bio-truncated" class="space-y-5">
-                  {truncatedBio.split('\n\n').filter(Boolean).map((para) => (
+                  {truncatedBio.map((para) => (
                     <p>{para}</p>
                   ))}
                 </div>
-                <div id="bio-rest" class="hs-collapse hidden overflow-hidden transition-[height] duration-300 space-y-5">
-                  {remainingBio.split('\n\n').filter(Boolean).map((para) => (
-                    <p>{para}</p>
-                  ))}
-                </div>
-                <button
-                  id="bio-toggle"
-                  type="button"
-                  data-hs-collapse="#bio-rest"
-                  aria-expanded="false"
-                  aria-controls="bio-rest"
-                  class="hs-collapse-toggle text-sm font-medium text-ink underline underline-offset-4 hover:no-underline mt-2"
-                >
-                  <span class="hs-collapse-open:hidden">Read more</span>
-                  <span class="hidden hs-collapse-open:block">Show less</span>
-                </button>
+                <details class="bio-more">
+                  <summary class="bio-more-summary">
+                    <span class="bio-more-open">Read more</span>
+                    <span class="bio-more-close">Show less</span>
+                  </summary>
+                  <div class="space-y-5">
+                    {remainingBio.map((para) => (
+                      <p>{para}</p>
+                    ))}
+                  </div>
+                </details>
               </>
             ) : (
               <>
-                {bio.split('\n\n').filter(Boolean).map((para) => (
+                {bioParagraphs.map((para) => (
                   <p>{para}</p>
                 ))}
               </>
@@ -126,5 +129,35 @@ const ogDescription = config.about?.og_description
 
   .about-intro::first-letter {
     text-transform: uppercase;
+  }
+
+  .bio-more-summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--color-ink);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .bio-more-summary:hover {
+    text-decoration: none;
+  }
+
+  .bio-more-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .bio-more-close,
+  .bio-more[open] .bio-more-open {
+    display: none;
+  }
+
+  .bio-more[open] .bio-more-close {
+    display: inline;
   }
 </style>

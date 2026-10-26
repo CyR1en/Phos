@@ -110,7 +110,6 @@ export const createDialog: CreateDialog = (ctx, deps) => {
     }
     if (lockedBody) lockedBody.style.overflow = previousOverflow
     lockedBody = null
-    window.__lenis?.start()
     state.open = false
     returnFocus()
     deps.onClosed()
@@ -143,7 +142,6 @@ export const createDialog: CreateDialog = (ctx, deps) => {
     lockedBody = document.body
     previousOverflow = lockedBody.style.overflow
     lockedBody.style.overflow = 'hidden'
-    window.__lenis?.stop()
     lastArrowAt = -Infinity
     downOnBackdrop = false
     clearAnimations()

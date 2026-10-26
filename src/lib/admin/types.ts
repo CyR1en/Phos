@@ -204,6 +204,7 @@ export interface ManifestPhoto {
   thumbMobile: string
   hd: string
   srcset: string
+  heroSrc: string
   gridSrcset: string
   width: number | null
   height: number | null
@@ -233,6 +234,13 @@ export interface HeroPriorityPhoto {
   thumb: string
   hd: string
   srcset: string
+  srcsetAvif: string
+  heroSrc: string
+  heroPortrait: {
+    srcset: string
+    srcsetAvif: string
+  } | null
+  ogImage: string
   title: string
   titleIsAuto: boolean
   description: string
@@ -260,6 +268,7 @@ export interface ManifestGallery {
   description: string
   cover: string | null
   coverFull: string | null
+  coverOg: string | null
   coverBlur: string
   coverFocus: string | null
   coverSrcset: string

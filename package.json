@@ -10,10 +10,14 @@
     "sharp@0.34.5": true
   },
   "scripts": {
-    "dev": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && (node admin/server.mjs &) && astro dev",
-    "build": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && astro build",
+    "test": "node --test tests/",
+    "check": "tsc --noEmit -p tsconfig.json && astro check && node --test tests/",
+    "dev": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && node scripts/write-active-theme.mjs && (node admin/server.mjs &) && astro dev",
+    "build": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && npm run build:site",
+    "build:site": "node scripts/write-active-theme.mjs && astro build && node scripts/compress-dist.mjs",
+    "check:full": "node scripts/check-full.mjs",
     "preview": "astro preview",
-    "generate": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs",
+    "generate": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && node scripts/write-active-theme.mjs",
     "astro": "astro"
   },
   "dependencies": {
@@ -37,7 +41,6 @@
     "framer-motion": "^12.40.0",
     "jquery": "^4.0.0",
     "js-yaml": "^4.2.0",
-    "lenis": "^1.3.23",
     "lodash": "^4.18.1",
     "lucide-preact": "^1.41.0",
     "lucide-react": "^1.21.0",
@@ -54,12 +57,15 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.12",
     "@types/datatables.net": "^1.10.28",
     "@types/dropzone": "^5.7.9",
     "@types/jquery": "^4.0.1",
     "@types/lodash": "^4.17.24",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.17",
+    "esbuild": "^0.27.7",
+    "postcss": "^8.5.15",
     "shadcn": "^4.11.0",
     "typescript": "^5.8.0"
   }

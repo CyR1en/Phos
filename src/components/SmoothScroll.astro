@@ -1,65 +1,63 @@
+<!-- Scroll reveals only: section visibility and staggered page headers. -->
 <script>
-import Lenis from 'lenis'
-import { inView, animate } from 'framer-motion/dom'
+  let scrollObserver: IntersectionObserver | undefined
+  let headerObserver: IntersectionObserver | undefined
 
-const lenis = new Lenis({
-  lerp: 0.15,
-  smoothWheel: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  wheelMultiplier: 1,
-  touchMultiplier: 1,
-  orientation: 'vertical',
-  gestureOrientation: 'vertical',
-  autoRaf: true,
-})
+  function disconnectObservers() {
+    scrollObserver?.disconnect()
+    headerObserver?.disconnect()
+  }
 
-;(window as any).__lenis = lenis
-
-let scrollObserver: IntersectionObserver | undefined
-
-function initScrollAnimations() {
-  scrollObserver?.disconnect()
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
+  function initScrollAnimations() {
+    disconnectObservers()
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return
         entry.target.setAttribute('data-visible', '')
         observer.unobserve(entry.target)
+      })
+    }, { threshold: 0.1 })
+    scrollObserver = observer
+
+    document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el))
+
+    const headers = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting || !(entry.target instanceof HTMLElement)) return
+        const header = entry.target
+        headers.unobserve(header)
+        if (header.dataset.animated) return
+        header.dataset.animated = 'true'
+        header.classList.remove('opacity-0')
+        if (motionQuery.matches) return
+        Array.from(header.children).forEach((child, i) => {
+          child.animate([
+            { opacity: 0, transform: 'translateY(20px)' },
+            { opacity: 1, transform: 'none' },
+          ], {
+            duration: 900,
+            easing: 'cubic-bezier(.16,1,.3,1)',
+            delay: i * 120,
+            fill: 'backwards',
+          })
+        })
+      })
+    }, { rootMargin: '0px 0px -60px 0px' })
+    headerObserver = headers
+
+    document.querySelectorAll<HTMLElement>('[data-animate-header]').forEach(header => {
+      if (header.dataset.animated) return
+      if (motionQuery.matches) {
+        header.dataset.animated = 'true'
+        header.classList.remove('opacity-0')
+        return
       }
+      headers.observe(header)
     })
-  }, { threshold: 0.1 })
-  scrollObserver = observer
+  }
 
-  document.querySelectorAll('[data-animate]').forEach((el) => observer.observe(el))
-
-  const headers = document.querySelectorAll('[data-animate-header]')
-  headers.forEach((header) => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      header.classList.remove('opacity-0')
-      return
-    }
-    // Prevent re-binding if already animated
-    if ((header as HTMLElement).dataset.animated) return
-    ;(header as HTMLElement).dataset.animated = 'true'
-    
-    inView(header, (element) => {
-      const children = element.children
-      animate(
-        Array.from(children),
-        { opacity: [0, 1], y: [20, 0] },
-        {
-          duration: 0.9,
-          ease: [0.16, 1, 0.3, 1],
-          delay: (i) => i * 0.12,
-        }
-      )
-      element.classList.remove('opacity-0')
-    }, { margin: "0px 0px -60px 0px" })
-  })
-}
-
-// Run immediately for initial load
-initScrollAnimations()
-
-// Run on subsequent navigations
-document.addEventListener('astro:after-swap', initScrollAnimations)
-document.addEventListener('astro:before-swap', () => scrollObserver?.disconnect())
+  initScrollAnimations()
+  document.addEventListener('astro:after-swap', initScrollAnimations)
+  document.addEventListener('astro:before-swap', disconnectObservers)
 </script>

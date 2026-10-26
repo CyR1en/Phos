@@ -95,6 +95,16 @@ body:has(.photo-hero) > main {
     animation: heroKenBurns calc(var(--hero-interval, 6000ms) + 1400ms) linear forwards;
   }
   .photo-hero[data-ken-burns][data-hero-paused='true'] .hero-slide { animation-play-state: paused; }
+  @supports (animation-timeline: scroll()) {
+    .photo-hero[data-parallax] #hero-bg {
+      animation: heroParallax linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+    @keyframes heroParallax {
+      to { transform: translate3d(0, 40vh, 0); }
+    }
+  }
 }
 @keyframes heroKenBurns {
   from { transform: scale(1); }

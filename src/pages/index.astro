@@ -19,10 +19,11 @@ try {
   galleries = []
 }
 
-const { categories, heroPriority } = manifest
+const { categories } = manifest
+const heroPriority: Array<(typeof manifest.heroPriority)[number] & { ogImage?: string }> = manifest.heroPriority
 const sw = config.home.selectedWork || {}
 const allPhotos = categories.flatMap(category => category.photos.map(photo => ({ ...photo, category: category.slug })))
-const photoByKey = new Map(allPhotos.map(photo => [`${photo.category}/${photo.filename}`, photo] as const))
+const photoByKey = new Map<string, (typeof allPhotos)[number]>(allPhotos.map(photo => [`${photo.category}/${photo.filename}`, photo] as const))
 const resolvePhotos = (keys: string[]) => keys.flatMap(key => {
   const photo = photoByKey.get(key)
   return photo ? [photo] : []
@@ -38,16 +39,16 @@ const selectedCandidates = [resolvePhotos(sw.photos || []), resolvePhotos(immers
   .find(list => list.length >= 3) ?? auto
 const selected = [...new Map(selectedCandidates.map(photo => [`${photo.category}/${photo.filename}`, photo] as const)).values()].slice(0, 9)
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321'
+const ogImage = config.site?.og?.image || heroPriority[0]?.ogImage || heroPriority[0]?.full
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Person',
   name: config.about.photographer.name,
   description: config.site.description,
   url: siteUrl,
-  image: heroPriority.length > 0 ? `${siteUrl}${heroPriority[0].full}` : undefined,
+  image: ogImage ? (ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`) : undefined,
 }
 
-const ogImage = config.site?.og?.image || (heroPriority.length > 0 ? heroPriority[0].full : undefined)
 const ogTitle = config.home?.og_title || config.site.title
 const ogDescription = config.home?.og_description || config.site.description
 const defaultLayout = ['subheading', 'selectedWork', 'showcase', 'immersiveGallery', 'services', 'testimonials', 'cta']

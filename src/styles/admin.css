@@ -1,3 +1,84 @@
+@import "./core.css";
+@import "./themes/gallery.css";
+@import "./themes/rose-pine.css";
+@import "./themes/modern-elegant.css";
+@import "./themes/noir.css";
+@import "./themes/bone.css";
+@import "./themes/slate.css";
+@import "./themes/nord.css";
+@import "./themes/solarized.css";
+@import "./themes/everforest.css";
+
+@import "../../node_modules/preline/variants.css";
+@source "../../node_modules/preline/dist/index.mjs";
+
+@custom-variant hs-success {
+  &.success { @slot; }
+  .success & { @slot; }
+}
+@custom-variant hs-error {
+  &.error { @slot; }
+  .error & { @slot; }
+}
+@custom-variant hs-dragged {
+  &.dragged { @slot; }
+}
+@custom-variant hs-toastify-on {
+  &.toastify\\.on { @slot; }
+  .toastify\\.on & { @slot; }
+}
+@custom-variant hs-apexcharts-tooltip-dark {
+  &.dark { @slot; }
+}
+
+.hs-overlay-backdrop {
+  background-color: rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(2px);
+}
+
+/* Theme picker cards */
+.theme-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.theme-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
+}
+.dark .theme-card:hover {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+}
+
+/* Toast Animations */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-out {
+  animation: toastSlideOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .admin-app {
   --font-display: var(--font-body);
   --color-focus-ring: var(--color-ink);

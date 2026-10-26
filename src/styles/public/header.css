@@ -73,6 +73,43 @@ body:has(.photo-hero[data-hero-empty]) .site-header:not(.is-scrolled) {
 }
 .site-nav-link[aria-current="page"]::after { transform: scaleX(1); }
 
+.mobile-nav {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(100%, 24rem);
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-inline-start: 1px solid var(--color-border);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  translate: 100% 0;
+  transition: translate 450ms cubic-bezier(.32, .72, 0, 1);
+}
+.mobile-nav[open] { translate: 0 0; }
+.mobile-nav[open][data-opening],
+.mobile-nav[open][data-closing] { translate: 100% 0; }
+.mobile-nav::backdrop {
+  background: rgb(0 0 0 / .35);
+  opacity: 1;
+  transition: opacity 450ms cubic-bezier(.32, .72, 0, 1);
+}
+.mobile-nav[data-opening]::backdrop,
+.mobile-nav[data-closing]::backdrop { opacity: 0; }
+
+@starting-style {
+  .mobile-nav[open] { translate: 100% 0; }
+  .mobile-nav[open]::backdrop { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav,
+  .mobile-nav::backdrop { transition: none; }
+}
+
 /* Without scripting nothing ever adds .is-scrolled, so the light-ink floating state would
    persist down the whole page; let the header scroll away with the hero instead. */
 @media (scripting: none) {

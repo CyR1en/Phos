@@ -263,7 +263,7 @@ export interface DialogDeps {
 
 /**
  * `<dialog>` lifecycle: `showModal()` (top layer, inert page, native focus containment),
- * body scroll lock + Lenis stop/start, enter/exit animation hooks (`.lightbox-enter` /
+ * body scroll lock, enter/exit animation hooks (`.lightbox-enter` /
  * `.lightbox-exit` classes), initial focus on the close button, focus return to the opener.
  */
 export interface Dialog {

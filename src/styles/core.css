@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@import "./fonts.css";
+@import "./tokens.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Z-INDEX SCALE
+   30  Preview panel (fixed right)
+   40  Header toolbar / mobile sidebar backdrop
+   50  Resize handles (sidebar + preview)
+   60  Sidebar (admin navigation)
+   70  Build log overlay
+   80  Toast notifications
+   90  AlertDialog (Radix — above toasts)
+   100 Tooltip (portal — above everything)
+ */
+
+@theme {
+  --font-display: 'Playfair Display', 'Playfair Display Fallback', Georgia, ui-serif, serif;
+  --font-body: 'DM Sans', 'DM Sans Fallback', Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+
+  --color-primary: var(--color-phos-accent);
+  --color-primary-hover: color-mix(in oklab, var(--color-primary) 85%, var(--color-ink));
+  --color-primary-light: var(--color-phos-accent-300);
+  --color-secondary: var(--color-phos-surface);
+  --color-secondary-hover: var(--color-phos-overlay);
+  --color-accent: var(--color-phos-iris);
+  --color-accent-soft: var(--color-phos-foam);
+  --color-accent-hover: var(--color-phos-pine);
+  --color-canvas: var(--color-phos-base);
+  --color-canvas-alt: var(--color-phos-surface);
+  --color-canvas-inverse: var(--color-phos-dark-base);
+  --color-surface: var(--color-phos-surface);
+  --color-surface-hover: var(--color-phos-overlay);
+  --color-border: var(--color-phos-highlight-med);
+  --color-border-light: var(--color-phos-highlight-low);
+  --color-border-hover: var(--color-phos-highlight-high);
+  --color-border-focus: var(--color-phos-iris);
+  --color-ink: var(--color-phos-text);
+  --color-ink-inverse: var(--color-phos-surface);
+  --color-muted: var(--color-phos-muted);
+  --color-muted-inverse: var(--color-phos-dark-muted);
+  --color-body-muted: var(--color-phos-subtle);
+  --color-success: var(--color-phos-pine);
+  --color-success-bg: var(--color-phos-foam);
+  --color-error: var(--color-phos-error);
+  --color-error-bg: var(--color-phos-accent-100);
+  --color-info: var(--color-phos-iris);
+  --color-info-bg: var(--color-phos-highlight-low);
+  --color-focus-ring: var(--color-phos-iris);
+  --color-primary-text: var(--color-phos-on-accent, var(--color-phos-surface));
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+  --radius-pill: 32px;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-feature-settings: "kern", "liga";
+  }
+  h1 { font-weight: 400; line-height: 1.05; font-size: var(--text-h1); letter-spacing: -0.022em; }
+  h2 { font-weight: 400; line-height: 1.12; font-size: var(--text-h2); letter-spacing: -0.022em; }
+  h3 { font-weight: 500; line-height: 1.18; font-size: var(--text-h3); letter-spacing: -0.012em; }
+  h4 { font-weight: 500; line-height: 1.2; font-size: 32px; letter-spacing: 0; }
+  h5 { font-weight: 500; line-height: 1.3; font-size: 24px; letter-spacing: 0; }
+  h6 { font-weight: 500; line-height: 1.3; font-size: 18px; letter-spacing: 0; }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer base {
+  .dark {
+    --color-primary: var(--color-phos-dark-accent);
+    --color-primary-hover: color-mix(in oklab, var(--color-primary) 85%, var(--color-ink));
+    --color-primary-light: var(--color-phos-accent-600);
+    --color-secondary: var(--color-phos-dark-surface);
+    --color-secondary-hover: var(--color-phos-dark-overlay);
+    --color-accent: var(--color-phos-dark-iris);
+    --color-accent-soft: var(--color-phos-dark-foam);
+    --color-accent-hover: var(--color-phos-dark-pine);
+    --color-canvas: var(--color-phos-dark-base);
+    --color-canvas-alt: var(--color-phos-dark-surface);
+    --color-canvas-inverse: var(--color-phos-base);
+    --color-surface: var(--color-phos-dark-surface);
+    --color-surface-hover: var(--color-phos-dark-overlay);
+    --color-border: var(--color-phos-dark-highlight-med);
+    --color-border-light: var(--color-phos-dark-highlight-low);
+    --color-border-hover: var(--color-phos-dark-highlight-high);
+    --color-ink: var(--color-phos-dark-text);
+    --color-ink-inverse: var(--color-phos-text);
+    --color-muted: var(--color-phos-dark-muted);
+    --color-muted-inverse: var(--color-phos-muted);
+    --color-body-muted: var(--color-phos-dark-subtle);
+    --color-success: var(--color-phos-dark-pine);
+    --color-success-bg: var(--color-phos-dark-highlight-low);
+    --color-error: var(--color-phos-dark-error);
+    --color-error-bg: var(--color-phos-accent-900);
+    --color-info: var(--color-phos-dark-iris);
+    --color-info-bg: var(--color-phos-dark-highlight-low);
+    --color-focus-ring: var(--color-phos-dark-iris);
+    --color-primary-text: var(--color-phos-on-accent, var(--color-phos-dark-base));
+
+    color-scheme: dark;
+  }
+
+  .dark h1, .dark h2 {
+    letter-spacing: -0.015em;
+  }
+  .dark h3 { letter-spacing: -0.008em; }
+  .dark h4, .dark h5, .dark h6 { letter-spacing: 0; }
+}
+
+@layer base {
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+}
+
+@utility fade-in {
+  animation: fadeIn 0.5s ease-out both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+

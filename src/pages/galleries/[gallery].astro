@@ -27,7 +27,7 @@ const { gallery } = Astro.props
 const photos = gallery.photos.map((p: any) => ({ ...p, category: p.category }))
 
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || ''
-const ogImage = gallery.coverFull ? `${siteUrl}${gallery.coverFull}` : undefined
+const ogImage = gallery.coverOg ? `${siteUrl}${gallery.coverOg}` : gallery.coverFull ? `${siteUrl}${gallery.coverFull}` : undefined
 ---
 
 <BaseLayout title={gallery.name} description={gallery.description} image={ogImage} page={`galleries/${gallery.slug}`} type="article">

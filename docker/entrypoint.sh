@@ -54,7 +54,7 @@ echo "Discovering plugins..."
 su-exec appuser node /app/scripts/discover-plugins.mjs
 
 echo "Building static site..."
-su-exec appuser npx astro build
+su-exec appuser npm run build:site
 
 echo "Starting admin server..."
 su-exec appuser node /app/admin/server.mjs &

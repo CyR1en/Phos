@@ -18,7 +18,7 @@ export default defineConfig({
   integrations: [sitemap(), preact({ compat: true })],
   prefetch: {
     prefetchAll: true,
-    defaultStrategy: 'viewport',
+    defaultStrategy: 'hover',
   },
   build: {
     assets: '_assets',

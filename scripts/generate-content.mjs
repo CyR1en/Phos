@@ -1,4 +1,4 @@
-import { readdir, stat, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
+import { readdir, stat, mkdir, readFile, writeFile, copyFile, rm, rename } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, extname, parse, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -27,9 +27,17 @@ const VARIANT_DIRS = {
   thumb: 'thumbs',
   thumbMobile: 'thumbs-mobile',
   immersiveMobile: 'immersive-mobile',
+  w1600: 'w1600',
   immersive: 'immersive',
+  w2880: 'w2880',
   hd: 'hd',
 }
+const LADDER_TIERS = ['immersiveMobile', 'w1600', 'immersive', 'w2880', 'hd']
+const TIER_WIDTHS = { immersiveMobile: IMMERSIVE_MOBILE_WIDTH, w1600: 1600, immersive: IMMERSIVE_WIDTH, w2880: 2880, hd: HD_SIZE }
+// Keep the existing HD q82 and immersive q84 pending the plan's q75 visual tuning.
+const WEBP_QUALITY = { immersiveMobile: 80, w1600: 75, immersive: 84, w2880: 75, hd: 82 }
+const OUTPUT_DIRS = { full: 'full', ...VARIANT_DIRS, avif: 'avif', heroPortrait: 'hero-portrait', og: 'og' }
+const PORTRAIT_SIZES = [[860, 1333], [1290, 2000]]
 const COVER_TIERS = ['thumb', 'immersiveMobile', 'immersive']
 
 // Filenames may contain spaces or commas, either of which would split a srcset candidate;
@@ -86,6 +94,37 @@ function normaliseFocus(value, label) {
   return null
 }
 
+function focusFractions(focus) {
+  const parts = focus.split(/\s+/)
+  let x = 50
+  let y = 50
+  if (parts.every((part) => /^\d+%$/.test(part))) {
+    x = Number(parts[0].slice(0, -1))
+    y = parts[1] ? Number(parts[1].slice(0, -1)) : 50
+  } else {
+    if (parts.includes('left')) x = 0
+    if (parts.includes('right')) x = 100
+    if (parts.includes('top')) y = 0
+    if (parts.includes('bottom')) y = 100
+  }
+  return [x / 100, y / 100]
+}
+
+function coverCrop(image, source, w, h, focus) {
+  if (!focus) return image.resize(w, h, { fit: 'cover', position: sharp.strategy.attention })
+  const scale = Math.max(w / source.w, h / source.h)
+  const rw = Math.max(w, Math.round(source.w * scale))
+  const rh = Math.max(h, Math.round(source.h * scale))
+  const [fx, fy] = focusFractions(focus)
+  // CSS object-position distributes the overflow, rather than snapping focus to an edge.
+  return image.resize(rw, rh, { fit: 'fill' }).extract({
+    left: Math.round(fx * (rw - w)),
+    top: Math.round(fy * (rh - h)),
+    width: w,
+    height: h,
+  })
+}
+
 function createLimiter(concurrency) {
   let active = 0
   const queue = []
@@ -123,9 +162,17 @@ async function loadCache() {
   return { version: CACHE_VERSION, files: {} }
 }
 
-async function saveCache(cache) {
-  await ensureDir(OUTPUT_DIR)
-  await writeFile(CACHE_PATH, JSON.stringify({ ...cache, version: CACHE_VERSION }, null, 2))
+let cacheSave = Promise.resolve()
+function saveCache(cache) {
+  const content = JSON.stringify({ ...cache, version: CACHE_VERSION }, null, 2)
+  // Categories finish concurrently. Serialize atomic snapshots so an interrupted run
+  // retains the last complete category instead of leaving a partial JSON file.
+  cacheSave = cacheSave.then(async () => {
+    await ensureDir(dirname(CACHE_PATH))
+    await writeFile(`${CACHE_PATH}.tmp`, content)
+    await rename(`${CACHE_PATH}.tmp`, CACHE_PATH)
+  })
+  return cacheSave
 }
 
 function getOrientedDimensions(metadata) {
@@ -137,19 +184,64 @@ function getOrientedDimensions(metadata) {
   }
 }
 
-function writeHd(image, hdPath) {
-  return image
+async function decodePixels(input) {
+  // Decode once at HD size, then derive every variant from these sRGB pixels.
+  const { data, info } = await sharp(input)
+    .rotate()
     .resize(HD_SIZE, HD_SIZE, { fit: 'inside', withoutEnlargement: true })
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  return () => sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
+}
+
+function variantDimensions(info) {
+  return { w: info.width, h: info.height }
+}
+
+function hasDimensions(variant) {
+  return variant?.w > 0 && variant.h > 0
+}
+
+function avifName(name, tier) {
+  return `${parse(name).name}-${TIER_WIDTHS[tier]}.avif`
+}
+
+function encodeAvif(image) {
+  // Effort 3 measured 4× faster than 4 with identical size and PSNR.
+  // q50 measured ~2 dB below the WebP it replaces; use q62 for photo fidelity.
+  return image.avif({ quality: 62, effort: 3, chromaSubsampling: '4:2:0' })
+}
+
+function writeLadderVariant(image, tier, path, format = 'webp') {
+  // Keep stable tier URLs for small sources and legacy caches; srcsets deduplicate
+  // their actual widths, and withoutEnlargement prevents duplicate tiers upscaling.
+  const resized = image
+    .resize(TIER_WIDTHS[tier], tier === 'hd' ? HD_SIZE : null, { fit: 'inside', withoutEnlargement: true })
     .withIccProfile('srgb')
-    .webp({ quality: 82 })
-    .toFile(hdPath)
+  return (format === 'avif' ? encodeAvif(resized) : resized.webp({ quality: WEBP_QUALITY[tier] })).toFile(path)
+}
+
+function writePhotoVariant(image, tier, path) {
+  if (tier === 'thumb' || tier === 'thumbMobile') {
+    return image
+      .resize(tier === 'thumb' ? THUMB_WIDTH : MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+      .sharpen({ sigma: 0.5 })
+      .webp({ quality: tier === 'thumb' ? 82 : 75, smartSubsample: true })
+      .toFile(path)
+  }
+  return writeLadderVariant(image, tier, path)
 }
 
 // Use encoded widths for every responsive ladder; tiers that add no pixels are dropped.
-function buildSrcset(catSlug, name, variants, tiers = ['immersiveMobile', 'immersive', 'hd']) {
-  const sizes = tiers
-    .map((tier) => [photoUrl(VARIANT_DIRS[tier], catSlug, name), variants[tier].w])
-    .sort((a, b) => a[1] - b[1])
+function buildSrcset(catSlug, name, variants, tiers = LADDER_TIERS, format = 'webp') {
+  return formatSrcset(tiers.map((tier) => [
+    photoUrl(format === 'avif' ? 'avif' : VARIANT_DIRS[tier], catSlug, format === 'avif' ? avifName(name, tier) : name),
+    variants[tier].w,
+  ]))
+}
+
+function formatSrcset(sizes) {
+  sizes.sort((a, b) => a[1] - b[1])
   const candidates = []
   let prevWidth = 0
   for (const [url, w] of sizes) {
@@ -160,6 +252,129 @@ function buildSrcset(catSlug, name, variants, tiers = ['immersiveMobile', 'immer
   return candidates.join(', ')
 }
 
+function ogUrl(catSlug, photo) {
+  return photoUrl('og', catSlug, `${parse(photo.filename).name}.jpg`)
+}
+
+// Hero AVIF ladders and portrait crops share one decoded source with the OG crop.
+// Gallery covers request only the OG crop.
+async function generatePhotoAssets(catSlug, photo, cache, hero = false) {
+  const cached = cache.files[`${catSlug}/${photo.filename}`]
+  const name = parse(photo.filename).name
+  const source = cached.variants.hd
+  const ogPath = join(OUTPUT_DIR, 'og', catSlug, `${name}.jpg`)
+  // A re-encoded source (fresh cache entry) invalidates every crop derived from it.
+  const sourceChanged = Boolean(cached.avifStale)
+  const changedOgFocus = sourceChanged || cached.og?.focus !== photo.focus || (photo.focus && cached.og?.framing !== 'object-position')
+  const needsOg = changedOgFocus || !existsSync(ogPath)
+  const portraitSizes = hero ? PORTRAIT_SIZES.filter(([w, h]) => Math.max(w / source.w, h / source.h) <= 1) : []
+  const canPortrait = portraitSizes.length > 0
+  const portraitPath = (w, format) => join(OUTPUT_DIR, 'hero-portrait', catSlug, `${name}-${w}.${format}`)
+  const avifPath = (tier) => join(OUTPUT_DIR, 'avif', catSlug, avifName(photo.filename, tier))
+  const changedPortraitFocus = sourceChanged || cached.heroPortrait?.focus !== photo.focus || (photo.focus && cached.heroPortrait?.framing !== 'object-position')
+  const missingPortrait = canPortrait
+    ? ['webp', 'avif'].flatMap((format) => portraitSizes
+      .filter(([w]) => changedPortraitFocus || !existsSync(portraitPath(w, format)))
+      .map(([w, h]) => ({ w, h, format })))
+    : []
+  const missingAvif = hero ? LADDER_TIERS.filter((tier) => cached.avifStale || !existsSync(avifPath(tier))) : []
+
+  if (canPortrait) {
+    if (changedPortraitFocus) cached.heroPortrait = { focus: photo.focus, framing: 'object-position', webp: {}, avif: {} }
+    cached.heroPortrait.webp ||= {}
+    cached.heroPortrait.avif ||= {}
+  }
+  if (hero) cached.variants.avif ||= {}
+
+  if (needsOg || missingPortrait.length || missingAvif.length) {
+    await limitEncode(async () => {
+      const pixels = await decodePixels(join(OUTPUT_DIR, 'full', catSlug, photo.filename))
+      await Promise.all([
+        ...(needsOg ? [coverCrop(pixels(), source, 1200, 630, photo.focus)
+          .withIccProfile('srgb')
+          .jpeg({ quality: 80 })
+          .toFile(ogPath)
+          .then((info) => { cached.og = { focus: photo.focus, framing: 'object-position', ...variantDimensions(info) } })] : []),
+        ...missingPortrait.map(async ({ w, h, format }) => {
+          const image = coverCrop(pixels(), source, w, h, photo.focus).withIccProfile('srgb')
+          const info = await (format === 'avif' ? encodeAvif(image) : image.webp({ quality: 75 })).toFile(portraitPath(w, format))
+          cached.heroPortrait[format][w] = variantDimensions(info)
+        }),
+        ...missingAvif.map(async (tier) => {
+          cached.variants.avif[tier] = variantDimensions(await writeLadderVariant(pixels(), tier, avifPath(tier), 'avif'))
+        }),
+      ])
+    })
+  }
+
+  // Recover absent cache keys from existing files without rewriting their bytes or mtimes.
+  await Promise.all([
+    ...(hero ? LADDER_TIERS.filter((tier) => !hasDimensions(cached.variants.avif[tier])).map(async (tier) => {
+      cached.variants.avif[tier] = variantDimensions(await sharp(avifPath(tier)).metadata())
+    }) : []),
+    ...['webp', 'avif'].flatMap((format) => portraitSizes.filter(([w]) => !hasDimensions(cached.heroPortrait[format][w])).map(async ([w]) => {
+      cached.heroPortrait[format][w] = variantDimensions(await sharp(portraitPath(w, format)).metadata())
+    })),
+  ])
+  if (hero) delete cached.avifStale
+
+  const portraitSrcset = (format) => formatSrcset(portraitSizes.map(([w]) => [
+    photoUrl('hero-portrait', catSlug, `${name}-${w}.${format}`),
+    cached.heroPortrait[format][w].w,
+  ]))
+  return {
+    ogImage: ogUrl(catSlug, photo),
+    ...(hero ? { srcsetAvif: buildSrcset(catSlug, photo.filename, cached.variants.avif, LADDER_TIERS, 'avif') } : {}),
+    heroPortrait: canPortrait ? { srcset: portraitSrcset('webp'), srcsetAvif: portraitSrcset('avif') } : null,
+  }
+}
+
+// The last successfully written gallery manifest remains live when SQLite is unavailable.
+// Preserve every OG/portrait URL it references, including references in nested photo data.
+function selectedAssets(categories, heroPriority, galleries) {
+  const expected = new Map(categories.map((cat) => [cat.slug, { og: new Set(), heroPortrait: new Set(), avif: new Set() }]))
+  const collect = (value, gallery = false) => {
+    if (Array.isArray(value)) {
+      for (const item of value) collect(item, gallery)
+    } else if (value && typeof value === 'object') {
+      for (const item of Object.values(value)) collect(item, gallery)
+    } else if (typeof value === 'string') {
+      for (const candidate of value.split(', ')) {
+        const match = candidate.split(' ')[0].match(/^\/photos\/(og|hero-portrait|avif)\/([^/]+)\/([^/]+)$/)
+        if (!match || (gallery && match[1] === 'avif')) continue
+        const [, dir, catSlug, name] = match
+        const key = dir === 'hero-portrait' ? 'heroPortrait' : dir
+        if (!expected.has(catSlug)) expected.set(catSlug, { og: new Set(), heroPortrait: new Set(), avif: new Set() })
+        expected.get(catSlug)[key].add(decodeURIComponent(name))
+      }
+    }
+  }
+  collect(heroPriority)
+  // Stable tier files can share an encoded width; srcset deduplication must not
+  // make pruning delete those files and trigger an encode on every warm run.
+  for (const hero of heroPriority) {
+    const filename = decodeURIComponent(hero.full.split('/').at(-1))
+    for (const tier of LADDER_TIERS) expected.get(hero.category).avif.add(avifName(filename, tier))
+  }
+  collect(galleries, true)
+  return expected
+}
+
+async function pruneSelectedAssets(categories, heroPriority, galleries) {
+  const expected = selectedAssets(categories, heroPriority, galleries)
+  for (const key of ['og', 'heroPortrait', 'avif']) {
+    if (galleries === null && key !== 'avif') continue
+    const root = join(OUTPUT_DIR, OUTPUT_DIRS[key])
+    if (!existsSync(root)) continue
+    for (const catSlug of await readdir(root)) {
+      const dir = join(root, catSlug)
+      const names = expected.get(catSlug)?.[key] || new Set()
+      const files = await readdir(dir)
+      await Promise.all(files.filter((name) => !names.has(name)).map((name) => rm(join(dir, name), { force: true })))
+    }
+  }
+}
+
 // `outputs` holds the filenames already present in each output dir for this category.
 async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
   const relPath = `${catSlug}/${file}`
@@ -167,80 +382,43 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
 
   const thumbName = `${parse(file).name}.webp`
   const fullPath = join(OUTPUT_DIR, 'full', catSlug, file)
-  const thumbPath = join(OUTPUT_DIR, 'thumbs', catSlug, thumbName)
-  const mobileThumbPath = join(OUTPUT_DIR, 'thumbs-mobile', catSlug, thumbName)
-  const immersivePath = join(OUTPUT_DIR, 'immersive', catSlug, thumbName)
-  const immersiveMobilePath = join(OUTPUT_DIR, 'immersive-mobile', catSlug, thumbName)
-  const hdPath = join(OUTPUT_DIR, 'hd', catSlug, thumbName)
+  const variantPath = (tier) => join(OUTPUT_DIR, VARIANT_DIRS[tier], catSlug, thumbName)
   const metaInfo = photoMeta[file] || {}
 
   let cached = cache.files[relPath]
-  if (
-    cached &&
-    Object.keys(VARIANT_DIRS).every((tier) => cached.variants?.[tier]?.w > 0 && cached.variants[tier].h > 0) &&
-    cached.mtimeMs === srcStat.mtimeMs &&
-    cached.size === srcStat.size &&
-    outputs.full.has(file) &&
-    outputs.thumbs.has(thumbName) &&
-    outputs.thumbsMobile.has(thumbName) &&
-    outputs.immersive.has(thumbName) &&
-    outputs.immersiveMobile.has(thumbName)
-  ) {
-    // Backfill only the HD variant so existing libraries don't re-encode everything.
-    if (!outputs.hd.has(thumbName)) {
-      const hd = await limitEncode(() => writeHd(sharp(srcPath).rotate(), hdPath))
-      cached.variants.hd = { w: hd.width, h: hd.height }
+  if (cached && cached.mtimeMs === srcStat.mtimeMs && cached.size === srcStat.size) {
+    cached.variants ||= {}
+    const missing = Object.keys(VARIANT_DIRS).filter((tier) => !outputs[tier].has(thumbName))
+    if (!outputs.full.has(file)) await copyFile(srcPath, fullPath)
+    if (missing.length) {
+      await limitEncode(async () => {
+        const pixels = await decodePixels(srcPath)
+        await Promise.all(missing.map(async (tier) => {
+          cached.variants[tier] = variantDimensions(await writePhotoVariant(pixels(), tier, variantPath(tier)))
+        }))
+      })
     }
+    // A version-2 entry can predate new variant keys. Read existing dimensions;
+    // only absent files need an encode, including missing thumbnails or HD.
+    await Promise.all(Object.keys(VARIANT_DIRS).filter((tier) => !hasDimensions(cached.variants[tier])).map(async (tier) => {
+      cached.variants[tier] = variantDimensions(await sharp(variantPath(tier)).metadata())
+    }))
   } else {
     cached = cache.files[relPath] = await limitEncode(async () => {
       const srcBuf = await readFile(srcPath)
       const imgMeta = await sharp(srcBuf).metadata()
       const { width, height } = getOrientedDimensions(imgMeta)
+      const pixels = await decodePixels(srcBuf)
 
-      // Decode the source once at HD size; every smaller variant resizes these pixels
-      // instead of decoding the full-resolution file again.
-      const { data, info } = await sharp(srcBuf)
-        .rotate()
-        .resize(HD_SIZE, HD_SIZE, { fit: 'inside', withoutEnlargement: true })
-        .raw()
-        .toBuffer({ resolveWithObject: true })
-      const pixels = () => sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
-
-      const [blur, , thumb, thumbMobile, immersive, immersiveMobile, hd] = await Promise.all([
+      const [blur, , variants] = await Promise.all([
         pixels()
           .resize(20, null, { fit: 'inside' })
           .webp({ quality: 30 })
           .toBuffer()
           .then(b => `data:image/webp;base64,${b.toString('base64')}`)
           .catch(() => ''),
-
         copyFile(srcPath, fullPath),
-
-        pixels()
-          .resize(THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-          .sharpen({ sigma: 0.5 })
-          .webp({ quality: 82, smartSubsample: true })
-          .toFile(thumbPath),
-
-        pixels()
-          .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-          .sharpen({ sigma: 0.5 })
-          .webp({ quality: 75, smartSubsample: true })
-          .toFile(mobileThumbPath),
-
-        pixels()
-          .resize(IMMERSIVE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-          .withIccProfile('srgb')
-          .webp({ quality: 84 })
-          .toFile(immersivePath),
-
-        pixels()
-          .resize(IMMERSIVE_MOBILE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-          .withIccProfile('srgb')
-          .webp({ quality: 80 })
-          .toFile(immersiveMobilePath),
-
-        writeHd(pixels(), hdPath),
+        Promise.all(Object.keys(VARIANT_DIRS).map(async (tier) => [tier, variantDimensions(await writePhotoVariant(pixels(), tier, variantPath(tier)))])),
       ])
 
       return {
@@ -250,13 +428,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
         height,
         blur,
         format: imgMeta.format,
-        variants: {
-          thumb: { w: thumb.width, h: thumb.height },
-          thumbMobile: { w: thumbMobile.width, h: thumbMobile.height },
-          immersiveMobile: { w: immersiveMobile.width, h: immersiveMobile.height },
-          immersive: { w: immersive.width, h: immersive.height },
-          hd: { w: hd.width, h: hd.height },
-        },
+        avifStale: true,
+        variants: Object.fromEntries(variants),
       }
     })
   }
@@ -275,6 +448,7 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
     immersiveMobile: photoUrl(VARIANT_DIRS.immersiveMobile, catSlug, thumbName),
     hd: photoUrl(VARIANT_DIRS.hd, catSlug, thumbName),
     srcset: buildSrcset(catSlug, thumbName, cached.variants),
+    heroSrc: photoUrl(VARIANT_DIRS.immersive, catSlug, thumbName),
     gridSrcset: buildSrcset(catSlug, thumbName, cached.variants, ['thumbMobile', 'thumb', 'immersiveMobile']),
     width: cached.width,
     height: cached.height,
@@ -283,7 +457,7 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
   }
 }
 
-async function processCategory(dirName, cache) {
+async function processCategory(dirName, cache, previousAssets) {
   const entryPath = join(PHOTOS_SOURCE, dirName)
   const catSlug = slugify(dirName)
 
@@ -318,42 +492,31 @@ async function processCategory(dirName, cache) {
 
   if (files.length === 0) return null
 
-  const fullDir = join(OUTPUT_DIR, 'full', catSlug)
-  const thumbDir = join(OUTPUT_DIR, 'thumbs', catSlug)
-  const mobileThumbDir = join(OUTPUT_DIR, 'thumbs-mobile', catSlug)
-  const immersiveDir = join(OUTPUT_DIR, 'immersive', catSlug)
-  const immersiveMobileDir = join(OUTPUT_DIR, 'immersive-mobile', catSlug)
-  const hdDir = join(OUTPUT_DIR, 'hd', catSlug)
-  await ensureDir(fullDir)
-  await ensureDir(thumbDir)
-  await ensureDir(mobileThumbDir)
-  await ensureDir(immersiveDir)
-  await ensureDir(immersiveMobileDir)
-  await ensureDir(hdDir)
-
   // One listing per output dir replaces several existsSync calls per photo.
-  const [full, thumbs, thumbsMobile, immersive, immersiveMobile, hd] = await Promise.all(
-    [fullDir, thumbDir, mobileThumbDir, immersiveDir, immersiveMobileDir, hdDir].map(async (dir) => new Set(await readdir(dir)))
-  )
-  const outputs = { full, thumbs, thumbsMobile, immersive, immersiveMobile, hd }
+  const outputs = Object.fromEntries(await Promise.all(Object.entries(OUTPUT_DIRS).map(async ([key, dir]) => {
+    const path = join(OUTPUT_DIR, dir, catSlug)
+    await ensureDir(path)
+    return [key, new Set(await readdir(path))]
+  })))
 
   // Outputs for photos that no longer exist in the source folder are pruned BEFORE encoding.
   // Doing it afterwards would, on case-insensitive filesystems (macOS APFS), delete the file a
   // case-only rename just regenerated, because `A.webp` and `a.webp` share one directory entry.
   const expectedWebp = new Set(files.map((f) => `${parse(f).name}.webp`))
   const currentFiles = new Set(files)
+  const expected = {
+    full: currentFiles,
+    ...Object.fromEntries(Object.keys(VARIANT_DIRS).map((tier) => [tier, expectedWebp])),
+    avif: new Set(files.flatMap((f) => LADDER_TIERS.map((tier) => avifName(f, tier)))),
+    heroPortrait: new Set(files.flatMap((f) => PORTRAIT_SIZES.flatMap(([w]) => ['webp', 'avif'].map((format) => `${parse(f).name}-${w}.${format}`)))),
+    og: new Set(files.map((f) => `${parse(f).name}.jpg`)),
+  }
   const stale = []
-  for (const [key, dir, expected] of [
-    ['full', fullDir, currentFiles],
-    ['thumbs', thumbDir, expectedWebp],
-    ['thumbsMobile', mobileThumbDir, expectedWebp],
-    ['immersive', immersiveDir, expectedWebp],
-    ['immersiveMobile', immersiveMobileDir, expectedWebp],
-    ['hd', hdDir, expectedWebp],
-  ]) {
+  for (const [key, dir] of Object.entries(OUTPUT_DIRS)) {
     for (const name of outputs[key]) {
-      if (expected.has(name)) continue
-      stale.push(join(dir, name))
+      if (['og', 'heroPortrait'].includes(key) && (previousAssets === null || previousAssets.get(catSlug)?.[key].has(name))) continue
+      if (expected[key].has(name)) continue
+      stale.push(join(OUTPUT_DIR, dir, catSlug, name))
       outputs[key].delete(name)
     }
   }
@@ -393,7 +556,7 @@ async function processCategory(dirName, cache) {
   }
 }
 
-async function scanPhotos(sourceDir) {
+async function scanPhotos(sourceDir, previousGalleries) {
   let entries
   try {
     entries = await readdir(sourceDir, { withFileTypes: true })
@@ -415,9 +578,14 @@ async function scanPhotos(sourceDir) {
     }
   }
 
+  const previousAssets = previousGalleries === null ? null : selectedAssets([], [], previousGalleries)
   const results = await pMap(
     Object.values(slugToDir),
-    (dirName) => processCategory(dirName, cache),
+    async (dirName) => {
+      const category = await processCategory(dirName, cache, previousAssets)
+      await saveCache(cache)
+      return category
+    },
     CONCURRENCY
   )
 
@@ -459,6 +627,9 @@ async function scanPhotos(sourceDir) {
           thumbMobile: p.thumbMobile,
           hd: p.hd,
           srcset: p.srcset,
+          heroSrc: p.heroSrc,
+          heroPortrait: null,
+          ogImage: ogUrl(cat.slug, p),
           title: p.title,
           titleIsAuto: p.titleIsAuto,
           description: p.description,
@@ -474,21 +645,47 @@ async function scanPhotos(sourceDir) {
     }
   }
 
-  await saveCache(cache)
+  const selected = new Map()
+  for (const hero of heroPriority) {
+    const photo = categories.find((cat) => cat.slug === hero.category).photos.find((p) => p.full === hero.full)
+    const key = `${hero.category}/${photo.filename}`
+    if (!selected.has(key)) selected.set(key, { catSlug: hero.category, photo, heroes: [] })
+    selected.get(key).heroes.push(hero)
+  }
+  await Promise.all([...selected.values()].map(async ({ catSlug, photo, heroes }) => {
+    const assets = await generatePhotoAssets(catSlug, photo, cache, heroes.length > 0)
+    for (const hero of heroes) Object.assign(hero, assets)
+    await saveCache(cache)
+  }))
 
   return { categories, heroPriority, cache }
 }
 
 async function main() {
-  console.log('Syncing site config from SQLite...')
+  if (process.env.PHOS_SKIP_CONFIG_SYNC === '1') {
+    console.log('Skipping site config sync (PHOS_SKIP_CONFIG_SYNC=1)')
+  } else {
+    console.log('Syncing site config from SQLite...')
+    try {
+      execSync('node scripts/merge-config.mjs', { cwd: ROOT, stdio: 'pipe' })
+    } catch (err) {
+      console.warn(`merge-config failed: ${err.message}`)
+    }
+  }
+
+  let previousGalleries = []
   try {
-    execSync('node scripts/merge-config.mjs', { cwd: ROOT, stdio: 'pipe' })
+    previousGalleries = JSON.parse(await readFile(GALLERIES_MANIFEST_PATH, 'utf-8')).galleries
+    if (!Array.isArray(previousGalleries)) throw new Error('Invalid galleries manifest')
   } catch (err) {
-    console.warn(`merge-config failed: ${err.message}`)
+    if (err.code !== 'ENOENT') {
+      previousGalleries = null
+      console.warn(`Could not read previous galleries; preserving OG/portrait files: ${err.message}`)
+    }
   }
 
   console.log('Scanning photos directory...')
-  const { categories, heroPriority, cache } = await scanPhotos(PHOTOS_SOURCE)
+  const { categories, heroPriority, cache } = await scanPhotos(PHOTOS_SOURCE, previousGalleries)
 
   if (categories.length === 0) {
     console.log('No photos found. Place photos in the photos/ directory.')
@@ -499,18 +696,12 @@ async function main() {
   }
 
   // OUTPUT_DIR can exist without any variants (empty library, fresh volume).
-  if (existsSync(join(OUTPUT_DIR, 'full'))) {
-    const existing = await readdir(join(OUTPUT_DIR, 'full'))
-    for (const cat of existing) {
-      const existingCat = categories.find((c) => c.slug === cat)
-      if (!existingCat) {
-        await rm(join(OUTPUT_DIR, 'full', cat), { recursive: true, force: true }).catch(() => {})
-        await rm(join(OUTPUT_DIR, 'thumbs', cat), { recursive: true, force: true }).catch(() => {})
-        await rm(join(OUTPUT_DIR, 'thumbs-mobile', cat), { recursive: true, force: true }).catch(() => {})
-        await rm(join(OUTPUT_DIR, 'immersive', cat), { recursive: true, force: true }).catch(() => {})
-        await rm(join(OUTPUT_DIR, 'immersive-mobile', cat), { recursive: true, force: true }).catch(() => {})
-        await rm(join(OUTPUT_DIR, 'hd', cat), { recursive: true, force: true }).catch(() => {})
-      }
+  const activeCategories = new Set(categories.map((cat) => cat.slug))
+  for (const dir of Object.values(OUTPUT_DIRS)) {
+    const path = join(OUTPUT_DIR, dir)
+    if (!existsSync(path)) continue
+    for (const cat of await readdir(path)) {
+      if (!activeCategories.has(cat)) await rm(join(path, cat), { recursive: true, force: true }).catch(() => {})
     }
   }
 
@@ -522,6 +713,8 @@ async function main() {
   console.log(`Manifest written to ${MANIFEST_PATH}`)
 
   // Generate galleries manifest from SQLite
+  let galleries = []
+  let galleriesWritten = false
   try {
     const DB_PATH = process.env.DB_PATH || join(ROOT, 'config', 'site.db')
     if (existsSync(DB_PATH)) {
@@ -552,7 +745,8 @@ async function main() {
         list.push({ category: p.category, filename: p.filename, position: p.position })
       }
 
-      const galleries = dbGalleries.map(g => {
+      const galleryCovers = new Map()
+      galleries = dbGalleries.map(g => {
         const dbPhotos = photoMap.get(g.id) || []
 
         const photos = dbPhotos
@@ -574,6 +768,7 @@ async function main() {
           if (photo) coverPhoto = { ...photo, category: catSlug }
         }
         if (!coverPhoto && photos.length > 0) coverPhoto = photos[0]
+        if (coverPhoto) galleryCovers.set(`${coverPhoto.category}/${coverPhoto.filename}`, coverPhoto)
 
         return {
           slug: g.slug,
@@ -581,6 +776,7 @@ async function main() {
           description: g.description || '',
           cover: coverPhoto?.thumb || null,
           coverFull: coverPhoto?.full || null,
+          coverOg: coverPhoto ? ogUrl(coverPhoto.category, coverPhoto) : null,
           coverBlur: coverPhoto?.blur || '',
           coverFocus: coverPhoto?.focus ?? null,
           coverSrcset: coverPhoto
@@ -595,14 +791,20 @@ async function main() {
       })
 
       db.close()
+      await Promise.all([...galleryCovers.values()].map((photo) => generatePhotoAssets(photo.category, photo, cache)))
 
       await ensureDir(dirname(GALLERIES_MANIFEST_PATH))
       await writeFile(GALLERIES_MANIFEST_PATH, JSON.stringify({ galleries }, null, 2))
+      galleriesWritten = true
       console.log(`Galleries manifest written to ${GALLERIES_MANIFEST_PATH} (${galleries.length} galleries)`)
     }
   } catch (err) {
     console.warn(`Gallery manifest generation skipped: ${err.message}`)
   }
+
+  await pruneSelectedAssets(categories, heroPriority, galleriesWritten ? galleries : previousGalleries)
+  for (const entry of Object.values(cache.files)) delete entry.avifStale
+  await saveCache(cache)
 }
 
 main().catch((err) => {
