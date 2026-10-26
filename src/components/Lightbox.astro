@@ -61,6 +61,13 @@ const serialized = JSON.stringify(photos)
 
 <script>
   function initLightbox() {
+    // Clean up previous global listeners even when the next page has no lightbox.
+    const oldClickHandler = (window as any).__lightboxClickHandler
+    if (oldClickHandler) document.removeEventListener('click', oldClickHandler, true)
+    const oldKeyHandler = (window as any).__lightboxKeyHandler
+    if (oldKeyHandler) document.removeEventListener('keydown', oldKeyHandler)
+    document.body.style.removeProperty('overflow')
+
     const lightbox = document.getElementById('lightbox')
     if (!lightbox) return
 
@@ -285,10 +292,6 @@ const serialized = JSON.stringify(photos)
       if (currentIndex < data.length - 1) { currentIndex++; transitionTo(data[currentIndex], data) }
     }
 
-    // Remove old global listeners to prevent duplicates
-    const oldClickHandler = (window as any).__lightboxClickHandler
-    if (oldClickHandler) document.removeEventListener('click', oldClickHandler, true)
-
     // Tiles are real links to the original file. Astro's <ClientRouter /> also listens for
     // document clicks (bubble phase) and would otherwise navigate to the JPEG, so this handler
     // runs in the capture phase and claims the click first; the tiles also carry
@@ -310,9 +313,6 @@ const serialized = JSON.stringify(photos)
     closeBtn.addEventListener('click', close)
     prevBtn.addEventListener('click', prev)
     nextBtn.addEventListener('click', next)
-
-    const oldKeyHandler = (window as any).__lightboxKeyHandler
-    if (oldKeyHandler) document.removeEventListener('keydown', oldKeyHandler)
 
     const keyHandler = (e: KeyboardEvent) => {
       if (lightbox!.classList.contains('hidden')) return
@@ -342,6 +342,18 @@ const serialized = JSON.stringify(photos)
     }
     document.addEventListener('keydown', keyHandler)
     ;(window as any).__lightboxKeyHandler = keyHandler
+
+    document.addEventListener('astro:before-swap', () => {
+      if (!lightbox.classList.contains('hidden')) {
+        loadToken++
+        lightbox.classList.add('hidden')
+        lightbox.classList.remove('flex', 'lightbox-enter', 'lightbox-exit')
+        ;(window as any).__lenis?.start()
+      }
+      document.body.style.removeProperty('overflow')
+      document.removeEventListener('click', clickHandler, true)
+      document.removeEventListener('keydown', keyHandler)
+    }, { once: true })
 
     lightbox.addEventListener('click', (e) => { if (e.target === lightbox) close() })
 

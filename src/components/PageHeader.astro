@@ -1,0 +1,71 @@
+---
+interface Props {
+  eyebrow?: string
+  title: string
+  titleConfigKey?: string
+  meta?: string
+  description?: string
+  backHref?: string
+  backLabel?: string
+  containerClass?: string
+}
+
+const {
+  eyebrow,
+  title,
+  titleConfigKey,
+  meta,
+  description,
+  backHref,
+  backLabel = 'Back',
+  containerClass = 'mx-auto w-full max-w-wide px-6 lg:px-8',
+} = Astro.props
+
+const hasEyebrow = Boolean(backHref || eyebrow || meta)
+const hasDetails = Boolean(description) || Astro.slots.has('actions')
+---
+
+<header class="page-header">
+  <div
+    class:list={[
+      containerClass,
+      'grid gap-6 opacity-0',
+      { 'lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-end': hasDetails },
+    ]}
+    data-animate-header
+  >
+    <div class="min-w-0">
+      {hasEyebrow && (
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {backHref ? (
+            <a href={backHref} class="inline-flex items-center gap-2 text-sm text-body-muted hover:text-ink">
+              <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              {backLabel}
+            </a>
+          ) : eyebrow && <span class="eyebrow">{eyebrow}</span>}
+          {meta && (
+            <>
+              {(backHref || eyebrow) && <span class="eyebrow" aria-hidden="true">/</span>}
+              <span class="eyebrow" data-page-meta>{meta}</span>
+            </>
+          )}
+        </div>
+      )}
+      <h1 class:list={['text-h1 font-display text-ink', { 'mt-3': hasEyebrow }]} data-config={titleConfigKey} data-page-title>{title}</h1>
+    </div>
+    {hasDetails && (
+      <div class="min-w-0 space-y-6">
+        {description && <p class="text-lead text-body-muted max-w-[52ch]">{description}</p>}
+        {Astro.slots.has('actions') && <slot name="actions" />}
+      </div>
+    )}
+  </div>
+</header>
+
+<style>
+  .page-header {
+    padding-block: clamp(2.5rem, 4vw, 4.5rem) clamp(1.5rem, 2.5vw, 2.5rem);
+  }
+</style>

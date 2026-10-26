@@ -1,0 +1,155 @@
+---
+import type { ManifestPhoto } from '@lib/admin/types'
+
+export interface Props {
+  photos: (ManifestPhoto & { category: string })[]
+  heading?: string
+  browseHref?: string
+}
+
+const { photos, heading = 'Selected work', browseHref = '/photos/all/' } = Astro.props
+const isPortrait = (photo: Props['photos'][number]) => Boolean(photo.width && photo.height && photo.height > photo.width)
+const placements: {
+  span: number
+  start: number
+  row: number
+}[] = []
+let index = 0
+let row = 0
+
+while (index < photos.length) {
+  const portrait = isPortrait(photos[index])
+  const next = photos[index + 1]
+  const nextPortrait = next && isPortrait(next)
+  let spans: number[]
+  let starts: number[]
+
+  if (portrait && nextPortrait) {
+    const third = photos[index + 2]
+    spans = third ? (isPortrait(third) ? [4, 4, 4] : [3, 3, 6]) : [4, 4]
+    starts = third ? (isPortrait(third) ? [1, 5, 9] : [1, 4, 7]) : [3, 7]
+  } else if (next && portrait !== nextPortrait) {
+    const portraitOnLeft = row % 2 === 0
+    spans = portrait ? [4, 8] : [8, 4]
+    starts = portrait
+      ? (portraitOnLeft ? [1, 5] : [9, 1])
+      : (portraitOnLeft ? [5, 1] : [1, 9])
+  } else if (next) {
+    spans = [6, 6]
+    starts = [1, 7]
+  } else {
+    spans = [portrait ? 4 : 8]
+    starts = [portrait ? 5 : 3]
+  }
+
+  spans.forEach((span, offset) => {
+    placements.push({ span, start: starts[offset], row: row + 1 })
+  })
+  index += spans.length
+  row++
+}
+
+const gap = 'clamp(8px, 1.2vw, 20px)'
+
+// A span covers s tracks and s - 1 gaps, inside the padded 96rem container.
+const tileSize = (width: string, span: number) => `calc((${width} - 11 * ${gap}) * ${span} / 12 + ${span - 1} * ${gap})`
+const tileSizes = (span: number) => [
+  `(min-width: 1536px) ${tileSize('1472px', span)}`,
+  `(min-width: 1024px) ${tileSize('100vw - 64px', span)}`,
+  `(min-width: 640px) ${tileSize('100vw - 48px', span)}`,
+  '100vw',
+].join(', ')
+---
+
+{photos.length >= 3 && (
+  <section id="selected-work" class="selected-work" aria-labelledby="selected-work-heading">
+    <div class="mx-auto max-w-wide px-6 lg:px-8">
+      <div class="selected-work-header">
+        <h2 id="selected-work-heading" class="text-h2 font-display text-ink" data-config="home.selectedWork.heading">{heading}</h2>
+        <a href={browseHref} class="showcase-browse">Browse all photos</a>
+      </div>
+
+      <div class="grid grid-cols-12 gap-[clamp(8px,1.2vw,20px)] items-end">
+        {photos.map((photo, index) => {
+          const { span, start, row } = placements[index]
+          const width = photo.width && photo.height ? photo.width : 3
+          const height = photo.width && photo.height ? photo.height : 2
+
+          return (
+            <a
+              href={photo.full}
+              data-index={index}
+              data-astro-reload
+              data-astro-prefetch="false"
+              aria-haspopup="dialog"
+              aria-label={`View ${photo.title}`}
+              class="selected-work-tile col-span-full block overflow-hidden rounded-photo"
+              style={`aspect-ratio: ${width} / ${height}; --selected-span: ${span}; --selected-start: ${start}; --selected-row: ${row}`}
+            >
+              <img
+                src={photo.thumb}
+                srcset={(span >= 6 ? photo.srcset || photo.gridSrcset : photo.gridSrcset) || undefined}
+                sizes={tileSizes(span)}
+                width={photo.width ?? undefined}
+                height={photo.height ?? undefined}
+                loading="lazy"
+                decoding="async"
+                alt={photo.title}
+                style={photo.blur ? `background-image: url('${photo.blur}'); background-size: cover; background-position: center` : undefined}
+              />
+            </a>
+          )
+        })}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .selected-work {
+    padding-block: calc(var(--spacing-section) / 2);
+    scroll-margin-top: var(--site-header-height);
+  }
+
+  .selected-work-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    margin-bottom: var(--spacing-heading-gap);
+  }
+
+  .selected-work-header .showcase-browse {
+    margin-left: auto;
+  }
+
+  .selected-work-tile:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 4px;
+  }
+
+  .selected-work-tile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  @media (min-width: 640px) {
+    .selected-work-tile {
+      grid-column: var(--selected-start) / span var(--selected-span);
+      grid-row: var(--selected-row);
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .selected-work-tile img {
+      transition: transform 800ms var(--ease-out-expo, cubic-bezier(.16, 1, .3, 1));
+    }
+
+    .selected-work-tile:hover img {
+      transform: scale(1.02);
+    }
+  }
+</style>

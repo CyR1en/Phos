@@ -6,7 +6,7 @@ const serviceCategories = manifest.categories.filter((cat) => cat.offer_service)
 ---
 
 {serviceCategories.length > 0 && (
-  <section data-animate class="site-section animate-reveal mx-auto max-w-7xl px-6 lg:px-8">
+  <section data-animate class="site-section animate-reveal mx-auto max-w-wide px-6 lg:px-8">
     <div class="max-w-3xl opacity-0" data-animate-header>
       <h2 class="section-heading font-display text-ink" data-config="home.services.heading">{config.home.services.heading}</h2>
       {config.home.services.subheading && (
@@ -16,9 +16,9 @@ const serviceCategories = manifest.categories.filter((cat) => cat.offer_service)
     <div class="service-list">
       {serviceCategories.map((cat) => (
         <a href={`/photos/all/?cat=${cat.slug}`} class="service-item group" aria-label={`${cat.name}, ${cat.photoCount} photos`}>
-          <img src={cat.cover} alt="" loading="lazy" decoding="async" width="96" height="112" />
+          <img src={cat.coverThumbMobile || cat.cover} alt="" loading="lazy" decoding="async" width="96" height="112" class="rounded-photo" />
           <div>
-            <h3 class="font-display text-ink">{cat.name}</h3>
+            <h3 class="font-display text-h3 text-ink">{cat.name}</h3>
             {cat.description && <p class="mt-2 text-base text-body-muted leading-relaxed max-w-xl">{cat.description}</p>}
           </div>
           <ArrowUpRight size={24} strokeWidth={1.5} aria-hidden="true" />

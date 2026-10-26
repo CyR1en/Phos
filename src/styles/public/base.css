@@ -7,27 +7,38 @@
   :root { --site-header-height: 64px; }
 }
 
-[data-theme="theme-slate"] {
-  --color-primary-text: #1a1d2b;
-  --color-primary-hover: #d4a84b;
-}
-[data-theme="theme-slate"].dark {
-  --color-primary-text: #1a1d2b;
-  --color-primary-hover: #e0b04a;
-}
-
 .public-site {
+  --color-brand-accent: var(--color-phos-accent);
+  --color-primary: var(--color-ink);
+  --color-primary-text: var(--color-canvas);
+  --color-primary-hover: color-mix(in oklab, var(--color-ink) 84%, var(--color-canvas));
   --color-accent: var(--color-ink);
   --color-info: var(--color-ink);
   --color-focus-ring: var(--color-ink);
   --color-border-focus: var(--color-ink);
+  --color-border-input: color-mix(in srgb, var(--color-ink) 50%, var(--color-canvas));
+}
+.dark .public-site {
+  --color-brand-accent: var(--color-phos-dark-accent);
 }
 .public-site h1, .public-site h2 {
   text-wrap: balance;
 }
 .public-site p { text-wrap: pretty; }
 .public-site ::selection {
-  background: color-mix(in srgb, var(--color-primary) 25%, transparent);
+  background: color-mix(in srgb, var(--color-brand-accent) 25%, transparent);
+}
+
+.photo-hero :is(a, button):focus-visible,
+body:has(.photo-hero) .site-header:not(.is-scrolled) :is(a, button):focus-visible,
+#lightbox :is(a, button):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgb(0 0 0 / .55);
+}
+
+@media (scripting: none) {
+  [data-animate-header], .animate-reveal { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

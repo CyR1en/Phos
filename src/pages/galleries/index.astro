@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
+import PageHeader from '@components/PageHeader.astro'
 import manifest from '@lib/categories'
 import config from '@lib/config'
 
@@ -11,7 +12,8 @@ try {
   galleries = []
 }
 
-const cards = galleries.length > 0
+const hasGalleries = galleries.length > 0
+const cards = hasGalleries
   ? galleries.map((gallery) => ({
     href: `/galleries/${gallery.slug}/`,
     name: gallery.name,
@@ -20,6 +22,7 @@ const cards = galleries.length > 0
     coverSrcset: gallery?.coverSrcset,
     coverWidth: gallery?.coverWidth,
     coverHeight: gallery?.coverHeight,
+    coverFocus: gallery.coverFocus,
     blur: gallery.coverBlur,
     photoCount: gallery.photoCount,
   }))
@@ -31,27 +34,28 @@ const cards = galleries.length > 0
     coverSrcset: category?.coverSrcset,
     coverWidth: category?.coverWidth,
     coverHeight: category?.coverHeight,
+    coverFocus: category.coverFocus,
     blur: category.coverBlur,
     photoCount: category.photoCount,
   }))
 
-const cardSizes = '(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 128px) / 3), (min-width: 640px) calc((100vw - 80px) / 2), calc(100vw - 48px)'
+// Capped: (1536px container - 64px padding - 2 × 32px gaps) / 3 ≈ 469px.
+// XL: (viewport - 64px padding - 2 × 2vw gaps) / 3; SM: (viewport - 48px padding - 2vw gap) / 2.
+const cardSizes = '(min-width: 1536px) 469px, (min-width: 1280px) calc((100vw - 64px - 4vw) / 3), (min-width: 640px) calc((100vw - 48px - 2vw) / 2), calc(100vw - 48px)'
+const plural = (n: number, word: string, pluralWord = `${word}s`) => `${n} ${n === 1 ? word : pluralWord}`
 
-const subtitle = galleries.length > 0 ? 'Curated collections that tell stories' : 'Browse the work by category'
 const ogTitle = config.portfolio?.og_title || 'Portfolio'
 const ogDescription = config.portfolio?.og_description
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription} page="galleries">
-  <section class="pt-16 lg:pt-24 pb-8 lg:pb-12">
-    <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 opacity-0" data-animate-header>
-      <p class="font-mono text-xs uppercase tracking-wider text-muted">Portfolio</p>
-      <h1 class="mt-4 font-display text-ink">Galleries</h1>
-      <p class="mt-4 text-lg text-body-muted leading-relaxed">{subtitle}</p>
-    </div>
-  </section>
+  <PageHeader
+    eyebrow="Portfolio"
+    title="Galleries"
+    meta={hasGalleries ? plural(cards.length, 'gallery', 'galleries') : plural(cards.length, 'category', 'categories')}
+  />
 
-  <section class="mx-auto max-w-7xl px-6 pb-16 lg:pb-24 lg:px-8">
+  <section class="mx-auto w-full max-w-wide px-6 pb-[calc(var(--spacing-section)/2)] lg:px-8">
     {cards.length === 0 ? (
       <div class="py-24 text-center">
         <p class="text-lg text-muted mb-6">No galleries yet.</p>
@@ -64,59 +68,45 @@ const ogDescription = config.portfolio?.og_description
         </a>
       </div>
     ) : (
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-[clamp(16px,2vw,32px)] gap-y-[clamp(40px,5vw,72px)]">
         {cards.map((card) => (
           <a
             href={card.href}
-            class="gallery-card block rounded-lg overflow-hidden border border-border-light hover:border-border-hover bg-canvas"
+            class="gallery-card group block"
           >
-            {card.cover && (
-              <div
-                class="aspect-[16/10] overflow-hidden bg-surface bg-cover bg-center"
-                style={card.blur ? `background-image:url('${card.blur}')` : undefined}
-              >
+            <div
+              class="aspect-[4/5] overflow-hidden rounded-photo bg-surface bg-cover bg-center"
+              style={card.blur ? `background-image:url('${card.blur}')` : undefined}
+            >
+              {card.cover && (
                 <img
                   src={card.cover}
                   srcset={card.coverSrcset || undefined}
                   sizes={card.coverSrcset ? cardSizes : undefined}
                   width={card.coverWidth || undefined}
                   height={card.coverHeight || undefined}
-                  alt={card.name}
+                  alt=""
                   loading="lazy"
                   decoding="async"
-                  class="w-full h-full object-cover"
+                  class="h-full w-full object-cover"
+                  style={card.coverFocus ? `object-position:${card.coverFocus}` : undefined}
                 />
-              </div>
-            )}
-            <div class="p-6">
-              <h2 class="font-display text-xl text-ink">{card.name}</h2>
-              {card.description && (
-                <p class="mt-2 text-sm text-body-muted line-clamp-2">{card.description}</p>
               )}
-              <p class="mt-4 text-xs text-muted">
-                {card.photoCount} photo{card.photoCount !== 1 ? 's' : ''}
-              </p>
             </div>
+            <h2 class="mt-4 text-h3 font-display text-ink">{card.name}</h2>
+            <p class="eyebrow mt-2">{plural(card.photoCount, 'photo')}</p>
+            {card.description && (
+              <p class="mt-2 text-sm text-body-muted max-w-[44ch] line-clamp-2">{card.description}</p>
+            )}
           </a>
         ))}
       </div>
     )}
   </section>
 
-  {galleries.length > 0 && (
-    <section class="mx-auto max-w-7xl px-6 pb-16 lg:pb-24 lg:px-8">
-      <div class="rounded-lg border border-border-light bg-canvas p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div>
-          <p class="text-lg text-body-muted">Looking for everything?</p>
-        </div>
-        <a
-          href="/photos/all/"
-          class="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-sm font-medium text-primary-text hover:bg-primary-hover transition-colors"
-        >
-          Browse all photos
-          <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </a>
-      </div>
+  {hasGalleries && (
+    <section class="mx-auto w-full max-w-wide px-6 pb-[calc(var(--spacing-section)/2)] lg:px-8 flex justify-end">
+      <a href="/photos/all/" class="showcase-browse">Browse all photos →</a>
     </section>
   )}
 </BaseLayout>

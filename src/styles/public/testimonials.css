@@ -1,9 +1,9 @@
 /* Testimonials grid on the home page. Entrance stagger lives in services.css. */
-.testimonial-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px 64px; margin-top: 48px; }
+.testimonial-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px 64px; margin-top: var(--spacing-heading-gap); }
 .testimonial { padding-top: 24px; border-top: 1px solid var(--color-border); }
 .testimonial:first-child { grid-row: span 2; position: relative; }
 .testimonial:first-child::before {
-  content: "\201C";
+  content: '\201C';
   position: absolute;
   top: -0.32em;
   left: -0.14em;
@@ -11,7 +11,7 @@
   font-family: var(--font-display);
   font-size: clamp(4.5rem, 9vw, 7rem);
   line-height: 1;
-  color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  color: color-mix(in srgb, var(--color-brand-accent) 18%, transparent);
   pointer-events: none;
 }
 .testimonial blockquote { font-size: 18px; line-height: 1.6; }
@@ -21,5 +21,4 @@
 @media (max-width: 767px) {
   .testimonial-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .testimonial:first-child { grid-row: auto; }
-  .testimonial-grid { margin-top: 32px; }
 }

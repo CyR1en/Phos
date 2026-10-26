@@ -9,11 +9,12 @@
   --color-phos-base: #faf4ed;
   --color-phos-surface: #fffaf3;
   --color-phos-overlay: #f2e9e1;
-  --color-phos-muted: #7d7891;
+  --color-phos-muted: #6e6a85;
   --color-phos-error: #d4453a;
-  --color-phos-subtle: #797593;
+  --color-phos-subtle: #6e6a85;
   --color-phos-text: #575279;
   --color-phos-accent: #b4637a;
+  --color-phos-on-accent: #111111;
   --color-phos-gold: #ea9d34;
   --color-phos-rose: #d7827e;
   --color-phos-pine: #286983;
@@ -89,7 +90,7 @@
 
   --primary: var(--color-phos-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-surface);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-accent-600);
   --primary-focus: var(--color-phos-accent-600);
   --primary-active: var(--color-phos-accent-600);
@@ -130,7 +131,7 @@
   --muted-active: var(--color-phos-overlay);
 
   --destructive: var(--color-phos-accent);
-  --destructive-foreground: var(--color-phos-surface);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-accent-600);
   --destructive-focus: var(--color-phos-accent-600);
 
@@ -279,6 +280,7 @@
 }
 
 [data-theme="theme-rose-pine"].dark {
+  --color-phos-on-accent: #191724;
   --background: var(--color-phos-dark-base);
   --background-1: var(--color-phos-dark-surface);
   --background-2: var(--color-phos-dark-overlay);
@@ -302,7 +304,7 @@
 
   --primary: var(--color-phos-dark-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-dark-base);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-dark-rose);
   --primary-focus: var(--color-phos-dark-rose);
   --primary-active: var(--color-phos-dark-rose);
@@ -343,7 +345,7 @@
   --muted-active: var(--color-phos-dark-surface);
 
   --destructive: var(--color-phos-dark-accent);
-  --destructive-foreground: var(--color-phos-dark-base);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-dark-rose);
   --destructive-focus: var(--color-phos-dark-rose);
 

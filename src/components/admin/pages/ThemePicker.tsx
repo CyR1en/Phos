@@ -13,9 +13,16 @@ interface ThemeDef {
 
 const THEMES: ThemeDef[] = [
   {
+    id: 'theme-gallery',
+    name: 'Gallery',
+    description: 'Neutral museum-wall palette; photographs carry the color',
+    light: ['#f5f5f3', '#ebebe8', '#151515', '#151515', '#151515'],
+    dark: ['#111111', '#1a1a1a', '#ececea', '#ececea', '#ececea'],
+  },
+  {
     id: 'theme-rose-pine',
     name: 'Rosé Pine',
-    description: 'Warm rose & iris — soft, poetic',
+    description: 'Warm rose & iris — soft, poetic (tinted)',
     light: ['#faf4ed', '#fffaf3', '#b4637a', '#907aa9', '#575279'],
     dark: ['#191724', '#1f1d2e', '#eb6f92', '#c4a7e7', '#e0def4'],
   },
@@ -43,28 +50,28 @@ const THEMES: ThemeDef[] = [
   {
     id: 'theme-slate',
     name: 'Slate',
-    description: 'Cool workspace — blue-gray, warm amber, Lightroom',
+    description: 'Cool workspace — blue-gray, warm amber, Lightroom (tinted)',
     light: ['#f0f2f5', '#e2e6ec', '#d4a84b', '#6a5a9a', '#1a1d2b'],
-    dark: ['#1a1d2b', '#232636', '#e0b04a', '#8a7aba', '#e8eaf0'],
+    dark: ['#18191d', '#202227', '#e0b04a', '#8a7aba', '#e8eaf0'],
   },
   {
     id: 'theme-nord',
     name: 'Nord',
-    description: 'Arctic cool blues — crisp, calm',
+    description: 'Arctic cool blues — crisp, calm (tinted)',
     light: ['#ECEFF4', '#FFFFFF', '#5E81AC', '#B48EAD', '#2E3440'],
     dark: ['#2E3440', '#3B4252', '#88C0D0', '#B48EAD', '#ECEFF4'],
   },
   {
     id: 'theme-solarized',
     name: 'Solarized',
-    description: 'Classic engineered — warm light, cool dark',
+    description: 'Classic engineered — warm light, cool dark (tinted)',
     light: ['#FDF6E3', '#EEE8D5', '#268BD2', '#6C71C4', '#073642'],
     dark: ['#002B36', '#073642', '#268BD2', '#6C71C4', '#FDF6E3'],
   },
   {
     id: 'theme-everforest',
     name: 'Everforest',
-    description: 'Earthy woodland greens — natural, grounded',
+    description: 'Earthy woodland greens — natural, grounded (tinted)',
     light: ['#FFF9E8', '#F6F0E2', '#3A94C5', '#DF69BA', '#4B4639'],
     dark: ['#2D353B', '#343F44', '#7FBBB3', '#D699B6', '#D3C6AA'],
   },
@@ -87,12 +94,12 @@ function SwatchStrip({ colors, label }: { colors: string[]; label: string }) {
 
 export function ThemePicker() {
   const { config, getValue, setValue, flushSave } = useConfig()
-  const currentTheme = (getValue('site.theme') as string) || 'theme-rose-pine'
+  const currentTheme = (getValue('site.theme') as string) || 'theme-gallery'
   const [selected, setSelected] = useState(currentTheme)
 
   // Re-sync local state when the config loads from the API (async, after first render)
   useEffect(() => {
-    const theme = (getValue('site.theme') as string) || 'theme-rose-pine'
+    const theme = (getValue('site.theme') as string) || 'theme-gallery'
     setSelected(theme)
   }, [config])
 

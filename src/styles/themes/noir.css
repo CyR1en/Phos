@@ -10,11 +10,12 @@
   --color-phos-base: #f5f0eb;
   --color-phos-surface: #faf6f0;
   --color-phos-overlay: #ece5db;
-  --color-phos-muted: #7d7891;
+  --color-phos-muted: #6a625b;
   --color-phos-error: #d4453a;
   --color-phos-subtle: #736b63;
   --color-phos-text: #1a1410;
   --color-phos-accent: #991b1b;
+  --color-phos-on-accent: #f5f0eb;
   --color-phos-gold: #b8860b;
   --color-phos-rose: #be123c;
   --color-phos-pine: #1e3a5f;
@@ -28,7 +29,7 @@
   --color-phos-dark-base: #0a0a0a;
   --color-phos-dark-surface: #141414;
   --color-phos-dark-overlay: #1f1f1f;
-  --color-phos-dark-muted: #8b87a8;
+  --color-phos-dark-muted: #a3a3a3;
   --color-phos-dark-error: #e06c75;
   --color-phos-dark-subtle: #a0a0a0;
   --color-phos-dark-text: #f5f0eb;
@@ -90,7 +91,7 @@
 
   --primary: var(--color-phos-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-surface);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-accent-700);
   --primary-focus: var(--color-phos-accent-700);
   --primary-active: var(--color-phos-accent-700);
@@ -131,7 +132,7 @@
   --muted-active: var(--color-phos-overlay);
 
   --destructive: var(--color-phos-accent);
-  --destructive-foreground: var(--color-phos-surface);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-accent-700);
   --destructive-focus: var(--color-phos-accent-700);
 
@@ -280,6 +281,7 @@
 }
 
 [data-theme="theme-noir"].dark {
+  --color-phos-on-accent: #ffffff;
   --background: var(--color-phos-dark-base);
   --background-1: var(--color-phos-dark-surface);
   --background-2: var(--color-phos-dark-overlay);
@@ -303,7 +305,7 @@
 
   --primary: var(--color-phos-dark-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-dark-text);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-dark-rose);
   --primary-focus: var(--color-phos-dark-rose);
   --primary-active: var(--color-phos-dark-rose);
@@ -344,7 +346,7 @@
   --muted-active: var(--color-phos-dark-surface);
 
   --destructive: var(--color-phos-dark-accent);
-  --destructive-foreground: var(--color-phos-dark-text);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-dark-rose);
   --destructive-focus: var(--color-phos-dark-rose);
 

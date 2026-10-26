@@ -5,6 +5,8 @@ import Services from '@components/Services.astro'
 import Testimonials from '@components/Testimonials.astro'
 import CTA from '@components/CTA.astro'
 import CategoryCard from '@components/CategoryCard.astro'
+import SelectedWork from '@components/SelectedWork.astro'
+import Lightbox from '@components/Lightbox.astro'
 import ImmersiveScrollGallery from '@components/ui/immersive-scroll-gallery'
 import manifest from '@lib/categories'
 import config from '@lib/config'
@@ -18,6 +20,23 @@ try {
 }
 
 const { categories, heroPriority } = manifest
+const sw = config.home.selectedWork || {}
+const allPhotos = categories.flatMap(category => category.photos.map(photo => ({ ...photo, category: category.slug })))
+const photoByKey = new Map(allPhotos.map(photo => [`${photo.category}/${photo.filename}`, photo] as const))
+const resolvePhotos = (keys: string[]) => keys.flatMap(key => {
+  const photo = photoByKey.get(key)
+  return photo ? [photo] : []
+})
+const immersive = config.home.immersiveGallery
+const configuredImmersiveText = immersive?.text?.trim() || ''
+const immersiveText = /^lorem/i.test(configuredImmersiveText) ? '' : configuredImmersiveText
+const auto = [
+  ...heroPriority.flatMap(hero => allPhotos.filter(photo => photo.category === hero.category && photo.full === hero.full).slice(0, 1)),
+  ...[...categories].sort((a, b) => a.order - b.order).flatMap(category => resolvePhotos(category.photos.slice(0, 2).map(photo => `${category.slug}/${photo.filename}`))),
+]
+const selectedCandidates = [resolvePhotos(sw.photos || []), resolvePhotos(immersive?.desktopPhotos || [])]
+  .find(list => list.length >= 3) ?? auto
+const selected = [...new Map(selectedCandidates.map(photo => [`${photo.category}/${photo.filename}`, photo] as const)).values()].slice(0, 9)
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321'
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -31,41 +50,52 @@ const jsonLd = {
 const ogImage = config.site?.og?.image || (heroPriority.length > 0 ? heroPriority[0].full : undefined)
 const ogTitle = config.home?.og_title || config.site.title
 const ogDescription = config.home?.og_description || config.site.description
-const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase", "testimonials", "cta"]
+const defaultLayout = ['subheading', 'selectedWork', 'showcase', 'immersiveGallery', 'services', 'testimonials', 'cta']
+const layout = [...new Set(config.home.layout || defaultLayout)]
+// Older saved layouts may predate known sections; preserve their existing order.
+for (const section of defaultLayout) {
+  if (layout.includes(section) || section === 'immersiveGallery') continue
+  if (section === 'selectedWork') {
+    layout.splice(layout.indexOf('subheading') + 1, 0, section)
+  } else {
+    layout.push(section)
+  }
+}
+if (!layout.includes('immersiveGallery')) layout.push('immersiveGallery')
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription} image={ogImage}>
   <Hero heroPriority={heroPriority} />
 
-  {(config.home.layout || defaultLayout).map((sectionName: string) => {
+  {layout.map((sectionName: string) => {
     if (sectionName === 'subheading' && config.home.hero.subheading) {
       return (
-        <section data-animate class="animate-reveal py-16 lg:py-24">
+        <section data-animate class="animate-reveal py-[calc(var(--spacing-section)/2)]">
           <div class="mx-auto max-w-2xl px-6 text-center">
-            <p class="text-lg md:text-xl text-muted leading-relaxed" data-config="home.hero.subheading">{config.home.hero.subheading}</p>
+            <p class="text-lead text-body-muted" data-config="home.hero.subheading">{config.home.hero.subheading}</p>
           </div>
         </section>
       )
     }
 
-    if (sectionName === 'services' && config.home.services.enabled !== false) {
-      return (
-        <div data-animate class="animate-reveal">
-          <Services />
-        </div>
-      )
+    if (sectionName === 'selectedWork' && sw.enabled !== false && selected.length >= 3) {
+      return <SelectedWork photos={selected} heading={sw.heading || 'Selected work'} />
     }
 
-    if (sectionName === 'immersiveGallery' && config.home.immersiveGallery?.enabled) {
+    if (sectionName === 'services' && config.home.services.enabled !== false) {
+      return <Services />
+    }
+
+    if (sectionName === 'immersiveGallery' && immersive?.enabled && immersive.desktopPhotos?.length) {
       return (
-        <div class="relative h-[300vh]">
+        <div class="immersive-gallery relative h-[200vh] motion-reduce:h-auto">
           <ImmersiveScrollGallery
-            client:only="preact"
-            mobilePhotos={config.home.immersiveGallery.mobilePhotos}
-            mobilePositions={config.home.immersiveGallery.mobilePositions}
-            desktopPhotos={config.home.immersiveGallery.desktopPhotos}
-            desktopPositions={config.home.immersiveGallery.desktopPositions}
-            text={config.home.immersiveGallery.text}
+            client:visible={{ rootMargin: '600px' }}
+            mobilePhotos={immersive.mobilePhotos}
+            mobilePositions={immersive.mobilePositions}
+            desktopPhotos={immersive.desktopPhotos}
+            desktopPositions={immersive.desktopPositions}
+            text={immersiveText}
           />
         </div>
       )
@@ -90,6 +120,7 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
               coverSrcset: gal.coverSrcset || '',
               coverWidth: gal.coverWidth ?? null,
               coverHeight: gal.coverHeight ?? null,
+              coverFocus: gal.coverFocus,
               photoCount: gal.photoCount,
               blur: gal.coverBlur,
               link: `/galleries/${gal.slug}/`,
@@ -108,6 +139,7 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
             coverSrcset: cat.coverSrcset || '',
             coverWidth: cat.coverWidth,
             coverHeight: cat.coverHeight,
+            coverFocus: cat.coverFocus,
             photoCount: cat.photoCount,
             blur: cat.coverBlur,
             link: `/photos/all/?cat=${cat.slug}`,
@@ -121,7 +153,7 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
 
         return (
           <section id="showcase" class="showcase-section" aria-labelledby="showcase-heading">
-            <div class="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+            <div class="mx-auto w-full max-w-wide px-6 lg:px-8">
               <div class="showcase-header">
                 <div data-animate-header class="opacity-0">
                   <h2 id="showcase-heading" class="section-heading font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
@@ -139,6 +171,7 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
                     coverSrcset={item.coverSrcset || undefined}
                     coverWidth={item.coverWidth}
                     coverHeight={item.coverHeight}
+                    coverFocus={item.coverFocus ?? undefined}
                     photoCount={item.photoCount}
                     blur={item.blur}
                     link={item.link}
@@ -155,29 +188,25 @@ const defaultLayout = ["subheading", "services", "immersiveGallery", "showcase",
     }
 
     if (sectionName === 'testimonials' && config.home.testimonials.enabled !== false) {
-      return (
-        <div data-animate class="animate-reveal">
-          <Testimonials />
-        </div>
-      )
+      return <Testimonials />
     }
 
     if (sectionName === 'cta' && config.home.cta.enabled !== false) {
       return (
-        <div data-animate class="animate-reveal">
-          <CTA
-            heading={config.home.cta.heading}
-            body={config.home.cta.body}
-            buttonText={config.home.cta.button}
-            configPrefix="home.cta"
-            configButtonKey="button"
-          />
-        </div>
+        <CTA
+          heading={config.home.cta.heading}
+          body={config.home.cta.body}
+          buttonText={config.home.cta.button}
+          configPrefix="home.cta"
+          configButtonKey="button"
+        />
       )
     }
 
     return null
   })}
+
+  {sw.enabled !== false && selected.length >= 3 && <Lightbox photos={selected} />}
 
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 </BaseLayout>

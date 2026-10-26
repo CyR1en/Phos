@@ -1,3 +1,23 @@
+/* Fallback values measured with capsize (@capsizecss/unpack xWidthAvg)
+   against local Georgia/Arial. */
+@font-face {
+  font-family: 'Playfair Display Fallback';
+  src: local('Georgia');
+  size-adjust: 101.39%;
+  ascent-override: 106.72%;
+  descent-override: 24.76%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'DM Sans Fallback';
+  src: local('Arial');
+  size-adjust: 104.53%;
+  ascent-override: 94.90%;
+  descent-override: 29.66%;
+  line-gap-override: 0%;
+}
+
 /* dm-sans-latin-ext-wght-normal */
 @font-face {
   font-family: 'DM Sans';

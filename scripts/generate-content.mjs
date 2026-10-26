@@ -59,6 +59,33 @@ function titleize(name) {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+// Focus accepts one integer percentage (horizontal, vertical centered), two (x/y),
+// or position keywords (left/right/top/bottom/center); decimals are rejected.
+function normaliseFocus(value, label) {
+  if (value === undefined || value === null) return null
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parts = String(value).trim().toLowerCase().split(/\s+/)
+    if (parts.length >= 1 && parts.length <= 2) {
+      if (parts.every((part) => /^\d+%?$/.test(part))) {
+        const positions = parts.map((part) => Number(part.replace('%', '')))
+        if (positions.every((position) => position >= 0 && position <= 100)) {
+          return positions.map((position) => `${position}%`).join(' ')
+        }
+      }
+
+      if (parts.every((part) => /^(top|bottom|left|right|center)$/.test(part))) {
+        const horizontal = parts.filter((part) => part === 'left' || part === 'right').length
+        const vertical = parts.filter((part) => part === 'top' || part === 'bottom').length
+        if (horizontal <= 1 && vertical <= 1) return parts.join(' ')
+      }
+    }
+  }
+
+  console.warn(`[generate-content] Invalid focus in ${label}; ignoring value`)
+  return null
+}
+
 function createLimiter(concurrency) {
   let active = 0
   const queue = []
@@ -238,6 +265,7 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
     filename: file,
     title: metaInfo.title || titleize(parse(file).name),
     description: metaInfo.description || '',
+    focus: normaliseFocus(metaInfo.focus, `${srcPath} (_meta.yaml photos.${file}.focus)`),
     full: photoUrl('full', catSlug, file),
     thumb: photoUrl(VARIANT_DIRS.thumb, catSlug, thumbName),
     thumbMobile: photoUrl(VARIANT_DIRS.thumbMobile, catSlug, thumbName),
@@ -261,6 +289,7 @@ async function processCategory(dirName, cache) {
   const dirents = await readdir(entryPath, { withFileTypes: true })
 
   let meta = {}
+  // _meta.yaml: photos.<filename>.focus sets object-position; cover_focus overrides the cover photo's focus.
   const metaPath = join(entryPath, '_meta.yaml')
   const metaEntry = dirents.find((d) => d.name === '_meta.yaml')
   if (metaEntry?.isSymbolicLink()) {
@@ -348,11 +377,13 @@ async function processCategory(dirName, cache) {
     name: meta.name || titleize(dirName),
     description: meta.description || '',
     cover: coverPhoto.thumb,
+    coverThumbMobile: coverPhoto.thumbMobile,
     coverFull: coverPhoto.full,
     coverSrcset: buildSrcset(catSlug, `${parse(coverPhoto.filename).name}.webp`, cache.files[`${catSlug}/${coverPhoto.filename}`].variants, COVER_TIERS),
     coverWidth: coverPhoto?.width || null,
     coverHeight: coverPhoto?.height || null,
     coverBlur: coverPhoto?.blur || '',
+    coverFocus: normaliseFocus(meta.cover_focus, `${metaPath} cover_focus`) ?? coverPhoto.focus,
     order: meta.order ?? 99,
     offer_service: meta.offer_service !== false,
     photoCount: photos.length,
@@ -428,6 +459,7 @@ async function scanPhotos(sourceDir) {
           srcset: p.srcset,
           title: p.title,
           description: p.description,
+          focus: p.focus,
           blur: p.blur,
           width: p.width,
           height: p.height,
@@ -547,6 +579,7 @@ async function main() {
           cover: coverPhoto?.thumb || null,
           coverFull: coverPhoto?.full || null,
           coverBlur: coverPhoto?.blur || '',
+          coverFocus: coverPhoto?.focus ?? null,
           coverSrcset: coverPhoto
             ? buildSrcset(coverPhoto.category, `${parse(coverPhoto.filename).name}.webp`, cache.files[`${coverPhoto.category}/${coverPhoto.filename}`].variants, COVER_TIERS)
             : '',

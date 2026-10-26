@@ -7,6 +7,7 @@ import { ShowcaseSection } from './ShowcaseSection'
 
 const FRIENDLY_NAMES: Record<string, string> = {
   subheading: 'Hero Subheading & Description',
+  selectedWork: 'Selected work',
   services: 'Services Section',
   immersiveGallery: 'Immersive Scroll Gallery',
   showcase: 'Showcase Grid (Categories & Galleries)',
@@ -14,7 +15,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
   cta: 'Call To Action (CTA) Section',
 }
 
-const DEFAULT_LAYOUT = ['subheading', 'services', 'immersiveGallery', 'showcase', 'testimonials', 'cta']
+const DEFAULT_LAYOUT = ['subheading', 'selectedWork', 'showcase', 'immersiveGallery', 'services', 'testimonials', 'cta']
 
 function DragHandleIcon() {
   return (
@@ -34,7 +35,15 @@ export function HomePage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
-  const layout = config?.home?.layout || DEFAULT_LAYOUT
+  const layout = [...new Set(config?.home?.layout || DEFAULT_LAYOUT)]
+  for (const section of DEFAULT_LAYOUT) {
+    if (layout.includes(section)) continue
+    if (section === 'selectedWork') {
+      layout.splice(layout.indexOf('subheading') + 1, 0, section)
+    } else {
+      layout.push(section)
+    }
+  }
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index)

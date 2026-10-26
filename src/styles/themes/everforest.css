@@ -9,11 +9,12 @@
   --color-phos-base: #FFF9E8;
   --color-phos-surface: #F6F0E2;
   --color-phos-overlay: #F0EAD8;
-  --color-phos-muted: #7d7891;
+  --color-phos-muted: #6a6656;
   --color-phos-error: #d4453a;
-  --color-phos-subtle: #828066;
+  --color-phos-subtle: #5c5a47;
   --color-phos-text: #4B4639;
   --color-phos-accent: #3A94C5;
+  --color-phos-on-accent: #09131a;
   --color-phos-gold: #DFA000;
   --color-phos-rose: #F85552;
   --color-phos-pine: #8DA101;
@@ -27,9 +28,9 @@
   --color-phos-dark-base: #2D353B;
   --color-phos-dark-surface: #343F44;
   --color-phos-dark-overlay: #3D484D;
-  --color-phos-dark-muted: #8b87a8;
+  --color-phos-dark-muted: #9da59a;
   --color-phos-dark-error: #e06c75;
-  --color-phos-dark-subtle: #859289;
+  --color-phos-dark-subtle: #a7b0a6;
   --color-phos-dark-text: #D3C6AA;
   --color-phos-dark-accent: #7FBBB3;
   --color-phos-dark-gold: #DBBC7F;
@@ -45,7 +46,7 @@
   --color-phos-accent-50: #ffffff;
   --color-phos-accent-100: #f5f5ff;
   --color-phos-accent-200: #dcdcf0;
-  --color-phos-accent-300: #bebedc;
+  --color-phos-accent-300: #89bdd8;
   --color-phos-accent-400: #8c8cb9;
   --color-phos-accent-500: #3a94c5;
   --color-phos-accent-600: #3179a2;
@@ -89,7 +90,7 @@
 
   --primary: var(--color-phos-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-surface);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-accent-600);
   --primary-focus: var(--color-phos-accent-600);
   --primary-active: var(--color-phos-accent-600);
@@ -130,7 +131,7 @@
   --muted-active: var(--color-phos-overlay);
 
   --destructive: var(--color-phos-accent);
-  --destructive-foreground: var(--color-phos-surface);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-accent-600);
   --destructive-focus: var(--color-phos-accent-600);
 
@@ -279,6 +280,7 @@
 }
 
 [data-theme="theme-everforest"].dark {
+  --color-phos-on-accent: #2D353B;
   --background: var(--color-phos-dark-base);
   --background-1: var(--color-phos-dark-surface);
   --background-2: var(--color-phos-dark-overlay);
@@ -302,7 +304,7 @@
 
   --primary: var(--color-phos-dark-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-dark-base);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-dark-rose);
   --primary-focus: var(--color-phos-dark-rose);
   --primary-active: var(--color-phos-dark-rose);
@@ -343,7 +345,7 @@
   --muted-active: var(--color-phos-dark-surface);
 
   --destructive: var(--color-phos-dark-accent);
-  --destructive-foreground: var(--color-phos-dark-base);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-dark-rose);
   --destructive-focus: var(--color-phos-dark-rose);
 

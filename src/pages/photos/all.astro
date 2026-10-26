@@ -2,10 +2,12 @@
 import BaseLayout from '@layouts/BaseLayout.astro'
 import PhotoGrid from '@components/PhotoGrid.astro'
 import Lightbox from '@components/Lightbox.astro'
+import PageHeader from '@components/PageHeader.astro'
 import manifest from '@lib/categories'
-import config from '@lib/config'
 
 const { categories } = manifest
+const PHOTO_CONTAINER = 'mx-auto w-full max-w-[1760px] px-[clamp(16px,3vw,48px)]'
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 interface FlatPhoto {
   filename: string
@@ -13,10 +15,12 @@ interface FlatPhoto {
   full: string
   thumb: string
   thumbMobile: string
+  gridSrcset?: string
   srcset: string
   width: number | null
   height: number | null
   blur: string
+  focus?: string | null
   category: string
   categoryName: string
 }
@@ -31,26 +35,20 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
 ---
 
 <BaseLayout title="All Photos" description="Browse all photos across every category" page="photos/all">
-  <section class="pt-16 lg:pt-24 pb-8 lg:pb-12">
-    <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 opacity-0" data-animate-header>
-      <p class="font-mono text-xs uppercase tracking-wider text-muted">Browse</p>
-      <h1 class="mt-4 font-display text-ink">All photos</h1>
-      <p class="mt-4 text-lg text-body-muted leading-relaxed">Every photo across all categories</p>
-    </div>
-  </section>
-
-  <section class="mx-auto pb-16 lg:pb-24 max-w-7xl px-6 sm:px-6 lg:px-8">
-    <div id="filters" class="mb-8 flex flex-wrap gap-2">
-      <button class="filter-btn text-sm font-medium rounded-pill border border-primary bg-primary px-4 py-2 text-primary-text min-h-[36px] transition-colors" data-filter="all" aria-pressed="true">
+  <PageHeader eyebrow="Browse" title="All photos" meta={plural(allPhotos.length, 'photo')} containerClass={PHOTO_CONTAINER}>
+    <div slot="actions" id="filters" class="flex gap-2 flex-nowrap overflow-x-auto lg:flex-wrap lg:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <button type="button" class="filter-btn shrink-0 text-sm font-medium rounded-pill border border-primary bg-primary px-4 py-2 text-primary-text min-h-11 transition-colors" data-filter="all" aria-pressed="true">
         All
       </button>
       {categories.map((cat) => (
-        <button class="filter-btn text-sm font-medium rounded-pill border border-border px-4 py-2 text-ink min-h-[36px] transition-colors" data-filter={cat.slug} aria-pressed="false">
+        <button type="button" class="filter-btn shrink-0 text-sm font-medium rounded-pill border border-border px-4 py-2 text-ink min-h-11 transition-colors" data-filter={cat.slug} aria-pressed="false">
           {cat.name}
         </button>
       ))}
     </div>
+  </PageHeader>
 
+  <section class={PHOTO_CONTAINER} style="padding-bottom: var(--spacing-section)">
     <PhotoGrid photos={allPhotos} wrapperClass="gallery-item" />
 
     <div id="empty-state" class="hidden py-24 text-center text-lg text-muted">
@@ -61,82 +59,101 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
   <Lightbox photos={allPhotos} />
 
   <script>
-    import { animate, stagger } from 'framer-motion/dom'
+    const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
     function initFilters() {
       const filtersContainer = document.getElementById('filters')
-      const items = document.querySelectorAll('.gallery-item')
+      if (!filtersContainer || filtersContainer.dataset.bound) return
+
+      const items = document.querySelectorAll<HTMLElement>('.gallery-item')
+      const buttons = Array.from(filtersContainer.querySelectorAll<HTMLButtonElement>('.filter-btn'))
       const emptyState = document.getElementById('empty-state')
-      const fullData = JSON.parse(document.getElementById('lightbox-data')?.textContent || '[]')
+      const pageHeader = filtersContainer.closest('header')
+      const pageTitle = pageHeader?.querySelector('[data-page-title]') || pageHeader?.querySelector('h1')
+      const pageMeta = pageHeader?.querySelector('[data-page-meta]')
+      const lightboxData = document.getElementById('lightbox-data')
+      const fullData = JSON.parse(lightboxData?.textContent || '[]') as { category?: string }[]
 
       const urlParams = new URLSearchParams(window.location.search)
       const initialCat = urlParams.get('cat')
 
       function applyFilter(filter: string) {
-        // Update button states
-        const currentBtns = document.querySelectorAll('.filter-btn')
-        currentBtns.forEach((b) => {
+        const activeBtn = buttons.find((button) => button.dataset.filter === filter)
+          || buttons.find((button) => button.dataset.filter === 'all')
+        const activeFilter = activeBtn?.dataset.filter || 'all'
+
+        buttons.forEach((b) => {
           b.classList.remove('bg-primary', 'text-primary-text', 'border-primary')
           b.classList.add('border-border', 'text-ink')
           b.setAttribute('aria-pressed', 'false')
         })
 
-        const activeBtn = document.querySelector(`[data-filter="${filter}"]`) || document.querySelector('[data-filter="all"]')
         if (activeBtn) {
           activeBtn.classList.add('bg-primary', 'text-primary-text', 'border-primary')
           activeBtn.classList.remove('border-border', 'text-ink')
           activeBtn.setAttribute('aria-pressed', 'true')
         }
 
-        let visible = 0
-        let newIdx = 0
         const visibleItems: HTMLElement[] = []
-        
+
         items.forEach((item) => {
-          const matches = filter === 'all' || (item as HTMLElement).dataset.category === filter
-          ;(item as HTMLElement).style.display = matches ? '' : 'none'
+          const matches = activeFilter === 'all' || item.dataset.category === activeFilter
+          item.getAnimations().forEach((animation) => animation.cancel())
+          item.dataset.animated = 'true'
+          delete item.dataset.revealPending
+          item.style.display = matches ? '' : 'none'
           if (matches) {
-            visible++
-            ;(item as HTMLElement).dataset.index = String(newIdx++)
-            visibleItems.push(item as HTMLElement)
+            item.dataset.index = String(visibleItems.length)
+            visibleItems.push(item)
           }
         })
 
-        emptyState?.classList.toggle('hidden', visible > 0)
+        emptyState?.classList.toggle('hidden', visibleItems.length > 0)
+        if (pageTitle) {
+          pageTitle.textContent = activeFilter === 'all' ? 'All photos' : activeBtn?.textContent?.trim() || 'All photos'
+        }
+        if (pageMeta) pageMeta.textContent = plural(visibleItems.length, 'photo')
 
-        if (visibleItems.length > 0) {
-          // Use Framer Motion keyframes to force the start state, avoiding manual style manipulation
-          animate(
-            visibleItems,
-            { opacity: [0, 1], y: [24, 0] },
-            {
-              duration: 0.7,
-              ease: [0.16, 1, 0.3, 1],
-              delay: stagger(0.06),
-            }
-          )
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          visibleItems
+            .map((item) => ({ item, rect: item.getBoundingClientRect() }))
+            .filter(({ rect }) => rect.top < window.innerHeight && rect.bottom > 0)
+            .sort((a, b) => a.rect.top - b.rect.top || a.rect.left - b.rect.left)
+            .slice(0, 12)
+            .forEach(({ item }, index) => {
+              item.animate(
+                [
+                  { opacity: 0, clipPath: 'inset(6% 0 0 0)' },
+                  { opacity: 1, clipPath: 'inset(0)' },
+                ],
+                {
+                  duration: 900,
+                  easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                  delay: Math.min(index * 60, 300),
+                  fill: 'backwards',
+                }
+              )
+            })
         }
 
-        const filtered = filter === 'all' ? fullData : fullData.filter((p: any) => p.category === filter)
-        window.__updateLightboxData?.(filtered)
+        const filtered = activeFilter === 'all' ? fullData : fullData.filter((p) => p.category === activeFilter)
+        if (window.__updateLightboxData) window.__updateLightboxData(filtered)
+        else if (lightboxData) lightboxData.textContent = JSON.stringify(filtered)
+        return activeFilter
       }
 
       // Use event delegation to avoid cloning nodes and losing references
-      if (filtersContainer && !filtersContainer.dataset.bound) {
-        filtersContainer.dataset.bound = 'true'
-        filtersContainer.addEventListener('click', (e) => {
-          const btn = (e.target as HTMLElement).closest('.filter-btn') as HTMLElement | null
-          if (!btn) return
-          
-          const filter = btn.dataset.filter || 'all'
-          applyFilter(filter)
-          
-          const url = new URL(window.location.href)
-          if (filter === 'all') url.searchParams.delete('cat')
-          else url.searchParams.set('cat', filter)
-          history.replaceState(null, '', url.toString())
-        })
-      }
+      filtersContainer.dataset.bound = 'true'
+      filtersContainer.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.filter-btn')
+        if (!btn) return
+
+        const filter = applyFilter(btn.dataset.filter || 'all')
+        const url = new URL(window.location.href)
+        if (filter === 'all') url.searchParams.delete('cat')
+        else url.searchParams.set('cat', filter)
+        history.replaceState(history.state, '', url.toString())
+      })
 
       if (initialCat) {
         applyFilter(initialCat)

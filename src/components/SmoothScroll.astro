@@ -14,7 +14,10 @@ const lenis = new Lenis({
 
 ;(window as any).__lenis = lenis
 
+let scrollObserver: IntersectionObserver | undefined
+
 function initScrollAnimations() {
+  scrollObserver?.disconnect()
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
@@ -23,6 +26,7 @@ function initScrollAnimations() {
       }
     })
   }, { threshold: 0.1 })
+  scrollObserver = observer
 
   document.querySelectorAll('[data-animate]').forEach((el) => observer.observe(el))
 
@@ -57,4 +61,5 @@ initScrollAnimations()
 
 // Run on subsequent navigations
 document.addEventListener('astro:after-swap', initScrollAnimations)
+document.addEventListener('astro:before-swap', () => scrollObserver?.disconnect())
 </script>

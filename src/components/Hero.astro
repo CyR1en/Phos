@@ -10,6 +10,7 @@ export interface Props {
     blur: string
     width: number | null
     height: number | null
+    focus?: string | null
     category: string
     categoryName: string
     hero_priority: number
@@ -30,304 +31,403 @@ const hasGalleries = galleries.length > 0
 const { heroPriority } = Astro.props
 const hasSlideshow = heroPriority.length > 1
 const slideshowInterval = config.home.hero.slideshow_interval ?? 6000
-const overlayOpacity = config.home.hero.overlay_opacity ?? 0.75
+const overlayOpacity = config.home.hero.overlay_opacity ?? 0.5
+const kenBurns = config.home.hero.ken_burns ?? false
+const parallax = config.home.hero.parallax ?? false
 
-// The hero is a viewport-tall cover crop: when the viewport is narrower than the photo's
-// aspect ratio, the painted width follows the height rather than 100vw.
+// Cover crops need enough resolution for the painted width, including on phones.
 function heroSizes(photo: { width: number | null; height: number | null }) {
   if (!photo.width || !photo.height) return '100vw'
   return `(max-aspect-ratio: ${photo.width}/${photo.height}) ${Math.ceil((photo.width / photo.height) * 100)}vh, 100vw`
 }
+
+function photoCredit(photo: Props['heroPriority'][number]) {
+  const title = photo.title.trim()
+  const hasTitle = title && !/^Sample \d+$/i.test(title) && !/^(DSC|IMG)[ _-]?\d+/i.test(title)
+  return [photo.categoryName, hasTitle ? title : ''].filter(Boolean).join(' · ')
+}
 ---
 
-<section class="photo-hero relative flex items-end justify-center overflow-hidden" data-hero-interval={slideshowInterval} style={`--hero-interval: ${slideshowInterval}ms`}>
+<section
+  class="photo-hero relative flex items-end justify-center overflow-hidden"
+  data-hero-interval={slideshowInterval}
+  data-hero-empty={heroPriority.length === 0 ? '' : undefined}
+  data-ken-burns={kenBurns ? '' : undefined}
+  data-parallax={parallax ? '' : undefined}
+  aria-roledescription={hasSlideshow ? 'carousel' : undefined}
+  aria-label={hasSlideshow ? 'Featured photographs' : undefined}
+  style={`--hero-interval: ${slideshowInterval}ms; --hero-scrim: ${overlayOpacity}`}
+>
   {heroPriority.length > 0 ? (
-    <div class="absolute inset-0 z-0 hero-parallax pointer-events-none will-change-transform" id="hero-bg">
-      {heroPriority.map((photo, i) => (
-        <div
-          class:list={["absolute inset-0 bg-cover bg-center hero-slide", i === 0 && "is-active"]}
-          id={i === 0 ? 'hero-active-slide' : undefined}
-          style={`background-image: url('${photo.blur}'); opacity: ${i === 0 ? 1 : 0};${hasSlideshow ? ' transition: opacity 1.5s ease, transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);' : ''}`}
-          data-hero-slide={i}
-          role="img"
-          aria-label={photo.title}
-        >
-          {i === 0 ? (
-            <img
-              src={photo.hd}
-              srcset={photo.srcset}
-              sizes={heroSizes(photo)}
-              alt=""
-              class="absolute inset-0 h-full w-full object-cover"
-              fetchpriority="high"
-            />
-          ) : (
-            <img
-              data-src={photo.hd}
-              data-srcset={photo.srcset}
-              data-sizes={heroSizes(photo)}
-              alt=""
-              class="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
-        </div>
-      ))}
-      <div class="absolute inset-0" style={`background: linear-gradient(to top, rgba(0,0,0,${overlayOpacity}) 0%, rgba(0,0,0,${overlayOpacity}) 10%, rgba(0,0,0,${overlayOpacity * 0.55}) 30%, rgba(0,0,0,${overlayOpacity * 0.08}) 45%, rgba(0,0,0,0) 55%);`} />
-    </div>
+    <>
+      <div class:list={['absolute inset-0 z-0 pointer-events-none', parallax && 'hero-parallax']} id="hero-bg">
+        {heroPriority.map((photo, i) => (
+          <div
+            class:list={['absolute inset-0 bg-cover bg-center hero-slide', i === 0 && 'is-active']}
+            style={`background-image: url('${photo.blur}'); opacity: ${i === 0 ? 1 : 0}; z-index: ${i === 0 ? 1 : 0};${photo.focus ? ` background-position: ${photo.focus};` : ''}`}
+            data-hero-slide={i}
+            data-hero-label={photo.title}
+            data-hero-credit-text={photoCredit(photo)}
+            data-hero-credit-href={`/photos/all/?cat=${encodeURIComponent(photo.category)}`}
+            role={i === 0 ? 'img' : undefined}
+            aria-label={i === 0 ? photo.title : undefined}
+            aria-hidden={i === 0 ? undefined : 'true'}
+          >
+            {i === 0 ? (
+              <img
+                src={photo.hd}
+                srcset={photo.srcset}
+                sizes={heroSizes(photo)}
+                alt=""
+                class="absolute inset-0 h-full w-full object-cover"
+                style={photo.focus ? `object-position: ${photo.focus}` : undefined}
+                fetchpriority="high"
+              />
+            ) : (
+              <img
+                data-src={photo.hd}
+                data-srcset={photo.srcset}
+                data-sizes={heroSizes(photo)}
+                alt=""
+                class="absolute inset-0 h-full w-full object-cover"
+                style={photo.focus ? `object-position: ${photo.focus}` : undefined}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <div class="hero-top-scrim absolute inset-0 pointer-events-none" aria-hidden="true" />
+      <div class="hero-text-scrim absolute inset-0 pointer-events-none" aria-hidden="true" />
+    </>
   ) : (
     <div class="absolute inset-0 bg-canvas" />
   )}
 
-  <div class="hero-content relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8">
+  <div class="hero-content relative z-10 mx-auto w-full max-w-wide px-6 lg:px-8">
     <div class="max-w-4xl">
-      <p data-hero-photographer class="hero-name font-body font-medium uppercase opacity-0" data-config="about.photographer.name">{config.about.photographer.name}</p>
-      <h1 data-hero-heading class="hero-heading mt-5 font-display text-[#f4f5f7]" data-config="home.hero.heading">
-        {
-          config.home.hero.heading.split(' ').map((word) => (
-            <span class="inline-block overflow-hidden pb-1 -mb-1">
-              <span class="inline-block opacity-0">{word}&nbsp;</span>
-            </span>
-          ))
-        }
-      </h1>
-      <div data-hero-ctas class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-start">
+      <p data-hero-photographer class="hero-name eyebrow" data-config="about.photographer.name">{config.about.photographer.name}</p>
+      <h1 data-hero-heading class="hero-heading text-display mt-5 font-display" data-config="home.hero.heading">{config.home.hero.heading}</h1>
+    </div>
+    <div class="hero-actions mt-8">
+      <div data-hero-ctas class="flex flex-wrap items-center gap-x-7 gap-y-3">
         <a
           href={hasGalleries ? '/galleries' : '/photos/all/'}
-          class="site-button hero-primary inline-flex items-center justify-center rounded-pill text-sm w-full sm:w-auto opacity-0"
+          class="site-button hero-primary inline-flex items-center justify-center rounded-pill text-sm"
         >
           <span data-config="home.hero.cta1">{config.home.hero.cta1}</span>
-          <svg class="ml-2 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
         </a>
-        <a
-          href="/contact"
-          class="site-button hero-secondary inline-flex items-center justify-center rounded-pill text-sm w-full sm:w-auto opacity-0"
-        >
+        <a href="/contact" class="hero-secondary inline-flex items-center justify-center text-sm">
           <span data-config="home.hero.cta2">{config.home.hero.cta2}</span>
         </a>
       </div>
-    </div>
-  </div>
 
-  {heroPriority.length > 0 && (
-    <div class="absolute bottom-3 left-1/2 z-30 -translate-x-1/2 flex pointer-events-auto">
-      {heroPriority.map((_, i) => (
-        <button
-          type="button"
-          class="hero-slide-control"
-          data-hero-dot={i}
-          aria-label={`Slide ${i + 1}`}
-          aria-pressed={i === 0}
-        />
-      ))}
+      {hasSlideshow && (
+        <div class="hero-controls flex flex-wrap items-center justify-end" role="group" aria-label="Slideshow controls">
+          {heroPriority.map((_, i) => (
+            <button
+              type="button"
+              class="hero-slide-control"
+              data-hero-dot={i}
+              aria-label={`Show photo ${i + 1} of ${heroPriority.length}`}
+              aria-current={i === 0 ? 'true' : undefined}
+            />
+          ))}
+          <button type="button" class="hero-slide-control hero-pause" aria-pressed="false" aria-label="Pause slideshow">
+            <svg data-hero-pause-icon class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
+            <svg data-hero-play-icon class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5 11 7-11 7z" /></svg>
+          </button>
+        </div>
+      )}
     </div>
-  )}
+    {heroPriority[0] && (
+      <div class="mt-5 flex justify-end">
+        <a
+          data-hero-credit
+          class="hero-credit eyebrow"
+          href={`/photos/all/?cat=${encodeURIComponent(heroPriority[0].category)}`}
+          hidden={!photoCredit(heroPriority[0])}
+        >{photoCredit(heroPriority[0])}</a>
+      </div>
+    )}
+  </div>
 </section>
 
 <script>
-  import { animate, stagger } from 'framer-motion/dom'
+  import { animate } from 'framer-motion/dom'
+
+  let cleanupHero: (() => void) | undefined
 
   function initHero() {
-    const slides = document.querySelectorAll('[data-hero-slide]')
-    const dots = document.querySelectorAll('[data-hero-dot]')
-    const heroBg = document.getElementById('hero-bg')
-    const heroSection = document.querySelector('[data-hero-interval]') as HTMLElement | null
+    cleanupHero?.()
+    cleanupHero = undefined
+
+    const heroSection = document.querySelector<HTMLElement>('[data-hero-interval]')
+    if (!heroSection) return
+
+    const slides = Array.from(heroSection.querySelectorAll<HTMLElement>('[data-hero-slide]'))
+    const dots = heroSection.querySelectorAll<HTMLButtonElement>('[data-hero-dot]')
+    const controls = heroSection.querySelector<HTMLElement>('.hero-controls')
+    const pauseButton = heroSection.querySelector<HTMLButtonElement>('.hero-pause')
+    const credit = heroSection.querySelector<HTMLAnchorElement>('[data-hero-credit]')
+    const heroBg = heroSection.querySelector<HTMLElement>('#hero-bg')
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const controller = new AbortController()
+    const { signal } = controller
+    let motionAllowed = !motionQuery.matches
+    let disposed = false
     let heroVisible = false
-    let updateSlideshowVisibility = () => {}
+    let hovered = controls?.matches(':hover') ?? false
+    let focused = heroSection.contains(document.activeElement) && Boolean(document.activeElement?.matches(':focus-visible'))
+    let userPaused = false
+    let current = 0
+    let requested = 0
+    let requestVersion = 0
+    let loading = false
+    let fading = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let finishFade: (() => void) | undefined
+    let reveal: ReturnType<typeof animate> | undefined
+    let removeParallax: (() => void) | undefined
 
-    if (heroSection) {
-      const observer = new IntersectionObserver(([entry]) => {
-        heroVisible = entry.isIntersecting
-        updateSlideshowVisibility()
+    const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
+
+    function decodeImage(img: HTMLImageElement | null, timeout: number) {
+      if (!img) return Promise.resolve()
+      return Promise.race([img.decode().catch(() => {}), wait(timeout)])
+    }
+
+    function warmSlide(index: number) {
+      const img = slides[index]?.querySelector<HTMLImageElement>('img[data-src]')
+      if (!img) return
+      img.sizes = img.dataset.sizes || ''
+      img.srcset = img.dataset.srcset || ''
+      img.src = img.dataset.src || ''
+      img.removeAttribute('data-src')
+    }
+
+    function stop() {
+      clearTimeout(timer)
+      timer = undefined
+    }
+
+    function isPaused() {
+      return userPaused || hovered || focused || !heroVisible || document.hidden || !motionAllowed
+    }
+
+    function updatePlayback() {
+      stop()
+      const paused = isPaused()
+      heroSection!.dataset.heroPaused = String(paused)
+      if (disposed || slides.length < 2 || paused || loading || fading) return
+      const interval = Number(heroSection!.dataset.heroInterval) || 6000
+      timer = setTimeout(() => { void showSlide((current + 1) % slides.length, true) }, interval)
+    }
+
+    function setActive(index: number) {
+      slides.forEach((slide, i) => {
+        const active = i === index
+        slide.classList.toggle('is-active', active)
+        if (active) {
+          slide.removeAttribute('aria-hidden')
+          slide.setAttribute('role', 'img')
+          slide.setAttribute('aria-label', slide.dataset.heroLabel || '')
+        } else {
+          slide.setAttribute('aria-hidden', 'true')
+          slide.removeAttribute('role')
+          slide.removeAttribute('aria-label')
+        }
       })
-      observer.observe(heroSection)
-      document.addEventListener('astro:before-swap', () => observer.disconnect(), { once: true })
-    }
-
-    const motionAllowed = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    if (motionAllowed) {
-    // --- Framer Motion Animations ---
-    // 1. Background image cinematic reveal
-    const firstSlide = document.querySelector('[data-hero-slide="0"]')
-    if (firstSlide) {
-      const img = firstSlide.querySelector('img')
-      if (img) {
-        animate(img, 
-          { scale: [1.12, 1], opacity: [0.2, 1] }, 
-          { duration: 2.8, ease: [0.16, 1, 0.3, 1] }
-        )
-      }
-    }
-
-    // 2. Photographer's name entrance
-    const name = document.querySelector('[data-hero-photographer]')
-    if (name) {
-      animate(name, 
-        { y: [15, 0], opacity: [0, 1] }, 
-        { duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.1 }
-      )
-    }
-
-    // 3. Heading entrance (dramatic animation)
-    const words = document.querySelectorAll('[data-hero-heading] span > span')
-    if (words.length > 0) {
-      animate(words, 
-        { y: [48, 0], rotate: [6, 0], scale: [0.96, 1], opacity: [0, 1] }, 
-        { 
-          duration: 1.5, 
-          ease: [0.16, 1, 0.3, 1], 
-          delay: stagger(0.08, { startDelay: 0.3 }) 
-        }
-      )
-    }
-
-    // 4. CTA buttons stagger reveal
-    const ctas = document.querySelectorAll('[data-hero-ctas] > a')
-    if (ctas.length > 0) {
-      animate(ctas, 
-        { y: [20, 0], opacity: [0, 1] }, 
-        { 
-          duration: 1.2, 
-          ease: [0.16, 1, 0.3, 1],
-          delay: stagger(0.1, { startDelay: 0.8 })
-        }
-      )
-    }
-
-    }
-
-    // --- Slideshow Setup ---
-    if (slides.length > 1) {
-      let current = 0
-      let interval: ReturnType<typeof setInterval> | null = null
-
-      // Only the first slide's image is in the initial HTML; later slides are fetched
-      // one step ahead so they never compete with the slide on screen for bandwidth.
-      function warmSlide(index: number) {
-        const img = slides[index]?.querySelector('img[data-src]') as HTMLImageElement | null
-        if (!img) return
-        img.sizes = img.dataset.sizes || ''
-        img.srcset = img.dataset.srcset || ''
-        img.src = img.dataset.src || ''
-        img.removeAttribute('data-src')
-      }
-
-      if (motionAllowed) {
-        const firstImg = slides[0].querySelector('img')
-        firstImg?.decode().catch(() => {}).then(() => warmSlide(1))
-      }
-
-      function showSlide(index: number) {
-        warmSlide(index)
-        if (motionAllowed) warmSlide((index + 1) % slides.length)
-        slides.forEach((s, i) => {
-          ;(s as HTMLElement).style.opacity = i === index ? '1' : '0'
-          s.classList.toggle('is-active', i === index)
-        })
-        dots.forEach((d, i) => {
-          d.setAttribute('aria-pressed', String(i === index))
-        })
-        current = index
-      }
-
-      function next() {
-        showSlide((current + 1) % slides.length)
-      }
-
-      function start() {
-        stop()
-        if (!heroVisible || document.hidden || !motionAllowed) return
-        const heroInterval = parseInt(heroSection?.dataset.heroInterval || '', 10) || 6000
-        interval = setInterval(next, heroInterval)
-      }
-
-      function stop() {
-        if (interval) {
-          clearInterval(interval)
-          interval = null
-        }
-      }
-
-      dots.forEach((dot) => {
-        dot.addEventListener('click', () => {
-          const idx = parseInt((dot as HTMLElement).dataset.heroDot || '', 10)
-          if (!isNaN(idx) && idx !== current) showSlide(idx)
-          start()
-        })
+      dots.forEach((dot, i) => {
+        if (i === index) dot.setAttribute('aria-current', 'true')
+        else dot.removeAttribute('aria-current')
       })
-
-      if (heroBg) {
-        heroBg.addEventListener('mouseenter', stop)
-        heroBg.addEventListener('mouseleave', start)
+      if (credit) {
+        credit.textContent = slides[index].dataset.heroCreditText || ''
+        credit.href = slides[index].dataset.heroCreditHref || '/photos/all/'
+        credit.hidden = !credit.textContent
       }
-
-      // Hidden slide transitions can trigger large image decodes during gallery scrolling.
-      updateSlideshowVisibility = start
-      document.addEventListener('visibilitychange', updateSlideshowVisibility)
-      start()
-
-      // Clean up interval on page swap to avoid memory leaks
-      document.addEventListener('astro:before-swap', () => {
-        stop()
-        document.removeEventListener('visibilitychange', updateSlideshowVisibility)
-      }, { once: true })
+      current = index
     }
 
-    // --- Parallax Setup ---
-    if (heroBg) {
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const isLowEnd = (() => {
-        const cores = navigator.hardwareConcurrency || 4
-        const mem = (navigator as any).deviceMemory || 4
-        return cores <= 2 || mem <= 2
-      })()
+    async function showSlide(index: number, automatic = false) {
+      if (disposed || slides.length < 2 || !slides[index]) return
+      requested = index
+      const version = ++requestVersion
+      stop()
 
-      if (!prefersReduced && !isLowEnd) {
+      // Finish the current fade at full coverage, then honor the latest dot click.
+      if (fading) return
+      loading = index !== current
+      if (!loading) {
+        updatePlayback()
+        return
+      }
+
+      warmSlide(index)
+      await decodeImage(slides[index].querySelector('img'), 1200)
+      if (disposed || version !== requestVersion) return
+      loading = false
+      if (automatic && isPaused()) {
+        requested = current
+        updatePlayback()
+        return
+      }
+
+      const outgoing = slides[current]
+      const incoming = slides[index]
+      if (!motionAllowed) {
+        outgoing.style.transition = 'none'
+        outgoing.style.opacity = '0'
+        outgoing.style.zIndex = '0'
+        incoming.style.transition = 'none'
+        incoming.style.opacity = '1'
+        incoming.style.zIndex = '1'
+        setActive(index)
+        updatePlayback()
+        return
+      }
+
+      fading = true
+      incoming.style.transition = 'none'
+      incoming.style.opacity = '0'
+      incoming.style.zIndex = '2'
+      outgoing.style.zIndex = '1'
+      // Commit the transparent incoming layer before enabling its transition.
+      void incoming.offsetWidth
+      incoming.style.removeProperty('transition')
+
+      let fallback: ReturnType<typeof setTimeout>
+      const finish = () => {
+        clearTimeout(fallback)
+        incoming.removeEventListener('transitionend', onTransitionEnd)
+        incoming.style.transition = 'none'
+        incoming.style.opacity = '1'
+        incoming.style.zIndex = '1'
+        outgoing.style.transition = 'none'
+        outgoing.style.opacity = '0'
+        outgoing.style.zIndex = '0'
+        fading = false
+        finishFade = undefined
+        if (disposed) return
+        if (requested !== current) void showSlide(requested)
+        else updatePlayback()
+      }
+      const onTransitionEnd = (event: TransitionEvent) => {
+        if (event.target === incoming && event.propertyName === 'opacity') finish()
+      }
+      finishFade = finish
+      incoming.addEventListener('transitionend', onTransitionEnd)
+      fallback = setTimeout(finish, 1600)
+      setActive(index)
+      incoming.style.opacity = '1'
+      if (motionAllowed) warmSlide((index + 1) % slides.length)
+    }
+
+    const firstImg = slides[0]?.querySelector<HTMLImageElement>('img') || null
+    if (firstImg && motionAllowed && !firstImg.complete) {
+      // Only JS hides a still-loading image; SSR and cached images stay visible.
+      firstImg.style.opacity = '0'
+      void decodeImage(firstImg, 800).then(() => {
+        if (disposed) return
+        if (!motionAllowed) {
+          firstImg.style.opacity = '1'
+          return
+        }
+        reveal = animate(firstImg, { opacity: [0, 1] }, { duration: 0.9, ease: [0.16, 1, 0.3, 1] })
+      })
+    }
+
+    if (slides.length > 1 && motionAllowed) {
+      void decodeImage(firstImg, 800).then(() => {
+        if (!disposed && motionAllowed) warmSlide(1)
+      })
+    }
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        void showSlide(Number(dot.dataset.heroDot))
+      }, { signal })
+    })
+    pauseButton?.addEventListener('click', () => {
+      userPaused = !userPaused
+      pauseButton.setAttribute('aria-pressed', String(userPaused))
+      if (!userPaused) {
+        hovered = false
+        focused = false
+      }
+      updatePlayback()
+    }, { signal })
+    controls?.addEventListener('mouseenter', () => {
+      hovered = true
+      updatePlayback()
+    }, { signal })
+    controls?.addEventListener('mouseleave', () => {
+      hovered = false
+      updatePlayback()
+    }, { signal })
+    heroSection.addEventListener('focusin', event => {
+      // Pointer focus (no :focus-visible) clears a pause left behind by earlier keyboard focus.
+      focused = event.target instanceof Element && event.target.matches(':focus-visible')
+      updatePlayback()
+    }, { signal })
+    heroSection.addEventListener('focusout', event => {
+      if (event.relatedTarget instanceof Node && heroSection.contains(event.relatedTarget)) return
+      focused = false
+      updatePlayback()
+    }, { signal })
+    document.addEventListener('visibilitychange', updatePlayback, { signal })
+    motionQuery.addEventListener('change', () => {
+      motionAllowed = !motionQuery.matches
+      if (!motionAllowed) {
+        reveal?.stop()
+        firstImg?.style.removeProperty('opacity')
+        finishFade?.()
+        heroBg?.style.removeProperty('transform')
+      }
+      updatePlayback()
+    }, { signal })
+
+    const observer = new IntersectionObserver(([entry]) => {
+      heroVisible = entry.isIntersecting
+      updatePlayback()
+    })
+    observer.observe(heroSection)
+
+    // No scroll subscription or promoted image layer unless parallax is opted in.
+    if (heroBg && heroSection.hasAttribute('data-parallax') && motionAllowed) {
+      const device = navigator as Navigator & { deviceMemory?: number }
+      const isLowEnd = (navigator.hardwareConcurrency || 4) <= 2 || (device.deviceMemory || 4) <= 2
+      const lenis = window.__lenis
+      if (!isLowEnd && lenis) {
         let lastY = 0
-        let lowFpsCount = 0
-        let lastFrameTime = performance.now()
-
-        const onLenisScroll = (lenis: any) => {
-          if (!heroVisible) return
-          const now = performance.now()
-          const dt = now - lastFrameTime
-          lastFrameTime = now
-          if (dt > 50) {
-            lowFpsCount++
-            if (lowFpsCount > 10) {
-              if ((window as any).__lenis) {
-                ;(window as any).__lenis.off('scroll', onLenisScroll)
-              }
-              heroBg.style.transform = ''
-              return
-            }
-          } else {
-            lowFpsCount = Math.max(0, lowFpsCount - 1)
-          }
-
+        const onLenisScroll = () => {
+          if (!heroVisible || !motionAllowed) return
           const y = lenis.animatedScroll * 0.4
           if (Math.abs(y - lastY) < 0.1) return
           lastY = y
           heroBg.style.transform = `translate3d(0, ${y}px, 0)`
         }
-
-        if ((window as any).__lenis) {
-          ;(window as any).__lenis.on('scroll', onLenisScroll)
-          
-          // Clean up scroll listener on page swap
-          document.addEventListener('astro:before-swap', () => {
-            if ((window as any).__lenis) {
-              ;(window as any).__lenis.off('scroll', onLenisScroll)
-            }
-          }, { once: true })
-        }
+        lenis.on('scroll', onLenisScroll)
+        removeParallax = () => lenis.off('scroll', onLenisScroll)
       }
+    }
+
+    updatePlayback()
+    cleanupHero = () => {
+      disposed = true
+      requestVersion++
+      stop()
+      finishFade?.()
+      reveal?.stop()
+      firstImg?.style.removeProperty('opacity')
+      removeParallax?.()
+      observer.disconnect()
+      controller.abort()
     }
   }
 
-  // Run immediately for initial load (module scripts are deferred, so DOM is ready)
   initHero()
-
-  // Run on subsequent client-side navigations
   document.addEventListener('astro:after-swap', initHero)
+  document.addEventListener('astro:before-swap', () => cleanupHero?.())
 </script>

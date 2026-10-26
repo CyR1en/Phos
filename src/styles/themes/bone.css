@@ -9,11 +9,12 @@
   --color-phos-base: #faf6ed;
   --color-phos-surface: #ede6d8;
   --color-phos-overlay: #e3dcc8;
-  --color-phos-muted: #7d7891;
+  --color-phos-muted: #6e6758;
   --color-phos-error: #b54a3a;
   --color-phos-subtle: #6b6552;
   --color-phos-text: #2a2520;
   --color-phos-accent: #a0522d;
+  --color-phos-on-accent: #faf6ed;
   --color-phos-gold: #b8860b;
   --color-phos-rose: #a0522d;
   --color-phos-pine: #5d7a3a;
@@ -89,7 +90,7 @@
 
   --primary: var(--color-phos-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-surface);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-accent-700);
   --primary-focus: var(--color-phos-accent-700);
   --primary-active: var(--color-phos-accent-700);
@@ -130,7 +131,7 @@
   --muted-active: var(--color-phos-overlay);
 
   --destructive: var(--color-phos-accent);
-  --destructive-foreground: var(--color-phos-surface);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-accent-700);
   --destructive-focus: var(--color-phos-accent-700);
 
@@ -279,6 +280,7 @@
 }
 
 [data-theme="theme-bone"].dark {
+  --color-phos-on-accent: #1a1612;
   --background: var(--color-phos-dark-base);
   --background-1: var(--color-phos-dark-surface);
   --background-2: var(--color-phos-dark-overlay);
@@ -302,7 +304,7 @@
 
   --primary: var(--color-phos-dark-accent);
   --primary-line: transparent;
-  --primary-foreground: var(--color-phos-dark-text);
+  --primary-foreground: var(--color-phos-on-accent);
   --primary-hover: var(--color-phos-dark-rose);
   --primary-focus: var(--color-phos-dark-rose);
   --primary-active: var(--color-phos-dark-rose);
@@ -343,7 +345,7 @@
   --muted-active: var(--color-phos-dark-surface);
 
   --destructive: var(--color-phos-dark-accent);
-  --destructive-foreground: var(--color-phos-dark-text);
+  --destructive-foreground: var(--color-phos-on-accent);
   --destructive-hover: var(--color-phos-dark-rose);
   --destructive-focus: var(--color-phos-dark-rose);
 

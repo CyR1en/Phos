@@ -1,0 +1,486 @@
+/* Gallery — neutral museum walls; photographs carry the color. */
+
+[data-theme="theme-gallery"] {
+  /* Light palette — neutral warm white */
+  --color-phos-base: #f5f5f3;
+  --color-phos-surface: #ebebe8;
+  --color-phos-overlay: #e2e2df;
+  --color-phos-muted: #5e5e5b;
+  --color-phos-error: #b3423f;
+  --color-phos-subtle: #454543;
+  --color-phos-text: #151515;
+  --color-phos-accent: #151515;
+  --color-phos-on-accent: #f5f5f3;
+  --color-phos-gold: #81765f;
+  --color-phos-rose: #8a7370;
+  --color-phos-pine: #3f6b57;
+  --color-phos-foam: #e4ebe7;
+  --color-phos-iris: #151515;
+  --color-phos-highlight-low: #e6e6e3;
+  --color-phos-highlight-med: #dadad6;
+  --color-phos-highlight-high: #8f8f8a;
+
+  /* Dark palette — neutral charcoal */
+  --color-phos-dark-base: #111111;
+  --color-phos-dark-surface: #1a1a1a;
+  --color-phos-dark-overlay: #222222;
+  --color-phos-dark-muted: #9a9a96;
+  --color-phos-dark-error: #e07a77;
+  --color-phos-dark-subtle: #b8b8b4;
+  --color-phos-dark-text: #ececea;
+  --color-phos-dark-accent: #ececea;
+  --color-phos-dark-gold: #b5aa91;
+  --color-phos-dark-rose: #b7a4a0;
+  --color-phos-dark-pine: #7fae97;
+  --color-phos-dark-foam: #223029;
+  --color-phos-dark-iris: #ececea;
+  --color-phos-dark-highlight-low: #1f1f1f;
+  --color-phos-dark-highlight-med: #2b2b2b;
+  --color-phos-dark-highlight-high: #5a5a58;
+
+  /* Neutral gray accent shades */
+  --color-phos-accent-50: #fafafa;
+  --color-phos-accent-100: #f5f5f5;
+  --color-phos-accent-200: #e5e5e5;
+  --color-phos-accent-300: #d4d4d4;
+  --color-phos-accent-400: #a3a3a3;
+  --color-phos-accent-500: #737373;
+  --color-phos-accent-600: #525252;
+  --color-phos-accent-700: #404040;
+  --color-phos-accent-800: #262626;
+  --color-phos-accent-900: #171717;
+  --color-phos-accent-950: #0a0a0a;
+
+  /* Light mode semantic tokens */
+  --background: var(--color-phos-base);
+  --background-1: var(--color-phos-surface);
+  --background-2: var(--color-phos-overlay);
+  --background-plain: var(--color-phos-base);
+  --foreground: var(--color-phos-text);
+  --foreground-inverse: var(--color-phos-surface);
+
+  --inverse: var(--color-phos-dark-base);
+
+  --border: var(--color-phos-highlight-med);
+  --border-line-inverse: var(--color-phos-dark-text);
+  --border-line-1: var(--color-phos-highlight-low);
+  --border-line-2: var(--color-phos-highlight-med);
+  --border-line-3: var(--color-phos-highlight-high);
+  --border-line-4: var(--color-phos-muted);
+  --border-line-5: var(--color-phos-subtle);
+  --border-line-6: var(--color-phos-text);
+  --border-line-7: var(--color-phos-dark-base);
+  --border-line-8: var(--color-phos-dark-surface);
+
+  --primary-50: var(--color-phos-accent-50);
+  --primary-100: var(--color-phos-accent-100);
+  --primary-200: var(--color-phos-accent-200);
+  --primary-300: var(--color-phos-accent-300);
+  --primary-400: var(--color-phos-accent-400);
+  --primary-500: var(--color-phos-accent-500);
+  --primary-600: var(--color-phos-accent-600);
+  --primary-700: var(--color-phos-accent-700);
+  --primary-800: var(--color-phos-accent-800);
+  --primary-900: var(--color-phos-accent-900);
+  --primary-950: var(--color-phos-accent-950);
+
+  --primary: var(--color-phos-accent);
+  --primary-line: transparent;
+  --primary-foreground: var(--color-phos-on-accent);
+  --primary-hover: var(--color-phos-accent-700);
+  --primary-focus: var(--color-phos-accent-700);
+  --primary-active: var(--color-phos-accent-700);
+  --primary-checked: var(--color-phos-accent);
+
+  --secondary: var(--color-phos-text);
+  --secondary-line: transparent;
+  --secondary-foreground: var(--color-phos-surface);
+  --secondary-hover: var(--color-phos-dark-base);
+  --secondary-focus: var(--color-phos-dark-base);
+  --secondary-active: var(--color-phos-dark-base);
+
+  --layer: var(--color-phos-base);
+  --layer-line: var(--border);
+  --layer-foreground: var(--color-phos-text);
+  --layer-hover: var(--color-phos-surface);
+  --layer-focus: var(--color-phos-surface);
+  --layer-active: var(--color-phos-surface);
+
+  --surface: var(--color-phos-surface);
+  --surface-1: var(--color-phos-overlay);
+  --surface-2: var(--color-phos-highlight-low);
+  --surface-3: var(--color-phos-highlight-med);
+  --surface-4: var(--color-phos-muted);
+  --surface-5: var(--color-phos-subtle);
+  --surface-line: transparent;
+  --surface-foreground: var(--color-phos-text);
+  --surface-hover: var(--color-phos-highlight-low);
+  --surface-focus: var(--color-phos-highlight-low);
+  --surface-active: var(--color-phos-highlight-low);
+
+  --muted: var(--color-phos-surface);
+  --muted-foreground: var(--color-phos-muted);
+  --muted-foreground-1: var(--color-phos-subtle);
+  --muted-foreground-2: var(--color-phos-text);
+  --muted-hover: var(--color-phos-overlay);
+  --muted-focus: var(--color-phos-overlay);
+  --muted-active: var(--color-phos-overlay);
+
+  --destructive: var(--color-phos-accent);
+  --destructive-foreground: var(--color-phos-on-accent);
+  --destructive-hover: var(--color-phos-accent-700);
+  --destructive-focus: var(--color-phos-accent-700);
+
+  --navbar: var(--color-phos-base);
+  --navbar-line: var(--border);
+  --navbar-divider: var(--border);
+  --navbar-nav-foreground: var(--color-phos-text);
+  --navbar-nav-hover: var(--color-phos-surface);
+  --navbar-nav-focus: var(--color-phos-surface);
+  --navbar-nav-active: var(--color-phos-surface);
+  --navbar-nav-list-divider: var(--border);
+  --navbar-inverse: var(--inverse);
+  --navbar-1: var(--color-phos-surface);
+  --navbar-1-line: var(--border);
+  --navbar-1-divider: var(--border);
+  --navbar-1-nav-foreground: var(--color-phos-text);
+  --navbar-1-nav-hover: var(--color-phos-overlay);
+  --navbar-1-nav-focus: var(--color-phos-overlay);
+  --navbar-1-nav-active: var(--color-phos-overlay);
+  --navbar-1-nav-list-divider: var(--border);
+  --navbar-2: var(--color-phos-overlay);
+  --navbar-2-line: transparent;
+  --navbar-2-divider: var(--color-phos-highlight-high);
+  --navbar-2-nav-foreground: var(--color-phos-text);
+  --navbar-2-nav-hover: var(--color-phos-highlight-low);
+  --navbar-2-nav-focus: var(--color-phos-highlight-low);
+  --navbar-2-nav-active: var(--color-phos-highlight-low);
+  --navbar-2-nav-list-divider: var(--border);
+
+  --sidebar: var(--color-phos-base);
+  --sidebar-line: var(--border);
+  --sidebar-divider: var(--border);
+  --sidebar-nav-foreground: var(--color-phos-text);
+  --sidebar-nav-hover: var(--color-phos-surface);
+  --sidebar-nav-focus: var(--color-phos-surface);
+  --sidebar-nav-active: var(--color-phos-surface);
+  --sidebar-nav-list-divider: var(--border);
+  --sidebar-inverse: var(--inverse);
+  --sidebar-1: var(--color-phos-surface);
+  --sidebar-1-line: var(--border);
+  --sidebar-1-divider: var(--border);
+  --sidebar-1-nav-foreground: var(--color-phos-text);
+  --sidebar-1-nav-hover: var(--color-phos-overlay);
+  --sidebar-1-nav-focus: var(--color-phos-overlay);
+  --sidebar-1-nav-active: var(--color-phos-overlay);
+  --sidebar-1-nav-list-divider: var(--border);
+  --sidebar-2: var(--color-phos-overlay);
+  --sidebar-2-line: transparent;
+  --sidebar-2-divider: var(--border);
+  --sidebar-2-nav-foreground: var(--color-phos-text);
+  --sidebar-2-nav-hover: var(--color-phos-highlight-low);
+  --sidebar-2-nav-focus: var(--color-phos-highlight-low);
+  --sidebar-2-nav-active: var(--color-phos-highlight-low);
+  --sidebar-2-nav-list-divider: var(--border);
+
+  --card: var(--color-phos-base);
+  --card-line: var(--border);
+  --card-divider: var(--border);
+  --card-header: var(--color-phos-overlay);
+  --card-footer: var(--color-phos-overlay);
+  --card-inverse: var(--inverse);
+
+  --dropdown: var(--color-phos-base);
+  --dropdown-1: var(--color-phos-base);
+  --dropdown-line: transparent;
+  --dropdown-divider: var(--border);
+  --dropdown-header: var(--color-phos-overlay);
+  --dropdown-footer: var(--color-phos-overlay);
+  --dropdown-item-foreground: var(--color-phos-text);
+  --dropdown-item-hover: var(--color-phos-surface);
+  --dropdown-item-focus: var(--color-phos-surface);
+  --dropdown-item-active: var(--color-phos-surface);
+  --dropdown-inverse: var(--inverse);
+
+  --select: var(--color-phos-base);
+  --select-1: var(--color-phos-base);
+  --select-line: transparent;
+  --select-item-foreground: var(--color-phos-text);
+  --select-item-hover: var(--color-phos-surface);
+  --select-item-focus: var(--color-phos-surface);
+  --select-item-active: var(--color-phos-surface);
+  --select-inverse: var(--inverse);
+
+  --overlay: var(--color-phos-base);
+  --overlay-line: transparent;
+  --overlay-divider: var(--border);
+  --overlay-header: var(--color-phos-overlay);
+  --overlay-footer: var(--color-phos-overlay);
+  --overlay-inverse: var(--inverse);
+
+  --popover: var(--color-phos-base);
+  --popover-line: var(--color-phos-highlight-low);
+
+  --tooltip: var(--inverse);
+  --tooltip-foreground: var(--color-phos-dark-text);
+  --tooltip-line: transparent;
+
+  --table-line: var(--border);
+
+  --switch: var(--color-phos-base);
+
+  --footer: var(--color-phos-base);
+  --footer-line: var(--border);
+  --footer-inverse: var(--inverse);
+
+  --scrollbar-track: var(--color-phos-surface);
+  --scrollbar-thumb: var(--color-phos-highlight-med);
+  --scrollbar-track-inverse: transparent;
+  --scrollbar-thumb-inverse: var(--color-phos-dark-text);
+
+  --chart-colors-background: var(--color-phos-base);
+  --chart-colors-background-inverse: var(--inverse);
+  --chart-colors-chart-inverse: var(--color-phos-surface);
+  --chart-colors-foreground: var(--color-phos-text);
+  --chart-colors-foreground-inverse: var(--color-phos-surface);
+  --chart-primary: var(--color-phos-accent);
+  --chart-colors-primary: var(--color-phos-accent);
+  --chart-colors-primary-inverse: var(--color-phos-accent-300);
+  --chart-colors-primary-hex: var(--color-phos-accent);
+  --chart-colors-primary-hex-inverse: var(--color-phos-accent-300);
+  --chart-1: var(--color-phos-accent-100);
+  --chart-2: var(--color-phos-accent-300);
+  --chart-3: var(--color-phos-accent-500);
+  --chart-4: var(--color-phos-accent-700);
+  --chart-5: var(--color-phos-accent-900);
+  --chart-6: var(--color-phos-iris);
+  --chart-7: var(--color-phos-pine);
+  --chart-8: var(--color-phos-foam);
+  --chart-9: var(--color-phos-rose);
+  --chart-10: var(--color-phos-gold);
+
+  --chart-colors-labels: var(--color-phos-subtle);
+  --chart-colors-xaxis-labels: var(--color-phos-muted);
+  --chart-colors-yaxis-labels: var(--color-phos-muted);
+  --chart-colors-grid-border: var(--border);
+  --chart-colors-bar-ranges: var(--color-phos-surface);
+
+  --map-colors-primary: var(--color-phos-accent);
+  --map-colors-primary-inverse: var(--color-phos-accent-300);
+  --map-colors-default: var(--color-phos-surface);
+  --map-colors-default-inverse: var(--color-phos-dark-overlay);
+  --map-colors-highlight: var(--color-phos-accent-300);
+  --map-colors-highlight-inverse: var(--color-phos-accent);
+  --map-colors-border: var(--color-phos-highlight-high);
+  --map-colors-border-inverse: var(--color-phos-dark-highlight-med);
+}
+
+[data-theme="theme-gallery"].dark {
+  --color-phos-on-accent: #111111;
+  --background: var(--color-phos-dark-base);
+  --background-1: var(--color-phos-dark-surface);
+  --background-2: var(--color-phos-dark-overlay);
+  --background-plain: var(--color-phos-dark-base);
+
+  --foreground: var(--color-phos-dark-text);
+  --foreground-inverse: var(--color-phos-text);
+
+  --inverse: var(--color-phos-dark-highlight-med);
+
+  --border: var(--color-phos-dark-highlight-med);
+  --border-line-inverse: var(--color-phos-text);
+  --border-line-1: var(--color-phos-dark-base);
+  --border-line-2: var(--color-phos-dark-surface);
+  --border-line-3: var(--color-phos-dark-highlight-low);
+  --border-line-4: var(--color-phos-dark-highlight-med);
+  --border-line-5: var(--color-phos-dark-highlight-high);
+  --border-line-6: var(--color-phos-dark-muted);
+  --border-line-7: var(--color-phos-dark-subtle);
+  --border-line-8: var(--color-phos-dark-text);
+
+  --primary: var(--color-phos-dark-accent);
+  --primary-line: transparent;
+  --primary-foreground: var(--color-phos-on-accent);
+  --primary-hover: var(--color-phos-accent-300);
+  --primary-focus: var(--color-phos-accent-300);
+  --primary-active: var(--color-phos-accent-300);
+  --primary-checked: var(--color-phos-dark-accent);
+
+  --secondary: var(--color-phos-dark-text);
+  --secondary-line: transparent;
+  --secondary-foreground: var(--color-phos-dark-base);
+  --secondary-hover: var(--color-phos-dark-subtle);
+  --secondary-focus: var(--color-phos-dark-subtle);
+  --secondary-active: var(--color-phos-dark-subtle);
+
+  --layer: var(--color-phos-dark-base);
+  --layer-line: var(--border);
+  --layer-foreground: var(--color-phos-dark-text);
+  --layer-hover: var(--color-phos-dark-surface);
+  --layer-focus: var(--color-phos-dark-surface);
+  --layer-active: var(--color-phos-dark-surface);
+
+  --surface: var(--color-phos-dark-surface);
+  --surface-1: var(--color-phos-dark-highlight-low);
+  --surface-2: var(--color-phos-dark-highlight-med);
+  --surface-3: var(--color-phos-dark-highlight-high);
+  --surface-4: var(--color-phos-dark-muted);
+  --surface-5: var(--color-phos-dark-subtle);
+  --surface-line: transparent;
+  --surface-foreground: var(--color-phos-dark-text);
+  --surface-hover: var(--color-phos-dark-highlight-low);
+  --surface-focus: var(--color-phos-dark-highlight-low);
+  --surface-active: var(--color-phos-dark-highlight-low);
+
+  --muted: var(--color-phos-dark-base);
+  --muted-foreground: var(--color-phos-dark-muted);
+  --muted-foreground-1: var(--color-phos-dark-subtle);
+  --muted-foreground-2: var(--color-phos-dark-text);
+  --muted-hover: var(--color-phos-dark-surface);
+  --muted-focus: var(--color-phos-dark-surface);
+  --muted-active: var(--color-phos-dark-surface);
+
+  --destructive: var(--color-phos-dark-accent);
+  --destructive-foreground: var(--color-phos-on-accent);
+  --destructive-hover: var(--color-phos-accent-300);
+  --destructive-focus: var(--color-phos-accent-300);
+
+  --navbar: var(--color-phos-dark-base);
+  --navbar-line: var(--border);
+  --navbar-divider: var(--border);
+  --navbar-nav-foreground: var(--color-phos-dark-text);
+  --navbar-nav-hover: var(--color-phos-dark-surface);
+  --navbar-nav-focus: var(--color-phos-dark-surface);
+  --navbar-nav-active: var(--color-phos-dark-surface);
+  --navbar-nav-list-divider: var(--border);
+  --navbar-inverse: var(--inverse);
+  --navbar-1: var(--color-phos-dark-surface);
+  --navbar-1-line: var(--border);
+  --navbar-1-divider: var(--border);
+  --navbar-1-nav-foreground: var(--color-phos-dark-text);
+  --navbar-1-nav-hover: var(--color-phos-dark-highlight-low);
+  --navbar-1-nav-focus: var(--color-phos-dark-highlight-low);
+  --navbar-1-nav-active: var(--color-phos-dark-highlight-low);
+  --navbar-1-nav-list-divider: var(--border);
+  --navbar-2: var(--color-phos-dark-overlay);
+  --navbar-2-line: transparent;
+  --navbar-2-divider: var(--border);
+  --navbar-2-nav-foreground: var(--color-phos-dark-text);
+  --navbar-2-nav-hover: var(--color-phos-dark-highlight-low);
+  --navbar-2-nav-focus: var(--color-phos-dark-highlight-low);
+  --navbar-2-nav-active: var(--color-phos-dark-highlight-low);
+  --navbar-2-nav-list-divider: var(--border);
+
+  --sidebar: var(--color-phos-dark-base);
+  --sidebar-line: var(--border);
+  --sidebar-divider: var(--border);
+  --sidebar-nav-foreground: var(--color-phos-dark-text);
+  --sidebar-nav-hover: var(--color-phos-dark-surface);
+  --sidebar-nav-focus: var(--color-phos-dark-surface);
+  --sidebar-nav-active: var(--color-phos-dark-surface);
+  --sidebar-nav-list-divider: var(--border);
+  --sidebar-inverse: var(--inverse);
+  --sidebar-1: var(--color-phos-dark-surface);
+  --sidebar-1-line: var(--border);
+  --sidebar-1-divider: var(--border);
+  --sidebar-1-nav-foreground: var(--color-phos-dark-text);
+  --sidebar-1-nav-hover: var(--color-phos-dark-highlight-low);
+  --sidebar-1-nav-focus: var(--color-phos-dark-highlight-low);
+  --sidebar-1-nav-active: var(--color-phos-dark-highlight-low);
+  --sidebar-1-nav-list-divider: var(--border);
+  --sidebar-2: var(--color-phos-dark-overlay);
+  --sidebar-2-line: transparent;
+  --sidebar-2-divider: var(--border);
+  --sidebar-2-nav-foreground: var(--color-phos-dark-text);
+  --sidebar-2-nav-hover: var(--color-phos-dark-highlight-low);
+  --sidebar-2-nav-focus: var(--color-phos-dark-highlight-low);
+  --sidebar-2-nav-active: var(--color-phos-dark-highlight-low);
+  --sidebar-2-nav-list-divider: var(--border);
+
+  --card: var(--color-phos-dark-base);
+  --card-line: var(--border);
+  --card-divider: var(--border);
+  --card-header: var(--color-phos-dark-surface);
+  --card-footer: var(--color-phos-dark-surface);
+  --card-inverse: var(--inverse);
+
+  --dropdown: var(--color-phos-dark-surface);
+  --dropdown-1: var(--color-phos-dark-overlay);
+  --dropdown-line: transparent;
+  --dropdown-divider: var(--border);
+  --dropdown-header: var(--color-phos-dark-highlight-low);
+  --dropdown-footer: var(--color-phos-dark-highlight-low);
+  --dropdown-item-foreground: var(--color-phos-dark-text);
+  --dropdown-item-hover: var(--color-phos-dark-highlight-low);
+  --dropdown-item-focus: var(--color-phos-dark-highlight-low);
+  --dropdown-item-active: var(--color-phos-dark-highlight-low);
+  --dropdown-inverse: var(--inverse);
+
+  --select: var(--color-phos-dark-surface);
+  --select-1: var(--color-phos-dark-overlay);
+  --select-line: transparent;
+  --select-item-foreground: var(--color-phos-dark-text);
+  --select-item-hover: var(--color-phos-dark-highlight-low);
+  --select-item-focus: var(--color-phos-dark-highlight-low);
+  --select-item-active: var(--color-phos-dark-highlight-low);
+  --select-inverse: var(--inverse);
+
+  --overlay: var(--color-phos-dark-base);
+  --overlay-line: transparent;
+  --overlay-divider: var(--border);
+  --overlay-header: var(--color-phos-dark-surface);
+  --overlay-footer: var(--color-phos-dark-surface);
+  --overlay-inverse: var(--inverse);
+
+  --popover: var(--color-phos-dark-surface);
+  --popover-line: var(--border);
+
+  --tooltip: var(--color-phos-dark-text);
+  --tooltip-foreground: var(--color-phos-text);
+  --tooltip-line: transparent;
+
+  --table-line: var(--border);
+
+  --switch: var(--color-phos-dark-accent);
+
+  --footer: var(--color-phos-dark-base);
+  --footer-line: var(--border);
+  --footer-inverse: var(--inverse);
+
+  --scrollbar-track: var(--color-phos-dark-surface);
+  --scrollbar-thumb: var(--color-phos-dark-highlight-high);
+  --scrollbar-track-inverse: var(--color-phos-dark-muted);
+  --scrollbar-thumb-inverse: var(--color-phos-dark-highlight-med);
+
+  --chart-colors-background: var(--color-phos-dark-base);
+  --chart-colors-background-inverse: var(--color-phos-highlight-low);
+  --chart-colors-chart-inverse: var(--color-phos-dark-surface);
+  --chart-colors-foreground: var(--color-phos-dark-subtle);
+  --chart-colors-foreground-inverse: var(--color-phos-base);
+  --chart-primary: var(--color-phos-dark-accent);
+  --chart-colors-primary: var(--color-phos-dark-accent);
+  --chart-colors-primary-inverse: var(--color-phos-accent-300);
+  --chart-colors-primary-hex: var(--color-phos-dark-accent);
+  --chart-colors-primary-hex-inverse: var(--color-phos-accent-300);
+  --chart-1: var(--color-phos-accent-200);
+  --chart-2: var(--color-phos-accent-300);
+  --chart-3: var(--color-phos-accent-400);
+  --chart-4: var(--color-phos-dark-accent);
+  --chart-5: var(--color-phos-accent-300);
+  --chart-6: var(--color-phos-dark-iris);
+  --chart-7: var(--color-phos-dark-pine);
+  --chart-8: var(--color-phos-dark-foam);
+  --chart-9: var(--color-phos-dark-rose);
+  --chart-10: var(--color-phos-dark-gold);
+
+  --chart-colors-labels: var(--color-phos-dark-muted);
+  --chart-colors-xaxis-labels: var(--color-phos-dark-muted);
+  --chart-colors-yaxis-labels: var(--color-phos-dark-muted);
+  --chart-colors-grid-border: var(--border);
+  --chart-colors-bar-ranges: var(--color-phos-dark-surface);
+
+  --map-colors-default: var(--color-phos-dark-surface);
+  --map-colors-default-inverse: var(--color-phos-dark-highlight-low);
+  --map-colors-border: var(--color-phos-dark-highlight-high);
+  --map-colors-border-inverse: var(--color-phos-dark-muted);
+}

@@ -14,17 +14,18 @@ export interface Props {
 }
 
 const { title, thumb, gridSrcset, width, height, blur, index } = Astro.props
-const imageStyle = [
-  width && height ? `aspect-ratio: ${width} / ${height}` : undefined,
-  blur ? `background: url('${blur}') center / cover no-repeat` : undefined,
-].filter(Boolean).join('; ') || undefined
+const ratio = width && height ? width / height : 1.5
+const desktopSize = Math.min(Math.round(ratio * 400), 1696)
+const tabletSize = Math.min(Math.round(ratio * 24), 100)
+const mobileSize = Math.min(Math.round(ratio * 48), 100)
+const imageStyle = blur ? `background: url('${blur}') center / cover no-repeat` : undefined
 ---
 
 <img
-  class="block w-full h-auto"
+  class="block h-full w-full object-cover"
   src={thumb}
   srcset={gridSrcset || undefined}
-  sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 128px) / 3), (min-width: 640px) calc((100vw - 112px) / 3), calc(100vw - 48px)"
+  sizes={`(min-width: 1760px) ${desktopSize}px, (min-width: 640px) ${tabletSize}vw, ${mobileSize}vw`}
   width={width ?? undefined}
   height={height ?? undefined}
   style={imageStyle}

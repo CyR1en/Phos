@@ -43,6 +43,8 @@ export interface SiteConfig {
       cta2: string
       slideshow_interval: number
       overlay_opacity: number
+      ken_burns?: boolean
+      parallax?: boolean
       photos: string[]
     }
     services: {
@@ -60,6 +62,7 @@ export interface SiteConfig {
         description: string
       }>
     }
+    selectedWork?: { enabled?: boolean; heading?: string; photos?: string[] }
     testimonials: {
       enabled: boolean
       heading: string
@@ -194,6 +197,7 @@ export interface ManifestPhoto {
   filename: string
   title: string
   description: string
+  focus: string | null
   full: string
   thumb: string
   thumbMobile: string
@@ -211,10 +215,12 @@ export interface ManifestCategory {
   name: string
   description: string
   cover: string
+  coverThumbMobile: string
   coverSrcset: string
   coverWidth: number | null
   coverHeight: number | null
   coverBlur: string
+  coverFocus: string | null
   order: number
   offer_service: boolean
   photoCount: number
@@ -228,6 +234,7 @@ export interface HeroPriorityPhoto {
   srcset: string
   title: string
   description: string
+  focus: string | null
   blur: string
   width: number | null
   height: number | null
@@ -252,6 +259,7 @@ export interface ManifestGallery {
   cover: string | null
   coverFull: string | null
   coverBlur: string
+  coverFocus: string | null
   coverSrcset: string
   coverWidth: number | null
   coverHeight: number | null

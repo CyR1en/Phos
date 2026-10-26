@@ -5,14 +5,14 @@ const testimonials = config.home.testimonials.testimonials
 
 {testimonials.length > 0 && (
   <section data-animate class="site-section animate-reveal">
-    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="mx-auto max-w-wide px-6 lg:px-8">
       <div class="max-w-3xl opacity-0" data-animate-header>
         <h2 class="section-heading font-display text-ink" data-config="home.testimonials.heading">{config.home.testimonials.heading}</h2>
       </div>
       <div class="testimonial-grid">
-        {testimonials.map((t) => (
+        {testimonials.map((t, index) => (
           <figure class="testimonial">
-            <blockquote class="text-ink">&ldquo;{t.quote}&rdquo;</blockquote>
+            <blockquote class="text-ink">{index === 0 ? t.quote : <><span class="-ml-[0.42em]">&ldquo;</span>{t.quote}&rdquo;</>}</blockquote>
             <figcaption>
               <span class="text-sm font-semibold text-ink">{t.author}</span>
               {t.role && <span class="block text-sm text-muted mt-1">{t.role}</span>}

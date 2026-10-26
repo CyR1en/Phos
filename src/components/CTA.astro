@@ -1,22 +1,22 @@
 ---
 import { ArrowUpRight } from 'lucide-preact'
 interface Props {
-  heading: string;
-  buttonText: string;
-  body?: string;
-  configPrefix: string;
-  configButtonKey: string;
-  centered?: boolean;
-  href?: string;
+  heading: string
+  buttonText: string
+  body?: string
+  configPrefix: string
+  configButtonKey: string
+  centered?: boolean
+  href?: string
 }
 const { heading, buttonText, body, configPrefix, configButtonKey, centered = false, href = '/contact' } = Astro.props
 ---
 
-<section data-animate class="site-section contact-invitation animate-reveal mx-auto w-full max-w-7xl px-6 lg:px-8">
-  <div class:list={[{ 'text-center': centered }]}>
-    <h2 class:list={["font-display text-ink", { 'mx-auto': centered }]} data-config={`${configPrefix}.heading`}>{heading}</h2>
-    {body && <p class:list={["mt-6 text-lg text-body-muted leading-relaxed", { 'mx-auto': centered }]} data-config={`${configPrefix}.body`}>{body}</p>}
-    <a href={href} class="site-button inline-flex items-center rounded-pill bg-primary text-primary-text text-sm">
+<section data-animate class="site-section contact-invitation animate-reveal mx-auto w-full max-w-wide px-6 lg:px-8">
+  <div class:list={['border-t border-border pt-[var(--spacing-heading-gap)]', { 'text-center': centered }]}>
+    <h2 class:list={['font-display text-h2 text-ink', { 'mx-auto': centered }]} data-config={`${configPrefix}.heading`}>{heading}</h2>
+    {body && <p class:list={['mt-6 text-lead text-body-muted max-w-[52ch]', { 'mx-auto': centered }]} data-config={`${configPrefix}.body`}>{body}</p>}
+    <a href={href} class="site-button inline-flex items-center rounded-pill bg-primary text-primary-text hover:bg-primary-hover">
       <span data-config={`${configPrefix}.${configButtonKey}`}>{buttonText}</span>
       <ArrowUpRight size={16} strokeWidth={1.5} aria-hidden="true" />
     </a>

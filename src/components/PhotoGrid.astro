@@ -11,6 +11,7 @@ interface Photo {
   width: number | null
   height: number | null
   blur: string
+  focus?: string | null
   category?: string
 }
 
@@ -22,11 +23,12 @@ interface Props {
 const { photos, wrapperClass } = Astro.props
 ---
 
-<div class="columns-1 sm:columns-3 gap-8">
+<div class="justified-grid">
   {photos.map((photo, i) => (
     <a
       href={photo.full}
-      class:list={['photo-card-wrap mb-8 block break-inside-avoid overflow-hidden rounded-lg shadow-sm', wrapperClass]}
+      class:list={['photo-card-wrap block overflow-hidden rounded-photo', wrapperClass]}
+      style={`--r: ${photo.width && photo.height ? (photo.width / photo.height).toFixed(4) : '1.5'}`}
       data-category={photo.category || undefined}
       data-index={i}
       data-astro-reload
@@ -52,44 +54,61 @@ const { photos, wrapperClass } = Astro.props
 </div>
 
 <style>
-  .photo-card-wrap {
+  .photo-card-wrap[data-reveal-pending] {
     opacity: 0;
-    transform: translateY(32px);
+    clip-path: inset(6% 0 0 0);
   }
 
   @media (prefers-reduced-motion: reduce) {
     .photo-card-wrap {
-      opacity: 1;
-      transform: none;
+      opacity: 1 !important;
+      clip-path: none !important;
     }
   }
 </style>
 
 <script>
-  import { inView, animate } from 'framer-motion/dom'
+  let revealObserver: IntersectionObserver | undefined
 
   function initPhotoGrid() {
+    revealObserver?.disconnect()
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!('IntersectionObserver' in window)) return
 
-    const cards = document.querySelectorAll('.photo-card-wrap')
-    cards.forEach((card) => {
-      if ((card as HTMLElement).dataset.animated) return
-      ;(card as HTMLElement).dataset.animated = 'true'
+    revealObserver = new IntersectionObserver((entries, observer) => {
+      const visible = entries
+        .filter((entry) => {
+          const card = entry.target as HTMLElement
+          if (card.dataset.animated) observer.unobserve(card)
+          return entry.isIntersecting && !card.dataset.animated
+        })
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top
+          || a.boundingClientRect.left - b.boundingClientRect.left)
 
-      const index = parseInt((card as HTMLElement).dataset.index || '0', 10)
-      const delay = (index % 3) * 0.12 // Stagger columns slightly
-
-      inView(card, (element) => {
-        animate(
-          element,
-          { opacity: 1, y: 0 },
+      visible.forEach((entry, index) => {
+        const card = entry.target as HTMLElement
+        card.dataset.animated = 'true'
+        card.animate(
+          [
+            { opacity: 0, clipPath: 'inset(6% 0 0 0)' },
+            { opacity: 1, clipPath: 'inset(0)' },
+          ],
           {
-            duration: 0.9,
-            ease: [0.16, 1, 0.3, 1],
-            delay: delay,
+            duration: 900,
+            easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            delay: Math.min(index * 60, 300),
+            fill: 'backwards',
           }
         )
-      }, { margin: '0px 0px -50px 0px' })
+        delete card.dataset.revealPending
+        observer.unobserve(card)
+      })
+    })
+
+    document.querySelectorAll<HTMLElement>('.photo-card-wrap').forEach((card) => {
+      if (card.dataset.animated) return
+      card.dataset.revealPending = 'true'
+      revealObserver?.observe(card)
     })
   }
 
@@ -97,5 +116,10 @@ const { photos, wrapperClass } = Astro.props
   initPhotoGrid()
 
   // Run on subsequent navigations
-  document.addEventListener('astro:after-swap', initPhotoGrid)
+  const w = window as any
+  if (!w.__photoGridBound) {
+    w.__photoGridBound = true
+    document.addEventListener('astro:after-swap', initPhotoGrid)
+    document.addEventListener('astro:before-swap', () => revealObserver?.disconnect())
+  }
 </script>
