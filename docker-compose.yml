@@ -8,6 +8,10 @@ services:
     volumes:
       - ${PHOTOS_PATH:-./AppData/photos}:/photos:rw
       - ${CONFIG_DIR:-./AppData/config}:/config:rw
+      # Generated thumbnails and resized variants. Keeping them across container
+      # recreates lets a redeploy reuse them instead of re-encoding every photo.
+      # Safe to delete (`docker compose down -v`); they are rebuilt on next start.
+      - generated-photos:/app/public/photos
     env_file:
       - .env
     environment:
@@ -40,6 +44,9 @@ services:
       - CHOWN
       - DAC_OVERRIDE
       - FOWNER
+
+volumes:
+  generated-photos:
 
 networks:
   internal:

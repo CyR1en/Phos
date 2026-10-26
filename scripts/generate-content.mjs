@@ -1,4 +1,4 @@
-import { readdir, stat, lstat, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
+import { readdir, stat, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, extname, parse, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,7 +23,8 @@ const MOBILE_THUMB_WIDTH = 400
 const IMMERSIVE_WIDTH = 2200
 const IMMERSIVE_MOBILE_WIDTH = 1100
 const HD_SIZE = 3840
-const CONCURRENCY = 4
+// sharp runs on libuv's threadpool, so more photos in flight than it has threads only costs memory.
+const CONCURRENCY = Number(process.env.UV_THREADPOOL_SIZE) || 4
 
 async function ensureDir(dir) {
   if (!existsSync(dir)) {
@@ -44,20 +45,31 @@ function titleize(name) {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-async function pMap(items, fn, concurrency) {
-  const results = []
-  const executing = new Set()
-  for (const item of items) {
-    const p = Promise.resolve().then(() => fn(item)).then(r => results.push(r))
-    executing.add(p)
-    const clean = () => executing.delete(p)
-    p.then(clean, clean)
-    if (executing.size >= concurrency) {
-      await Promise.race(executing)
-    }
+function createLimiter(concurrency) {
+  let active = 0
+  const queue = []
+  const next = () => {
+    if (active >= concurrency || queue.length === 0) return
+    active++
+    const { fn, resolve, reject } = queue.shift()
+    Promise.resolve().then(fn).then(resolve, reject).finally(() => {
+      active--
+      next()
+    })
   }
-  await Promise.all(executing)
-  return results
+  return (fn) => new Promise((resolve, reject) => {
+    queue.push({ fn, resolve, reject })
+    next()
+  })
+}
+
+// Shared by every category so the whole library encodes at most CONCURRENCY photos at once.
+const limitEncode = createLimiter(CONCURRENCY)
+
+// Results keep the order of `items`, not completion order.
+function pMap(items, fn, concurrency) {
+  const limit = createLimiter(concurrency)
+  return Promise.all(items.map((item) => limit(() => fn(item))))
 }
 
 async function loadCache() {
@@ -73,8 +85,8 @@ async function saveCache(cache) {
   await writeFile(CACHE_PATH, JSON.stringify(cache, null, 2))
 }
 
-function writeHd(input, hdPath) {
-  return sharp(input)
+function writeHd(image, hdPath) {
+  return image
     .resize(HD_SIZE, HD_SIZE, { fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 82 })
     .toFile(hdPath)
@@ -99,7 +111,8 @@ function buildSrcset(catSlug, name, width, height) {
   return candidates.join(', ')
 }
 
-async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
+// `outputs` holds the filenames already present in each output dir for this category.
+async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
   const relPath = `${catSlug}/${file}`
   const srcStat = await stat(srcPath)
 
@@ -112,80 +125,74 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
   const hdPath = join(OUTPUT_DIR, 'hd', catSlug, thumbName)
   const metaInfo = photoMeta[file] || {}
 
-  const cached = cache.files[relPath]
+  let cached = cache.files[relPath]
   if (
     cached &&
     cached.mtimeMs === srcStat.mtimeMs &&
     cached.size === srcStat.size &&
-    existsSync(fullPath) &&
-    existsSync(thumbPath) &&
-    existsSync(mobileThumbPath) &&
-    existsSync(immersivePath) &&
-    existsSync(immersiveMobilePath)
+    outputs.full.has(file) &&
+    outputs.thumbs.has(thumbName) &&
+    outputs.thumbsMobile.has(thumbName) &&
+    outputs.immersive.has(thumbName) &&
+    outputs.immersiveMobile.has(thumbName)
   ) {
     // Backfill only the HD variant so existing libraries don't re-encode everything.
-    if (!existsSync(hdPath)) await writeHd(srcPath, hdPath)
-    return {
-      filename: file,
-      title: metaInfo.title || titleize(parse(file).name),
-      description: metaInfo.description || '',
-      full: `/photos/full/${catSlug}/${file}`,
-      thumb: `/photos/thumbs/${catSlug}/${thumbName}`,
-      thumbMobile: `/photos/thumbs-mobile/${catSlug}/${thumbName}`,
-      immersive: `/photos/immersive/${catSlug}/${thumbName}`,
-      immersiveMobile: `/photos/immersive-mobile/${catSlug}/${thumbName}`,
-      hd: `/photos/hd/${catSlug}/${thumbName}`,
-      srcset: buildSrcset(catSlug, thumbName, cached.width, cached.height),
-      width: cached.width,
-      height: cached.height,
-      blur: cached.blur,
-      hero_priority: metaInfo.hero_priority || 0,
-    }
-  }
+    if (!outputs.hd.has(thumbName)) await limitEncode(() => writeHd(sharp(srcPath), hdPath))
+  } else {
+    cached = cache.files[relPath] = await limitEncode(async () => {
+      const srcBuf = await readFile(srcPath)
+      const imgMeta = await sharp(srcBuf).metadata().then(m => ({ width: m.width, height: m.height, format: m.format }))
 
-  const srcBuf = await readFile(srcPath)
-  const imgMeta = await sharp(srcBuf).metadata().then(m => ({ width: m.width, height: m.height, format: m.format }))
+      // Decode the source once at HD size; every smaller variant resizes these pixels
+      // instead of decoding the full-resolution file again.
+      const { data, info } = await sharp(srcBuf)
+        .resize(HD_SIZE, HD_SIZE, { fit: 'inside', withoutEnlargement: true })
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+      const pixels = () => sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
 
-  const [blur] = await Promise.all([
-    sharp(srcBuf)
-      .resize(20, null, { fit: 'inside' })
-      .webp({ quality: 30 })
-      .toBuffer()
-      .then(b => `data:image/webp;base64,${b.toString('base64')}`)
-      .catch(() => ''),
+      const [blur] = await Promise.all([
+        pixels()
+          .resize(20, null, { fit: 'inside' })
+          .webp({ quality: 30 })
+          .toBuffer()
+          .then(b => `data:image/webp;base64,${b.toString('base64')}`)
+          .catch(() => ''),
 
-    copyFile(srcPath, fullPath),
+        copyFile(srcPath, fullPath),
 
-    sharp(srcBuf)
-      .resize(THUMB_WIDTH, THUMB_HEIGHT, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 82 })
-      .toFile(thumbPath),
+        pixels()
+          .resize(THUMB_WIDTH, THUMB_HEIGHT, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 82 })
+          .toFile(thumbPath),
 
-    sharp(srcBuf)
-      .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 75 })
-      .toFile(mobileThumbPath),
+        pixels()
+          .resize(MOBILE_THUMB_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 75 })
+          .toFile(mobileThumbPath),
 
-    sharp(srcBuf)
-      .resize(IMMERSIVE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 84 })
-      .toFile(immersivePath),
+        pixels()
+          .resize(IMMERSIVE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 84 })
+          .toFile(immersivePath),
 
-    sharp(srcBuf)
-      .resize(IMMERSIVE_MOBILE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 80 })
-      .toFile(immersiveMobilePath),
+        pixels()
+          .resize(IMMERSIVE_MOBILE_WIDTH, null, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toFile(immersiveMobilePath),
 
-    writeHd(srcBuf, hdPath),
-  ])
+        writeHd(pixels(), hdPath),
+      ])
 
-  cache.files[relPath] = {
-    mtimeMs: srcStat.mtimeMs,
-    size: srcStat.size,
-    width: imgMeta.width,
-    height: imgMeta.height,
-    blur,
-    format: imgMeta.format,
+      return {
+        mtimeMs: srcStat.mtimeMs,
+        size: srcStat.size,
+        width: imgMeta.width,
+        height: imgMeta.height,
+        blur,
+        format: imgMeta.format,
+      }
+    })
   }
 
   return {
@@ -198,39 +205,27 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, cache) {
     immersive: `/photos/immersive/${catSlug}/${thumbName}`,
     immersiveMobile: `/photos/immersive-mobile/${catSlug}/${thumbName}`,
     hd: `/photos/hd/${catSlug}/${thumbName}`,
-    srcset: buildSrcset(catSlug, thumbName, imgMeta.width, imgMeta.height),
-    width: imgMeta.width,
-    height: imgMeta.height,
-    blur,
+    srcset: buildSrcset(catSlug, thumbName, cached.width, cached.height),
+    width: cached.width,
+    height: cached.height,
+    blur: cached.blur,
     hero_priority: metaInfo.hero_priority || 0,
   }
 }
 
-async function processCategory(entry, cache) {
-  const entryPath = join(PHOTOS_SOURCE, entry)
-  const entryStat = await lstat(entryPath)
+async function processCategory(dirName, cache) {
+  const entryPath = join(PHOTOS_SOURCE, dirName)
+  const catSlug = slugify(dirName)
 
-  if (entryStat.isSymbolicLink()) {
-    console.warn(`[generate-content] Skipping symlink: ${entryPath}`)
-    return null
-  }
-
-  if (!entryStat.isDirectory() || entry.startsWith('.')) return null
-
-  const catSlug = slugify(entry)
+  // Dirent types come from the listing itself, so no per-file lstat is needed to spot symlinks.
+  const dirents = await readdir(entryPath, { withFileTypes: true })
 
   let meta = {}
   const metaPath = join(entryPath, '_meta.yaml')
-  let isMetaSymlink = false
-  try {
-    const metaStat = await lstat(metaPath)
-    if (metaStat.isSymbolicLink()) {
-      isMetaSymlink = true
-      console.warn(`[generate-content] Skipping symlinked meta file: ${metaPath}`)
-    }
-  } catch {}
-
-  if (!isMetaSymlink && existsSync(metaPath)) {
+  const metaEntry = dirents.find((d) => d.name === '_meta.yaml')
+  if (metaEntry?.isSymbolicLink()) {
+    console.warn(`[generate-content] Skipping symlinked meta file: ${metaPath}`)
+  } else if (metaEntry) {
     try {
       meta = yaml.parse(await readFile(metaPath, 'utf-8')) || {}
     } catch (e) {
@@ -238,21 +233,14 @@ async function processCategory(entry, cache) {
     }
   }
 
-  const rawFiles = await readdir(entryPath)
   const files = []
-  for (const f of rawFiles) {
-    if (IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')) {
-      const fPath = join(entryPath, f)
-      try {
-        const fStat = await lstat(fPath)
-        if (fStat.isSymbolicLink()) {
-          console.warn(`[generate-content] Skipping symlink: ${fPath}`)
-          continue
-        }
-        files.push(f)
-      } catch {
+  for (const d of dirents) {
+    if (IMAGE_EXTENSIONS.has(extname(d.name).toLowerCase()) && !d.name.startsWith('.')) {
+      if (d.isSymbolicLink()) {
+        console.warn(`[generate-content] Skipping symlink: ${join(entryPath, d.name)}`)
         continue
       }
+      files.push(d.name)
     }
   }
   files.sort()
@@ -272,20 +260,25 @@ async function processCategory(entry, cache) {
   await ensureDir(immersiveMobileDir)
   await ensureDir(hdDir)
 
+  // One listing per output dir replaces several existsSync calls per photo.
+  const [full, thumbs, thumbsMobile, immersive, immersiveMobile, hd] = await Promise.all(
+    [fullDir, thumbDir, mobileThumbDir, immersiveDir, immersiveMobileDir, hdDir].map(async (dir) => new Set(await readdir(dir)))
+  )
+  const outputs = { full, thumbs, thumbsMobile, immersive, immersiveMobile, hd }
+
   const photoMeta = meta.photos || {}
   const coverFile = meta.cover || files[0]
 
-  const photos = await pMap(
-    files,
-    (file) => processPhoto(join(entryPath, file), catSlug, file, photoMeta, cache),
-    CONCURRENCY
+  // Encoding is throttled globally by limitEncode; cache hits only cost a stat.
+  const photos = await Promise.all(
+    files.map((file) => processPhoto(join(entryPath, file), catSlug, file, photoMeta, outputs, cache))
   )
 
   const coverPhoto = photos.find((p) => p.filename === coverFile) || photos[0]
 
   return {
     slug: catSlug,
-    name: meta.name || titleize(entry),
+    name: meta.name || titleize(dirName),
     description: meta.description || '',
     cover: `/photos/thumbs/${catSlug}/${parse(coverFile).name}.webp`,
     coverFull: `/photos/full/${catSlug}/${coverFile}`,
@@ -302,7 +295,7 @@ async function processCategory(entry, cache) {
 async function scanPhotos(sourceDir) {
   let entries
   try {
-    entries = await readdir(sourceDir)
+    entries = await readdir(sourceDir, { withFileTypes: true })
   } catch {
     console.warn(`Warning: photos directory not found at ${sourceDir}`)
     return { categories: [], heroPriority: [] }
@@ -312,61 +305,32 @@ async function scanPhotos(sourceDir) {
 
   const slugToDir = {}
   for (const entry of entries) {
-    const entryPath = join(sourceDir, entry)
-    let s
-    try {
-      s = await lstat(entryPath)
-    } catch {
+    if (entry.isSymbolicLink()) {
+      console.warn(`[generate-content] Skipping symlink: ${join(sourceDir, entry.name)}`)
       continue
     }
-    if (s.isSymbolicLink()) {
-      console.warn(`[generate-content] Skipping symlink: ${entryPath}`)
-      continue
-    }
-    if (s.isDirectory() && !entry.startsWith('.')) {
-      slugToDir[slugify(entry)] = entry
+    if (entry.isDirectory() && !entry.name.startsWith('.')) {
+      slugToDir[slugify(entry.name)] = entry.name
     }
   }
 
-  const activeRelPaths = new Set()
-  for (const [slug, dirName] of Object.entries(slugToDir)) {
-    const catDirPath = join(sourceDir, dirName)
-    let catFiles
-    try {
-      catFiles = await readdir(catDirPath)
-    } catch {
-      continue
-    }
-    for (const f of catFiles) {
-      if (IMAGE_EXTENSIONS.has(extname(f).toLowerCase()) && !f.startsWith('.')) {
-        const fPath = join(catDirPath, f)
-        try {
-          const fStat = await lstat(fPath)
-          if (fStat.isSymbolicLink()) {
-            console.warn(`[generate-content] Skipping symlink: ${fPath}`)
-            continue
-          }
-          activeRelPaths.add(`${slug}/${f}`)
-        } catch {
-          continue
-        }
-      }
-    }
-  }
+  const results = await pMap(
+    Object.values(slugToDir),
+    (dirName) => processCategory(dirName, cache),
+    CONCURRENCY
+  )
 
+  const categories = results.filter(Boolean)
+
+  // Pruning after processing is equivalent to pruning before: processPhoto only touches
+  // entries for files that still exist, so the directory tree is walked once, not twice.
+  const activeRelPaths = new Set(categories.flatMap((c) => c.photos.map((p) => `${c.slug}/${p.filename}`)))
   for (const relPath of Object.keys(cache.files)) {
     if (!activeRelPaths.has(relPath)) {
       delete cache.files[relPath]
     }
   }
 
-  const results = await pMap(
-    Object.keys(slugToDir),
-    (entry) => processCategory(entry, cache),
-    CONCURRENCY
-  )
-
-  const categories = results.filter(Boolean)
   categories.sort((a, b) => a.order - b.order)
 
   let config = {}
@@ -431,7 +395,8 @@ async function main() {
     console.log(`Found ${categories.length} categories with ${total} photos (${heroCount} in hero)`)
   }
 
-  if (existsSync(OUTPUT_DIR)) {
+  // OUTPUT_DIR can exist without any variants (empty library, fresh volume).
+  if (existsSync(join(OUTPUT_DIR, 'full'))) {
     const existing = await readdir(join(OUTPUT_DIR, 'full'))
     for (const cat of existing) {
       const existingCat = categories.find((c) => c.slug === cat)
