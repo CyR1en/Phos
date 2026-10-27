@@ -10,6 +10,7 @@ import Lightbox from '@components/Lightbox.astro'
 import ImmersiveScrollGallery from '@components/ui/immersive-scroll-gallery'
 import manifest from '@lib/categories'
 import config from '@lib/config'
+import type { PhotoPosition } from '@lib/admin/types'
 
 let galleries: any[] = []
 try {
@@ -29,6 +30,20 @@ const resolvePhotos = (keys: string[]) => keys.flatMap(key => {
   return photo ? [photo] : []
 })
 const immersive = config.home.immersiveGallery
+// Remove missing keys with their matching positions so surviving photos keep their layout.
+const filterImmersiveLayout = (photos: string[] = [], positions?: PhotoPosition[] | null) => {
+  const entries = photos.map((key, index) => ({ key, index })).filter(({ key }) => photoByKey.has(key))
+  return {
+    photos: entries.map(({ key }) => key),
+    positions: positions ? entries.map(({ index }) => positions[index]) : null,
+  }
+}
+const { photos: desktopPhotos, positions: desktopPositions } = filterImmersiveLayout(immersive?.desktopPhotos, immersive?.desktopPositions)
+const { photos: mobilePhotos, positions: mobilePositions } = filterImmersiveLayout(immersive?.mobilePhotos, immersive?.mobilePositions)
+const immersiveSources = Object.fromEntries([...desktopPhotos, ...mobilePhotos].flatMap(key => {
+  const photo = photoByKey.get(key)
+  return photo ? [[key, { thumb: photo.thumb, immersive: photo.immersive, immersiveMobile: photo.immersiveMobile }]] : []
+}))
 const configuredImmersiveText = immersive?.text?.trim() || ''
 const immersiveText = /^lorem/i.test(configuredImmersiveText) ? '' : configuredImmersiveText
 const auto = [
@@ -87,17 +102,27 @@ if (!layout.includes('immersiveGallery')) layout.push('immersiveGallery')
       return <Services />
     }
 
-    if (sectionName === 'immersiveGallery' && immersive?.enabled && immersive.desktopPhotos?.length) {
+    if (sectionName === 'immersiveGallery' && immersive?.enabled && desktopPhotos.length) {
       return (
         <div class="immersive-gallery relative h-[200vh] motion-reduce:h-auto">
           <ImmersiveScrollGallery
-            client:visible={{ rootMargin: '600px' }}
-            mobilePhotos={immersive.mobilePhotos}
-            mobilePositions={immersive.mobilePositions}
-            desktopPhotos={immersive.desktopPhotos}
-            desktopPositions={immersive.desktopPositions}
+            client:only="preact"
+            sources={immersiveSources}
+            mobilePhotos={mobilePhotos}
+            mobilePositions={mobilePositions}
+            desktopPhotos={desktopPhotos}
+            desktopPositions={desktopPositions}
             text={immersiveText}
-          />
+          >
+            <div slot="fallback" class="mx-auto max-w-6xl px-6 py-12">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-start gap-4">
+                {resolvePhotos(desktopPhotos.slice(0, 6)).map(photo => (
+                  <img src={photo.thumb} alt={photo.title || ''} width={photo.width} height={photo.height} class="block w-full h-auto" loading="lazy" decoding="async" />
+                ))}
+              </div>
+              {immersiveText && <h2 class="max-w-3xl mx-auto text-ink text-2xl md:text-4xl py-8 font-display text-center" data-config="home.immersiveGallery.text">{immersiveText}</h2>}
+            </div>
+          </ImmersiveScrollGallery>
         </div>
       )
     }

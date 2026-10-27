@@ -34,6 +34,8 @@ export function ObjectField({ path }: Props) {
     <>
       {Object.entries(data).map(([key, value]) => {
         if (SKIP_KEYS.has(key)) return null
+        // Legacy home.portfolio data predates Selected work and has no public consumer.
+        if (path === 'home' && key === 'portfolio') return null
         const fieldPath = `${path}.${key}`
         const label = prettify(key)
 

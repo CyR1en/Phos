@@ -191,7 +191,7 @@ export interface GalleryPhoto {
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
 
-// --- Build-time manifest types (for src/content/*.json imports) ---
+// --- Build-time manifest types (for src/generated/*.json imports) ---
 
 export interface ManifestPhoto {
   filename: string
@@ -203,8 +203,10 @@ export interface ManifestPhoto {
   thumb: string
   thumbMobile: string
   hd: string
+  /** Stage tiers the generator always emits (URLs resolve to the largest encoded tier). */
+  immersive: string
+  immersiveMobile: string
   srcset: string
-  heroSrc: string
   gridSrcset: string
   width: number | null
   height: number | null
@@ -232,6 +234,7 @@ export interface ManifestCategory {
 export interface HeroPriorityPhoto {
   full: string
   thumb: string
+  thumbMobile: string
   hd: string
   srcset: string
   srcsetAvif: string

@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { bundle } from './helpers/bundle.mjs'
 
 const siteUrl = 'https://phos.test'
@@ -26,3 +27,19 @@ const cases = [
   ['empty hero and config produce no URL or metadata', { hero: {}, configOg: {} }, expected(undefined, undefined, undefined, undefined)],
 ]
 for (const [name, input, output] of cases) test('OG resolver: ' + name, async () => assert.deepEqual(await resolve(input), output))
+
+test('BaseLayout passes the first hero and configured OG to the resolver and emits its alt', async () => {
+  const source = await readFile(new URL('../src/layouts/BaseLayout.astro', import.meta.url), 'utf8')
+  const call = source.match(/\bresolveOpenGraph\s*\(\s*\{([\s\S]*?)\}\s*\)/)?.[1]
+  assert.ok(call, 'BaseLayout calls the shared resolver')
+  assert.match(call, /\bhero\s*:\s*(?:manifest\.)?heroPriority\s*\[\s*0\s*\]/)
+  assert.match(call, /(?:^|,)\s*configOg\s*(?::\s*configOg\s*)?(?=,|$)/, 'resolver receives the configured OG alias')
+  assert.match(source, /\bconst\s+configOg\s*=\s*config\.site\??\.og[ \t]*;?[ \t]*$/m, 'alias is the complete configured OG object')
+  const fields = source.match(/const\s*\{([^}]+)\}\s*=\s*resolveOpenGraph\s*\(/)?.[1]
+  assert.ok(fields, 'resolver fields are consumed by the layout')
+  const alt = fields.match(/\balt\s*:\s*(\w+)/)?.[1] || (/\balt\s*(?:,|$)/.test(fields) ? 'alt' : null)
+  assert.ok(alt, 'alt comes from the resolver result')
+  const meta = source.match(/<meta\b[^>]*\bproperty=['"]og:image:alt['"][^>]*\/>/)?.[0]
+  assert.ok(meta, 'BaseLayout emits og:image:alt')
+  assert.match(meta, new RegExp('\\bcontent=\\{\\s*' + alt + '\\s*\\}'), 'meta content uses the resolver alt')
+})

@@ -17,7 +17,7 @@ async function sandbox(t) {
   const ROOT = await realpath(await mkdtemp(join(tmpdir(), 'phos-merge-config-')))
   t.after(() => rm(ROOT, { recursive: true, force: true }))
   await mkdir(join(ROOT, 'scripts'), { recursive: true })
-  for (const script of ['merge-config', 'migrate-config', 'write-active-theme', 'discover-plugins']) {
+  for (const script of ['merge-config', 'migrate-config', 'write-active-theme', 'discover-plugins', 'generate-content']) {
     await cp(join(repoRoot, `scripts/${script}.mjs`), join(ROOT, `scripts/${script}.mjs`))
   }
   await cp(join(repoRoot, 'lib'), join(ROOT, 'lib'), { recursive: true })
@@ -72,6 +72,20 @@ test('an admin-saved database without any marker still counts as owner configura
   assert.equal((await json('dest.json')).site.title, 'PRE-MARKER TITLE')
 })
 
+test('portfolio-only admin config round-trips through an isolated DB and marks owner configuration', async t => {
+  const { db } = await sandbox(t)
+  const portfolio = {
+    page_description: 'A selected portfolio',
+    og_title: 'Selected work',
+    og_description: 'Photography from the mountains and city',
+  }
+  const result = db(`
+    db.writeFullConfig({ portfolio: ${JSON.stringify(portfolio)} });
+    console.log(JSON.stringify({ portfolio: db.assembleConfig().portfolio, owner: db.hasOwnerConfig() }));
+  `)
+  assert.deepEqual(JSON.parse(result.stdout), { portfolio, owner: true })
+})
+
 test('a brand-new database defers to the persisted JSON and keeps credentials for the build', async (t) => {
   const { ROOT, merge, db, json } = await sandbox(t)
   const saved = {
@@ -120,6 +134,92 @@ test('write-active-theme bootstraps missing generated config byte-for-byte and s
   await rm(join(ROOT, 'src/generated/plugins.mjs'))
   node(['scripts/discover-plugins.mjs'])
   assert.deepEqual(await readFile(join(ROOT, 'src/generated/plugins.mjs')), stub, 'missing-manifest bootstrap and zero-plugin discovery emit identical bytes')
+})
+
+test('write-active-theme bootstraps missing photo manifests byte-equal to an empty generator run', async t => {
+  const { ROOT, node } = await sandbox(t)
+  await themeInputs(ROOT)
+  const paths = ['categories', 'galleries'].map(name => join(ROOT, 'src/generated', name + '.json'))
+  for (const path of paths) assert.ok(!existsSync(path), path + ': initially missing')
+  node(['scripts/write-active-theme.mjs'])
+  const bootstrapped = await Promise.all(paths.map(path => readFile(path)))
+  assert.deepEqual(JSON.parse(bootstrapped[0]), { categories: [], heroPriority: [] })
+  assert.deepEqual(JSON.parse(bootstrapped[1]), { galleries: [] })
+  for (const path of paths) await rm(path)
+  const source = join(ROOT, 'empty-photos')
+  await mkdir(source)
+  node(['scripts/generate-content.mjs'], {
+    PHOS_SKIP_CONFIG_SYNC: '1', PHOTOS_SOURCE: source,
+    DB_PATH: join(ROOT, 'no-database.db'), PHOTOS_CACHE_PATH: join(ROOT, 'empty-photo-cache.json'),
+  })
+  for (const [index, path] of paths.entries()) {
+    assert.deepEqual(await readFile(path), bootstrapped[index], path + ': exact generator serialization')
+  }
+})
+
+test('write-active-theme leaves existing photo manifest bytes and mtimes untouched', async t => {
+  const { ROOT, node } = await sandbox(t)
+  await themeInputs(ROOT)
+  await mkdir(join(ROOT, 'src/generated'), { recursive: true })
+  const manifests = [
+    ['categories', '{ "categories": [{ "slug": "kept" }], "heroPriority": [] }\n'],
+    ['galleries', '{ "galleries": [{ "slug": "kept" }] }\n'],
+  ]
+  for (const [name, bytes] of manifests) {
+    const path = join(ROOT, 'src/generated', name + '.json')
+    await writeFile(path, bytes)
+    await utimes(path, new Date('2001-01-01'), new Date('2001-01-01'))
+  }
+  const before = await Promise.all(manifests.map(([name]) => stat(join(ROOT, 'src/generated', name + '.json'))))
+  node(['scripts/write-active-theme.mjs'])
+  for (const [index, [name, bytes]] of manifests.entries()) {
+    const path = join(ROOT, 'src/generated', name + '.json')
+    assert.equal(await readFile(path, 'utf8'), bytes, name + ': preserve noncanonical bytes')
+    assert.equal((await stat(path)).mtimeMs, before[index].mtimeMs, name + ': no rewrite')
+  }
+})
+
+test('write-active-theme create-only bootstraps preserve files that appear after the missing check', async t => {
+  const { ROOT, node, json } = await sandbox(t)
+  await themeInputs(ROOT)
+  await mkdir(join(ROOT, 'src/generated'), { recursive: true })
+  const owner = await json('src/content/site-config.json')
+  owner.site.title = 'OWNER SAVED DURING BOOTSTRAP'
+  const existing = new Map([
+    ['site-config.json', JSON.stringify(owner, null, 4) + '\n'],
+    ['plugins.mjs', 'export const plugins = ["owner-plugin"]\nexport const components = {}\n'],
+    ['categories.json', '{ "categories": [{ "slug": "owner" }], "heroPriority": [] }\n'],
+    ['galleries.json', '{ "galleries": [{ "slug": "owner" }] }\n'],
+  ])
+  const before = new Map()
+  for (const [name, bytes] of existing) {
+    const path = join(ROOT, 'src/generated', name)
+    await writeFile(path, bytes)
+    await utimes(path, new Date('2001-01-01'), new Date('2001-01-01'))
+    before.set(name, (await stat(path)).mtimeMs)
+  }
+  // Inject a stale existsSync result only in the sandbox copy. The actual writes
+  // must still use create-only semantics when another writer wins that race.
+  const scriptPath = join(ROOT, 'scripts/write-active-theme.mjs')
+  const script = await readFile(scriptPath, 'utf8')
+  assert.match(script, /\bexistsSync\s*[,}]/, 'the bootstrap checks file existence')
+  const staleChecks = `
+const pretendMissing = new Set(${JSON.stringify([...existing.keys()])}.map(name => new URL('../src/generated/' + name, import.meta.url).href))
+const existsSync = path => {
+  if (path instanceof URL && pretendMissing.delete(path.href)) return false
+  return actualExistsSync(path)
+}
+`
+  assert.match(script, /\bconst allThemesUrl\b/, 'injection precedes the first existence check')
+  await writeFile(scriptPath, script.replace(/\bexistsSync(?=\s*[,}])/, 'existsSync as actualExistsSync')
+    .replace(/(?=const allThemesUrl\b)/, () => staleChecks))
+  node(['scripts/write-active-theme.mjs'])
+  for (const [name, bytes] of existing) {
+    const path = join(ROOT, 'src/generated', name)
+    assert.equal(await readFile(path, 'utf8'), bytes, name + ': non-empty owner bytes survive the missing branch')
+    assert.equal((await stat(path)).mtimeMs, before.get(name), name + ': untouched mtime')
+  }
+  assert.equal((await json('public/site-config.json')).site.title, owner.site.title, 'public copy uses the winning owner config')
 })
 
 test('write-active-theme preserves owner values, fills new defaults and does not rewrite unchanged config', async t => {

@@ -17,7 +17,7 @@ import { LoadingState } from './ui/LoadingState'
 
 const PAGE_LABELS: Record<string, string> = {
   site: 'Site', home: 'Home', about: 'About', contact: 'Contact', notFound: '404',
-  categories: 'Categories', galleries: 'Galleries', plugins: 'Plugins',
+  portfolio: 'Portfolio', categories: 'Categories', galleries: 'Galleries', plugins: 'Plugins',
 }
 
 const SitePage = lazy(() => import('./pages/SitePage').then(m => ({ default: m.SitePage })))
@@ -25,6 +25,7 @@ const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.H
 const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })))
 const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
+const PortfolioPage = lazy(() => import('./pages/PortfolioPage').then(m => ({ default: m.PortfolioPage })))
 const CategoriesPage = lazy(() => import('./pages/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
 const GalleriesPage = lazy(() => import('./pages/GalleriesPage').then(m => ({ default: m.GalleriesPage })))
 const PluginsPage = lazy(() => import('./pages/PluginsPage').then(m => ({ default: m.PluginsPage })))
@@ -54,6 +55,8 @@ function PageRouter() {
             return <ContactPage />
           case 'notFound':
             return <NotFoundPage />
+          case 'portfolio':
+            return <PortfolioPage />
           case 'categories':
             return <CategoriesPage />
           case 'galleries':
@@ -72,7 +75,7 @@ const BUILD_LOG_ENABLED = import.meta.env.PUBLIC_ADMIN_BUILD_LOG !== 'false'
 
 function DashboardBody() {
   const { token, flushSave, setToken, republish, regenerate, currentPage, buildStatus, buildLog, clearBuildStatus } = useConfig()
-  const signOut = async () => { await flushSave(); setToken(null) }
+  const signOut = async () => { if (await flushSave()) setToken(null) }
   const [countdown, setCountdown] = useState<number | null>(null)
   const autoCloseRef = useRef<ReturnType<typeof setTimeout>>()
   const intervalRef = useRef<ReturnType<typeof setInterval>>()

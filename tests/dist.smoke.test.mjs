@@ -63,8 +63,21 @@ test('built site contracts', {
   const htmlFiles = all.filter((path) => path.endsWith('.html'))
   const publicHtml = htmlFiles.filter((path) => !/^admin(?:\/|$)/.test(relative(dist, path)))
   assert.ok(publicHtml.length, 'dist/ contains public HTML pages')
-  const manifest = JSON.parse(await readFile(join(repoRoot, 'src/content/categories.json'), 'utf8'))
-  const galleries = JSON.parse(await readFile(join(repoRoot, 'src/content/galleries.json'), 'utf8'))
+  const manifest = JSON.parse(await readFile(join(repoRoot, 'src/generated/categories.json'), 'utf8'))
+  const galleries = JSON.parse(await readFile(join(repoRoot, 'src/generated/galleries.json'), 'utf8'))
+  await t.test('generated categories omit heroSrc while every selected hero exposes an existing heroSrc', () => {
+    for (const category of manifest.categories) {
+      for (const photo of category.photos) {
+        assert.ok(!Object.hasOwn(photo, 'heroSrc'), category.slug + '/' + photo.filename + ': category payload')
+      }
+    }
+    for (const hero of manifest.heroPriority) {
+      assert.equal(typeof hero.heroSrc, 'string', 'selected hero carries heroSrc')
+      assert.ok(hero.heroSrc.startsWith('/photos/'), hero.heroSrc)
+      const path = decodeURIComponent(new URL(hero.heroSrc, 'https://phos.test').pathname)
+      assert.ok([dist, join(repoRoot, 'public')].some(root => existsSync(join(root, path))), hero.heroSrc)
+    }
+  })
   const configPath = existsSync(join(repoRoot, 'src/generated/site-config.json'))
     ? join(repoRoot, 'src/generated/site-config.json')
     : join(repoRoot, 'src/content/site-config.json')
@@ -111,8 +124,8 @@ test('built site contracts', {
       for (const item of Object.values(value)) collect(item, from)
     }
   }
-  collect(manifest, 'src/content/categories.json')
-  collect(galleries, 'src/content/galleries.json')
+  collect(manifest, 'src/generated/categories.json')
+  collect(galleries, 'src/generated/galleries.json')
   let pages = 0
   let redirects = 0
   let anchors = 0
@@ -139,7 +152,7 @@ test('built site contracts', {
     for (const [, css] of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)) publicInlineStyles.add(css)
     for (const [, raw] of body.matchAll(/<[a-z][\w:-]*\b([^>]*)>/gi)) {
       const attrs = attributes(raw)
-      for (const field of ['src', 'srcset', 'href', 'content', 'data-src', 'data-srcset']) {
+      for (const field of ['src', 'srcset', 'href', 'content', 'data-src', 'data-srcset', 'props']) {
         if (attrs.has(field)) collect(attrs.get(field), name + ':' + field)
       }
     }
@@ -233,7 +246,8 @@ test('built site contracts', {
         assert.ok(attrs.has('data-astro-reload'), 'photo anchor opts out of router navigation')
         assert.equal(attrs.get('data-astro-prefetch'), 'false')
         assert.equal(attrs.get('aria-haspopup'), 'dialog')
-        assert.match(attrs.get('href') || '', /^\/photos\/hd\//, 'photo anchor links to HD')
+        // The pipeline skips ladder tiers above the source width, so the HD link resolves to the largest ENCODED tier.
+        assert.match(attrs.get('href') || '', /^\/photos\/(?:hd|w2880|immersive|w1600|immersive-mobile)\//, 'photo anchor links to the largest encoded ladder tier')
         assert.doesNotMatch(attrs.get('href') || '', /\/photos\/full\//)
       }
       if (tiles.length) {
@@ -247,6 +261,13 @@ test('built site contracts', {
         assert.equal(attributes(raw).get('type'), 'application/json')
         const photos = JSON.parse(json)
         assert.ok(Array.isArray(photos))
+        // The tile href must be the largest encoded tier: exactly the lightbox's largest srcset candidate.
+        const largestCandidate = (srcset) => srcset.split(',').map((entry) => entry.trim().split(/\s+/))
+          .sort((a, b) => parseInt(a[1]) - parseInt(b[1])).at(-1)?.[0]
+        for (const attrs of tiles) {
+          const photo = photos[Number(attrs.get('data-index'))]
+          if (photo?.srcset) assert.equal(attrs.get('href'), largestCandidate(photo.srcset), `tile ${attrs.get('data-index')} links to the largest lightbox candidate`)
+        }
         for (const photo of photos) {
           if (photo.srcset) assert.ok(!Object.hasOwn(photo, 'full'), 'responsive lightbox data omits originals')
         }
@@ -678,6 +699,19 @@ test('built site contracts', {
     assert.ok(urls > 0, 'sitemap contains URLs')
   })
   t.diagnostic(`${pages} public pages, ${redirects} Astro redirect stubs, ${anchors} photo anchors`)
+})
+
+test('nginx denies direct gzip URLs at server level before all locations and keeps gzip_static enabled', async () => {
+  const source = (await readFile(join(repoRoot, 'docker/nginx.conf.template'), 'utf8')).replace(/#.*$/gm, '')
+  const server = nginxBlocks(source).find(block => block.header === 'server')
+  assert.ok(server, 'server block exists')
+  const children = nginxBlocks(server.body).filter(block => block.depth === 0)
+  const guard = children.find(block => /^if\s*\(\s*\$uri\s+~\s+["']?\\\.gz\$["']?\s*\)$/.test(block.header))
+  assert.ok(guard, 'server-level .gz suffix guard accepts quoted or bare regexes')
+  assert.match(nginxDirectives(guard.body), /^\s*return\s+404\s*;\s*$/)
+  const firstLocation = children.find(block => /^location\b/.test(block.header))
+  assert.ok(firstLocation && guard.index < firstLocation.index, 'guard precedes the first location, including ^~ prefixes')
+  assert.match(source, /^\s*gzip_static\s+on\s*;/m)
 })
 
 test('public sources use easing tokens inline or the shared motion.ts fallbacks', async () => {

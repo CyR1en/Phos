@@ -1,18 +1,19 @@
 import { useEffect, useState, useRef } from 'preact/hooks'
 import { useConfig } from '../../lib/admin/store'
-import { Globe, House, UserRound, Mail, CircleAlert, FolderOpen, Images, Blocks, ArrowUpRight } from 'lucide-preact'
+import { Globe, House, UserRound, Mail, CircleAlert, FolderOpen, Images, LayoutGrid, Blocks, ArrowUpRight } from 'lucide-preact'
 import { SidebarResizeHandle } from './SidebarResizeHandle'
 import { Tooltip } from './ui/Tooltip'
 
 const NAV: Array<{ id: string; label: string }> = [
   { id: 'site', label: 'Site' },
   { id: 'home', label: 'Home' },
+  { id: 'portfolio', label: 'Portfolio' },
   { id: 'about', label: 'About' },
   { id: 'contact', label: 'Contact' },
   { id: 'notFound', label: '404' },
 ]
 
-const NAV_ICONS = { site: Globe, home: House, about: UserRound, contact: Mail, notFound: CircleAlert, categories: FolderOpen, galleries: Images, plugins: Blocks }
+const NAV_ICONS = { site: Globe, home: House, portfolio: LayoutGrid, about: UserRound, contact: Mail, notFound: CircleAlert, categories: FolderOpen, galleries: Images, plugins: Blocks }
 
 function getIcon(id: string, collapsed: boolean) {
   const Icon = NAV_ICONS[id as keyof typeof NAV_ICONS]
@@ -65,7 +66,7 @@ export function Sidebar({ width, collapsed, setWidth, setCollapsed }: SidebarPro
   const navigate = async (id: string) => {
     closeOverlay()
     if (id === currentPage) return
-    await flushSave()
+    if (!await flushSave()) return
     await flushPluginSaves()
     setCurrentPage(id)
   }

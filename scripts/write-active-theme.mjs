@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { atomicWriteFileSync } from '../lib/atomic-write.mjs'
 import { publicConfigJson } from '../lib/config-secrets.mjs'
 import { deepMerge } from '../lib/merge.mjs'
@@ -11,6 +11,18 @@ const defaultsUrl = new URL('../src/content/site-config.json', import.meta.url)
 const generatedUrl = new URL('../src/generated/', import.meta.url)
 const configUrl = new URL('site-config.json', generatedUrl)
 const pluginsUrl = new URL('plugins.mjs', generatedUrl)
+mkdirSync(generatedUrl, { recursive: true })
+
+function writeMissing(url, content) {
+  try {
+    writeFileSync(url, content, { flag: 'wx' })
+    return true
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error
+    return false
+  }
+}
+
 const themesUrl = new URL('../src/styles/themes/', import.meta.url)
 const outputUrl = new URL('../src/styles/active-theme.css', import.meta.url)
 // The admin field editor needs the config's SHAPE for type inference; the build config itself
@@ -36,12 +48,21 @@ if (existsSync(configUrl)) {
     }
   }
 } else {
-  atomicWriteFileSync(configUrl, defaultsBytes)
-  config = defaults
+  config = writeMissing(configUrl, defaultsBytes)
+    ? defaults
+    : deepMerge(defaults, JSON.parse(readFileSync(configUrl, 'utf8')), { skipUnknownKeys: true })
 }
 // Match discover-plugins' empty output without loading SQLite or replacing a discovered manifest.
 if (!existsSync(pluginsUrl)) {
-  atomicWriteFileSync(pluginsUrl, 'export const plugins = []\nexport const components = {}\n')
+  writeMissing(pluginsUrl, 'export const plugins = []\nexport const components = {}\n')
+}
+// Match generate-content's empty-library JSON without scanning photos or opening SQLite.
+for (const [filename, manifest] of [
+  ['categories.json', { categories: [], heroPriority: [] }],
+  ['galleries.json', { galleries: [] }],
+]) {
+  const url = new URL(filename, generatedUrl)
+  if (!existsSync(url)) writeMissing(url, JSON.stringify(manifest, null, 2))
 }
 const themeFiles = readdirSync(themesUrl, { withFileTypes: true })
   .filter(entry => entry.isFile() && entry.name.endsWith('.css'))

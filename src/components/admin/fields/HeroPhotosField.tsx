@@ -47,12 +47,20 @@ function GripVerticalIcon({ size = 24, class: cls, className, ...props }: { size
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import manifest from '@content/categories.json'
+import rawManifest from '../../../generated/categories.json'
+import type { CategoriesManifest } from '../../../lib/admin/types'
+const manifest = rawManifest as CategoriesManifest
 
 interface Props {
   limit?: number
   path: string
   label: string
+}
+
+function photoThumb(catSlug: string, filename: string): string {
+  const photo = manifest.categories.find(category => category.slug === catSlug)
+    ?.photos.find(photo => photo.filename === filename)
+  return photo?.thumbMobile || photo?.thumb || `/photos/thumbs/${catSlug}/${encodeURIComponent(filename.replace(/\.[^.]+$/, '.webp'))}`
 }
 
 function isPortraitPhoto(photoPath: string): boolean {
@@ -73,7 +81,7 @@ function SortablePhotoItem({ id, photo, onRemove }: { id: string, photo: string,
   const parts = photo.split('/')
   const catSlug = parts[0]
   const filename = parts[1]
-  const thumbUrl = catSlug && filename ? `/photos/thumbs/${catSlug}/${filename.replace(/\.[^.]+$/, '.webp')}` : ''
+  const thumbUrl = catSlug && filename ? photoThumb(catSlug, filename) : ''
 
   return (
     <div 
@@ -221,7 +229,7 @@ export function HeroPhotosField({ path, label, limit }: Props) {
                         onClick={() => !isDisabled && togglePhotoSelection(photoPath)}
                         className={`relative aspect-square rounded-sm overflow-hidden cursor-pointer border-2 transition-all ${isSelected ? 'border-primary ring-1 ring-primary' : 'border-transparent hover:border-[var(--color-border)]'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <img src={`/photos/thumbs/${cat.slug}/${photo.replace(/\.[^.]+$/, ".webp")}`} alt={photo} className="w-full h-full object-cover" loading="lazy" />
+                        <img src={photoThumb(cat.slug, photo)} alt={photo} className="w-full h-full object-cover" loading="lazy" />
                         {isSelected && (
                           <div className="absolute top-1 right-1 bg-primary text-white rounded-full p-0.5">
                             <XIcon size={12} className="rotate-45" />

@@ -95,7 +95,10 @@ export function syncPositions(
 
 /** Convert a photo path like `wedding/sample-01.jpg` to its thumb URL. */
 export function thumbUrl(photo: string): string {
-  return `/photos/thumbs/${photo.replace(/\.[^.]+$/, '.webp')}`
+  const separator = photo.lastIndexOf('/')
+  const category = photo.slice(0, separator + 1)
+  const filename = photo.slice(separator + 1).replace(/\.[^.]+$/, '.webp')
+  return `/photos/thumbs/${category}${encodeURIComponent(filename)}`
 }
 
 /** Rectangle overlap test (AABB). Used by marquee selection. */

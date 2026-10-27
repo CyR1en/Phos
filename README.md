@@ -55,6 +55,13 @@ file is missing. For an existing file, it preserves owner values, fills missing 
 keys and removes keys outside the defaults schema, writing only when the bytes change.
 It also bootstraps a missing plugin manifest with empty exports, so checks and direct
 `build:site` runs work without creating a database.
+Photo manifests are generated at `src/generated/categories.json` and
+`src/generated/galleries.json` by `scripts/generate-content.mjs` during `dev`,
+`generate`, and `build` (and at Docker startup before `build:site`). They are
+gitignored build inputs. The generator writes both manifests atomically, so concurrent
+builds read complete JSON files. The theme writer creates an empty manifest only when it
+is missing, using create-only writes that preserve a concurrently generated manifest,
+so fresh clones can check or build without any photos.
 The script generates `src/generated/site-config.public.json` for the admin editor and
 `public/site-config.json` for static hosts, both with the entire SMTP block removed.
 The public copy is generated and gitignored too. `.dockerignore` excludes `config/`,
@@ -82,6 +89,13 @@ the tracked defaults with `git restore src/content/site-config.json` and delete
 `public/site-config.json`. The next check or build recreates a public copy with SMTP removed.
 The theme writer warns if the tracked defaults still contain an SMTP user or password.
 
+When upgrading a Git checkout, the old generator may have left local modifications in
+the tracked `src/content/categories.json` and `src/content/galleries.json`. These can
+make `git pull` abort. Before pulling this change, run
+`git checkout HEAD -- src/content/categories.json src/content/galleries.json` to discard
+those generated changes (they are regenerated, so there is nothing to keep). After pulling, run
+`npm run generate` to create the manifests at their new paths under `src/generated/`.
+
 Admin saves update SQLite, the generated build input, and the stripped public copy.
 Astro dev can pick up the generated input immediately. Use the admin's **Republish site** action
 to publish changed settings to static pages; it runs `npm run build`, which syncs
@@ -92,13 +106,25 @@ cache path if that destination does not exist (including across volumes). If bot
 files exist, the generator keeps the destination and removes the legacy public cache.
 Keep the cache outside `public/`; public `site-config.json` omits the entire SMTP block.
 
+The photo pipeline keeps 400/800 px thumbnails and a WebP ladder at
+1100/1600/2200/2880/3840 px, plus the same AVIF ladder for selected heroes.
+Ladder widths are capped by the oriented source and the 3840 px maximum edge.
+Walk the ladder in ascending order and encode a tier only when its capped width is
+strictly greater than the previous encoded width. Keep the first tier reaching the
+source bound and skip subsequent duplicate widths. This deliberately keeps every
+pixel: a 2201 px wide source whose maximum edge is within 3840 px encodes a 2201 px
+`w2880` tier after the 2200 px `immersive` tier, even though it adds only 1 px.
+Manifest URLs resolve to existing files, and responsive srcsets retain the same
+candidate widths. Legacy duplicate tiers from earlier runs are kept until the source
+changes; replacing a source removes obsolete tier files before encoding its new ladder.
+
 Run `npm test` for tests or `npm run check:full` to build and run all checks. The latter
 uses `scripts/check-full.mjs` and works on Windows too; coordinate builds in a shared checkout.
 It defaults an unset `PUBLIC_SITE_URL` to `https://phos.test` for OG checks; that verification
 dist is not deployable. Rebuild with your actual public URL before deployment.
 
-On a fresh clone, `npm run check` bootstraps both the generated config and plugin
-manifest, along with the theme files. `npm run build:site` does the same. Before invoking
+On a fresh clone, `npm run check` bootstraps the generated config, plugin stub,
+empty photo manifests, and theme files. `npm run build:site` does the same. Before invoking
 `tsc` or `astro check` directly, run `node scripts/write-active-theme.mjs` once.
 `npm run dev`, `npm run build`, and `npm run generate` also discover installed plugins;
 the empty bootstrap manifest never replaces an existing one. Plugin discovery may read
@@ -112,6 +138,10 @@ selected public values: Astro serializes island props into public HTML, so forwa
 complete configuration can expose credentials. Anything a plugin renders or ships to the
 browser is public: island props, `define:vars`, attributes, or a client script importing its
 own config. Discovery warns about secret-looking config keys.
+
+The admin includes a Portfolio page for the galleries-index metadata (page description and
+Open Graph title/description). Precompressed `.gz` siblings are served only through
+`gzip_static` and are not directly downloadable.
 
 ## Images
 **Admin page** `/admin`

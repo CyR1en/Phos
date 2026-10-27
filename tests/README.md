@@ -47,13 +47,17 @@ node --test tests/dist.smoke.test.mjs
 | `reveals.runtime.test.mjs` | Computed easing tokens and literal fallback passed to WAAPI; SmoothScroll readiness on every init, section visibility, 900ms/120ms header staggering, reduced motion, three swaps and reveal-timeout visibility; PhotoGrid pending opt-in/order, backwards fill, 300ms stagger cap, reduced motion/no IO/timeout, observer cleanup and pending removal before a throwing animate call. |
 | `theme.runtime.test.mjs` | BaseLayout first-statement `js`, exact 4000ms reveal failsafe, readiness suppression, timer replacement across three swaps and incoming-root timeout carryover only before readiness; mode bootstrap/current-root preparation with blocked storage, skip-link focus, destination-based preview gating, public zero-fetch behavior, parser-time stylesheet order, parent theme, config updates and one fetch per navigation; ThemeToggle cycle/labels/storage/colors, silent-on-load live status, View Transition ready/finish/rejection/overlap and direct reduced-motion fallback. |
 | `motion.runtime.test.mjs` | Shared `easing(name)` trims and caches all four tokens independently; missing, throwing, whitespace-only and CSS.supports-rejected values use cached literal fallbacks. Explicit read counters detect re-reads even when motion.ts catches a reader exception. Fresh module instances isolate cache cases. |
-| `merge-config.test.mjs` | Admin/SQLite versus persisted JSON precedence, SMTP serialization, generated DEST with unchanged defaults, noncanonical byte-for-byte bootstrap, owner-preserving schema merge/default fill, unchanged-config mtime, matching empty plugin stubs, defaults credential warnings and migration no-op/skip. A sandboxed admin login/GET/PUT checks no-store, normalized generated config, atomic replacement and public stripping; its server is killed on every path. |
-| `config-hygiene.test.mjs` | Read-only Git checks for tracked defaults, untracked public/generated config, index/work-tree diff against HEAD and effective check-ignore rules; Git checks clearly skip outside a work tree. Docker excludes config/generated/test/AppData/env inputs and has no negations; migration precedes generation. |
-| `admin-fields.test.mjs` | TSX source contracts for native input/password/autocomplete/ignore-attribute forwarding, SMTP numeric port bounds and email types, and PluginsPage API-key password inference before textarea handling; the actual secret-key predicate is bundled. |
+| `merge-config.test.mjs` | Admin/SQLite versus persisted JSON precedence, portfolio-only config round-trip and owner marker, SMTP serialization, generated DEST with unchanged defaults, noncanonical byte-for-byte bootstrap, empty photo-manifest bootstrap byte-equal to an isolated generator run and existing-manifest byte/mtime preservation, owner-preserving schema merge/default fill, unchanged-config mtime, matching empty plugin stubs, defaults credential warnings and migration no-op/skip. A sandboxed admin login/GET/PUT checks no-store, normalized generated config, atomic replacement and public stripping; its server is killed on every path. |
+| `config-hygiene.test.mjs` | Read-only Git checks for tracked defaults, untracked public/generated config and photo manifests, and effective check-ignore rules; Git checks clearly skip outside a work tree. All four manifest consumers import generated files, with a recursive source guard against content-manifest imports. Docker excludes config/generated/test/AppData/env inputs and has no negations; migration precedes generation. |
+| `atomic-write.test.mjs` | Injected rename failures for EPERM/EBUSY/EACCES: success after two retries, bounded attempts and exact last-error propagation, default five attempts, immediate rejection of other errors, old-destination preservation and temporary-file cleanup. All destinations live under `os.tmpdir()`. |
+| `admin-fields.test.mjs` | TSX source contracts for native input/password/autocomplete/ignore-attribute forwarding, SMTP numeric port bounds and email types, and PluginsPage API-key password inference before textarea handling; the actual secret-key predicate is bundled. Portfolio page field bindings, sidebar/dashboard routing, boolean `flushSave` validation and republish gating. |
+| `flush-callsites.test.mjs` | Boolean save gates for republish, navigation, sign-out, category save/switch and immersive layout save; rejected mutations, edit-version checks and dirty-ref refetch protection. |
+| `immersive-sources.test.mjs` | Browser-only Preact island; executed home frontmatter and prop expressions verify manifest-only sources, missing-photo filtering and parallel device positions. Executed picture memo/reduced-motion branches omit unresolved sources; source changes invalidate the memo. |
+| `build-fixtures.test.mjs` | Opt-in isolated Astro build with the immersive gallery enabled; serialized island sources and SSR immersive references must resolve to existing public photos. Skipped by default. |
 | `plugins.test.mjs` | Every Astro script block and src JS/TS module respects the build-time manifest boundary; directive keys are filtered before spreading props. Sandboxes scan every regular file for private sentinels, load colliding/digit-leading/quoted names and entry paths, and check secret-key warnings without printing values. |
-| `og.test.mjs` | Pure bundled OG resolver: configured/absolute/home-pass-through images, explicit versus automatic hero alt, OG/full dimensions, page gallery alt isolation and empty fallback. |
-| `pipeline.test.mjs` | Synthetic sharp images, oriented dimensions/pixels, responsive descriptors, P3-to-sRGB conversion, ICC/alpha preservation, original copies, blur, metadata, galleries, caches/backfill/pruning, WebP tiers, hero-only AVIF ladders, no-upscale crops, CSS focus offsets, OG images, config-sync isolation and unreadable-DB preservation; generated-config hero precedence, unchanged defaults and fallback when the generated file is absent; default/explicit cache paths, legacy migration and duplicate-cache cleanup with single log lines; direct immutable SMTP-block stripping. |
-| `dist.smoke.test.mjs` | Build freshness and generated/default build-config selection; public/admin palettes and dependencies; hero loading/sources; HD tiles/prefetch/compression/photo references; layout/dialog/JSON; skip-link placement/CSS, form/control name heuristics, browser colors, mandatory hero/config OG fallback with PUBLIC_SITE_URL diagnostics, Twitter/OG equality, alt provenance and dimensions, route canonical/og:url equality, noindex 404 and admin-free sitemap, matched fixture behaviour attributes/nesting, no-JS visibility and reveal-timeout CSS gates, canvas/light scheme, motion tokens and root/header transitions; centralized source easing, fine-pointer service hover with keyboard equivalents; all-asset SMTP scans, raw/default/generated/@lib/config TSX imports, server-level nginx error routing, exact 404/public header-map equality including CSP, and recursive Docker snippet coverage. Astro redirect stubs are checked separately. |
+| `og.test.mjs` | Pure bundled OG resolver: configured/absolute/home-pass-through images, explicit versus automatic hero alt, OG/full dimensions, page gallery alt isolation and empty fallback. BaseLayout source guard connects first-hero/configured-OG inputs and the resolver's alt to `og:image:alt`, independent of sample data. |
+| `pipeline.test.mjs` | Synthetic sharp images, oriented dimensions/pixels, responsive descriptors, P3-to-sRGB conversion, ICC/alpha preservation, original copies, blur, metadata, galleries, caches/backfill/pruning, distinct-width WebP and hero-only AVIF ladders, skipped file/cache absence, existing HD/immersive fallback URLs, exact 2000×1333 and 6000×4000 ladders, no-upscale crops, CSS focus offsets, OG images, config-sync isolation and unreadable-DB preservation; generated photo manifests with hero-only `heroSrc`; generated-config hero precedence, unchanged defaults and fallback when the generated file is absent; default/explicit cache paths, legacy migration and duplicate-cache cleanup with single log lines; direct immutable SMTP-block stripping. |
+| `dist.smoke.test.mjs` | Build freshness, generated photo manifests with hero-only `heroSrc`, and generated/default build-config selection; public/admin palettes and dependencies; hero loading/sources; HD tiles/prefetch/compression/photo references; layout/dialog/JSON; skip-link placement/CSS, form/control name heuristics, browser colors, mandatory hero/config OG fallback with PUBLIC_SITE_URL diagnostics, Twitter/OG equality, alt provenance and dimensions, route canonical/og:url equality, noindex 404 and admin-free sitemap, matched fixture behaviour attributes/nesting, no-JS visibility and reveal-timeout CSS gates, canvas/light scheme, motion tokens and root/header transitions; centralized source easing, fine-pointer service hover with keyboard equivalents; all-asset SMTP scans, raw/default/generated/@lib/config TSX imports, server-level nginx gzip URL denial before locations with gzip_static retained, error routing, exact 404/public header-map equality including CSP, and recursive Docker snippet coverage. The gzip source guard runs even without a build. Astro redirect stubs are checked separately. |
 | `contrast.test.mjs` | Actual light/dark gallery theme text, muted, subtle and error colors on base/surface backgrounds meet 4.5:1 WCAG AA contrast. |
 | `helpers/bundle.mjs` | Bundles current TypeScript modules and selected processed `.astro` scripts with esbuild, resolving component-relative imports; cached per worker, with optional fresh module instances for cache tests. Any script attribute except `src` selects inline JavaScript (Astro semantics), which is transformed without bundling. Self-closing external scripts cannot swallow the following block. Extracted scripts run in strict mode. No dist chunks or generated bundle files. Missing esbuild errors say `npm i -D esbuild`. |
 | `bundle.test.mjs`, `smoke-helpers.test.mjs` | Script extraction/strict mode; negative fixtures for accessible names, fixture drift, reveal-root compounds and raw/plugin imports; nginx direct directives/header values and Docker glob coverage. |
@@ -74,7 +78,7 @@ There are deliberately two DOM models: the lightbox world has specialized geomet
 pointer capture/history and frame-driven animation, while the component DOM needs
 HTML parsing, modal inertness/focus, head/parser ordering and idle/source mutation
 tracking. Merging these would change the established lightbox model substantially.
-Both use simulated time; the complete suite should stay below roughly 25 seconds.
+Both use simulated time; the default suite should stay below roughly 20 seconds.
 
 ## Component fixtures and shared contracts
 
@@ -121,12 +125,35 @@ PHOS_ALLOW_STALE_DIST=1 node --test tests/
 ```
 
 When current source or stale dist does not yet satisfy an agreed shared contract,
-put `{ todo: 'Y: <contract>' }` on that individual test. The assertion still executes and reports
+put `{ todo: 'Z: <contract>' }` on that individual test. The assertion still executes and reports
 its failure without making the suite fail. Remove the option after the source
 lands or the integrator rebuilds; keep the assertion. Existing satisfied checks
 have no placeholder wrapper. OG checks require an image when the manifest has a
 hero or `site.og.image` is configured. They skip only when neither exists and the
 page has no image. Build with `PUBLIC_SITE_URL=https://phos.test` for these checks.
+
+The shared-checkout command permits stale dist and does not validate a fresh build.
+Regenerate real photo manifests and rebuild before using `check:full` to validate
+fresh output. Git hygiene checks enforce that the old `src/content/` photo manifests
+are untracked.
+
+## Opt-in build fixture
+
+Run the immersive-gallery build regression separately:
+
+```sh
+PHOS_BUILD_FIXTURES=1 node --test tests/build-fixtures.test.mjs
+```
+
+It copies the checkout to a temporary directory, excluding `node_modules`, `dist`,
+`public/photos`, `.git`, `config` and `AppData`. Dependencies are copied with APFS
+`cp -cR` (falling back to `cp -R`); a dependency symlink breaks Astro's metadata.
+It refreshes the copied generated JSON and symlinks `public/photos` for read-only
+reference checks. The fixture enables the gallery with the first six manifest keys,
+then runs `PHOS_SKIP_CONFIG_SYNC=1 PUBLIC_SITE_URL=https://phos.test npx astro build`
+with a 240-second timeout. The serialized island must include existing manifest
+sources, and SSR markup must have no missing immersive references. Cleanup runs
+after success or failure. The real checkout is never built or generated into.
 
 ## Add a scenario
 
@@ -158,8 +185,8 @@ explicit `resolve()`/`reject()` calls to reproduce network races deterministical
 ## Pipeline isolation and tier changes
 
 The pipeline test creates a unique directory with `os.tmpdir()`, copies the current
-generator, installs a test-only merge-config execution tripwire, and symlinks only
-`node_modules`. No real merge-config or `lib/` support files are copied. All inputs,
+generator and its `lib/atomic-write.mjs` dependency, installs a test-only merge-config
+execution tripwire, and symlinks only `node_modules`. The real merge-config is never copied. All inputs,
 SQLite data, config, cache and generated outputs live in that directory. Cleanup
 runs through `t.after()` on success or failure. It never generates into the checkout's
 `public/photos`, `src/content` or `src/generated`. A `sharp` load failure **fails** by default because
@@ -176,7 +203,16 @@ contract change: `CACHE_VERSION`, `MAX_EDGE`, `TIERS`, `STAGE_TIERS`, `GRID_TIER
 `COVER_TIERS`, `PORTRAIT_SIZES`, `OG_SIZE`, and `THUMB_ENCODINGS`. Tier-dependent
 assertions cover dimensions and cache entries, ICC/pixel/alpha checks, srcset
 candidate widths, per-photo regeneration output counts, and encoding controls.
-The HD backfill scenario specifically tests deletion of the `hd/` directory.
+The HD backfill scenario specifically tests deletion of the `hd/` directory. Only
+`a-landscape.jpg`, `e-orientation3.jpg`, `j-panorama.jpg` and `gradient.png` in this
+fixture encode HD: the other sources reach their cap at an earlier tier. A poisoned
+HD cache entry on the 2000px oriented portrait must be removed without encoding it.
+An encoded landscape HD entry is also poisoned to 1×1; backfill must restore its
+actual source dimensions. Replacing the five-tier gradient hero with a smaller blue
+source runs twice and checks removal of obsolete WebP/AVIF files and cache entries,
+new srcset widths, fallback URLs and new pixels. A seeded Phase 6 duplicate ladder
+keeps its bytes, mtimes and cache entries, with HD resolving to the first tier at
+the largest width.
 The final cache-path probes use a 64×40 synthetic image and a DB in a separate
 directory, with `PHOTOS_CACHE_PATH: ''`. They verify default placement and moving
 `public/photos/.cache.json` while preserving cache JSON and generated image mtimes,
@@ -185,9 +221,14 @@ paths exist. The temporary root is canonicalized so macOS `/var` aliases agree w
 subprocess log paths. All preceding fidelity scenarios retain their explicit cache path unchanged.
 
 The tests track cache version 2, 400/800 thumbnails, 1100/1600/2200/2880/3840 WebP
-stage tiers, five AVIF files per selected hero, 860×1333 and 1290×2000 hero crops
+stage tiers and AVIF stage tiers per selected hero. Each ladder encodes only distinct
+capped widths, keeping the first tier reaching a width; later duplicate tiers have
+neither files nor cache entries. The space-containing 2000×1333 source encodes
+1100/1600/2000; the 6000×4000 gradient encodes all five widths. HD/immersive URLs
+resolve to an existing tier, while srcsets remain deduped. Tests also cover 860×1333 and 1290×2000 hero crops
 only when they do not upscale, and 1200×630 OG images for heroes/gallery covers.
-Category photos do not expose `srcsetAvif`, and categories do not expose `coverOg`.
+Photo manifests live under `src/generated/`. Category photos expose neither
+`srcsetAvif` nor `heroSrc`; selected heroes expose `heroSrc`, and categories do not expose `coverOg`.
 A 6000×4000 gradient with a marker square verifies `34% 50%` crop placement to one
 pixel. Backfill checks preserve WebP mtimes, deselection prunes hero-only assets,
 and an unreadable DB preserves the gallery manifest and its referenced assets.

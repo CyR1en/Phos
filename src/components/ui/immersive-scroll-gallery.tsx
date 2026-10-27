@@ -7,7 +7,12 @@ import type { JSX } from 'preact'
 import type { PhotoPosition } from '@lib/admin/types'
 
 // Types
+/** Manifest-resolved URLs per photo key; the pipeline skips ladder tiers above the source width,
+ *  so a hard-coded /photos/immersive/… path may not exist. */
+export interface PhotoSources { thumb: string; immersive: string; immersiveMobile: string }
+
 interface iImmersiveScrollGalleryProps {
+  sources: Record<string, PhotoSources>
   mobilePhotos?: string[]
   mobilePositions?: PhotoPosition[] | null
   desktopPhotos?: string[]
@@ -67,8 +72,10 @@ function ProgressiveImage({ src, thumb, className, style, shouldLoadFull }: Prog
   )
 }
 
-function photoPath(src: string, variant: 'thumbs' | 'immersive' | 'immersive-mobile') {
-  return `/photos/${variant}/${src.replace(/\.[^.]+$/, '.webp')}`
+function photoPath(src: string, variant: 'thumbs' | 'immersive' | 'immersive-mobile', sources: Record<string, PhotoSources>): string | null {
+  const resolved = sources[src]
+  if (!resolved) return null
+  return variant === 'thumbs' ? resolved.thumb : variant === 'immersive' ? resolved.immersive : resolved.immersiveMobile
 }
 
 function clamp01(value: number) {
@@ -86,6 +93,7 @@ const IMAGE_STYLES = [
 ]
 
 interface AnimatedGalleryProps {
+  sources: Record<string, PhotoSources>
   photos: string[]
   positions: PhotoPosition[] | null
   isDesktop: boolean
@@ -93,7 +101,7 @@ interface AnimatedGalleryProps {
   className: string
 }
 
-function AnimatedGallery({ photos, positions, isDesktop, text, className }: AnimatedGalleryProps) {
+function AnimatedGallery({ sources, photos, positions, isDesktop, text, className }: AnimatedGalleryProps) {
   const container = useRef<HTMLDivElement | null>(null)
   const stickyRef = useRef<HTMLDivElement | null>(null)
   const photoKey = photos.join('|')
@@ -127,6 +135,9 @@ function AnimatedGallery({ photos, positions, isDesktop, text, className }: Anim
   })
 
   const pictures = React.useMemo(() => photos.map((src, index) => {
+    const imageSrc = photoPath(src, imageVariant, sources)
+    const thumb = photoPath(src, 'thumbs', sources)
+    if (!imageSrc || !thumb) return null
     const pos = positions?.[index]
     const fallbackClassName = IMAGE_STYLES[index % IMAGE_STYLES.length]
     const mobileMatch = fallbackClassName.match(/(?:^|\s)z-(\d+)/)
@@ -139,15 +150,15 @@ function AnimatedGallery({ photos, positions, isDesktop, text, className }: Anim
       : fallbackClassName.split(' ').includes('hidden'))
 
     return {
-      src: photoPath(src, imageVariant),
-      thumb: photoPath(src, 'thumbs'),
+      src: imageSrc,
+      thumb,
       index,
       pos,
       fallbackClassName,
       zIndex: pos?.z ?? fallbackZIndex,
       hiddenOnMobile,
     }
-  }).filter(({ hiddenOnMobile }) => !hiddenOnMobile), [photos, positions, isDesktop, imageVariant])
+  }).filter((picture): picture is NonNullable<typeof picture> => picture !== null && !picture.hiddenOnMobile), [photos, positions, isDesktop, imageVariant, sources])
   // The last tile in the highest stacking layer stays through the text handoff.
   const lastImageIndex = pictures.reduce((lastIndex, picture, index) => (
     lastIndex === -1 || (picture.zIndex ?? 0) >= (pictures[lastIndex].zIndex ?? 0) ? index : lastIndex
@@ -264,6 +275,7 @@ function AnimatedGallery({ photos, positions, isDesktop, text, className }: Anim
 }
 
 export default function ImmersiveScrollGallery({
+  sources,
   mobilePhotos = [],
   mobilePositions = null,
   desktopPhotos = [],
@@ -280,17 +292,21 @@ export default function ImmersiveScrollGallery({
     return (
       <div className={`mx-auto max-w-6xl px-6 py-12 ${className}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-start gap-4">
-          {photos.map((src, index) => (
-            <img
-              key={`${src}-${index}`}
-              src={photoPath(src, 'thumbs')}
-              alt=""
-              aria-hidden="true"
-              className="block w-full h-auto"
-              loading="lazy"
-              decoding="async"
-            />
-          ))}
+          {photos.map((src, index) => {
+            const thumb = photoPath(src, 'thumbs', sources)
+            if (!thumb) return null
+            return (
+              <img
+                key={`${src}-${index}`}
+                src={thumb}
+                alt=""
+                aria-hidden="true"
+                className="block w-full h-auto"
+                loading="lazy"
+                decoding="async"
+              />
+            )
+          })}
         </div>
         {text && (
           <h2
@@ -305,5 +321,5 @@ export default function ImmersiveScrollGallery({
     )
   }
 
-  return <AnimatedGallery photos={photos} positions={positions} isDesktop={isDesktop} text={text} className={className} />
+  return <AnimatedGallery sources={sources} photos={photos} positions={positions} isDesktop={isDesktop} text={text} className={className} />
 }

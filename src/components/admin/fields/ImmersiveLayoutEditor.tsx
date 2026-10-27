@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { useConfig } from '../../../lib/admin/store'
 import type { PhotoPosition } from '../../../lib/admin/types'
 import { Button } from '../ui/Button'
-import manifest from '@content/categories.json'
+import manifest from '../../../generated/categories.json'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -616,7 +616,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       desktopPhotos: localDesktopPhotos,
       desktopPositions: localDesktopPositions,
     })
-    await flushSave()
+    if (!(await flushSave())) return
     setDirty(false)
     setOpen(false)
     pushToast('success', 'Layout saved. Click Republish to apply to the live site.')

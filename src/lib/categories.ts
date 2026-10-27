@@ -1,4 +1,4 @@
 import type { CategoriesManifest } from './admin/types'
-import rawManifest from '@content/categories.json'
+import rawManifest from '../generated/categories.json'
 
 export default rawManifest as CategoriesManifest

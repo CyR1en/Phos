@@ -33,7 +33,7 @@ interface ConfigCtx {
   setSaveStatus: (s: 'idle' | 'dirty' | 'saving' | 'saved' | 'error') => void
   setValue: (path: string, value: unknown) => void
   getValue: (path: string) => unknown
-  flushSave: () => Promise<void>
+  flushSave: () => Promise<boolean>
   pluginConfigs: PluginManifest[] | null
   setPluginValue: (name: string, path: string, value: unknown) => void
   getPluginValue: (name: string, path: string) => unknown
@@ -110,6 +110,9 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   // Refs to avoid stale-closure bugs in flushSave / scheduleSave
   const configRef = useRef<SiteConfig | null>(config)
   const dirtyRef = useRef(false)
+  const editVersionRef = useRef(0)
+  const pluginConfigsRef = useRef<PluginManifest[] | null>(pluginConfigs)
+  const pluginEditVersionsRef = useRef<Map<string, number>>(new Map())
 
   const queryClient = useQueryClient()
 
@@ -117,9 +120,21 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
     persistToken(t)
     setTokenState(t)
     if (!t) {
+      // Drop cached owner data with the session; a re-login then refetches and the config
+      // effect sees a new reference (structural sharing would otherwise leave config null).
+      queryClient.removeQueries()
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      for (const timer of pluginDebouncesRef.current.values()) clearTimeout(timer)
+      pluginDebouncesRef.current.clear()
+      configRef.current = null
+      dirtyRef.current = false
+      editVersionRef.current++
+      pluginConfigsRef.current = null
+      pluginDirtyRef.current.clear()
       setConfig(null)
       setCategories(null)
       setPluginConfigs(null)
+      setSaveStatusState('idle')
     }
   }
 
@@ -142,7 +157,7 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   })
 
   useEffect(() => {
-    if (configQuery.data) {
+    if (configQuery.data && !dirtyRef.current) {
       setConfig(configQuery.data)
       configRef.current = configQuery.data
       dirtyRef.current = false
@@ -161,35 +176,58 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   }, [categoriesQuery.data])
 
   useEffect(() => {
-    if (pluginsQuery.data) setPluginConfigs(pluginsQuery.data.plugins)
+    if (pluginsQuery.data && pluginDirtyRef.current.size === 0) {
+      pluginConfigsRef.current = pluginsQuery.data.plugins
+      setPluginConfigs(pluginsQuery.data.plugins)
+    }
   }, [pluginsQuery.data])
 
   const putConfigMutation = useMutation({
-    mutationFn: (next: SiteConfig) => api.putConfig(next),
+    // Serialize snapshots so a slower, older request cannot replace a newer save.
+    scope: { id: 'config-save' },
+    mutationFn: ({ config: next }: { config: SiteConfig; version: number }) => api.putConfig(next),
     onMutate: () => setSaveStatusState('saving'),
-    onSuccess: () => {
-      setSaveStatusState('saved')
-      dirtyRef.current = false
+    onSuccess: (_, { version }) => {
+      if (!configRef.current) return
+      if (editVersionRef.current === version) dirtyRef.current = false
+      setSaveStatusState(dirtyRef.current || pluginDirtyRef.current.size > 0 ? 'dirty' : 'saved')
       queryClient.invalidateQueries({ queryKey: ['config'] })
     },
     onError: (err: unknown) => {
+      if (!configRef.current) return
       setSaveStatusState('error')
       dirtyRef.current = true
+      if (err instanceof ApiError && err.status === 401) {
+        // A rotated password or expired token: every save would fail, so end the session.
+        pushToast('error', 'Session expired. Please sign in again.')
+        setToken(null)
+        return
+      }
       const msg = err instanceof ApiError ? err.message : 'Save failed'
       pushToast('error', msg)
     },
   })
 
   const putPluginMutation = useMutation({
-    mutationFn: ({ name, config: cfg }: { name: string; config: Record<string, unknown> }) =>
+    scope: { id: 'plugin-save' },
+    mutationFn: ({ name, config: cfg }: { name: string; config: Record<string, unknown>; version: number }) =>
       api.putPlugin(name, cfg),
     onMutate: () => setSaveStatusState('saving'),
-    onSuccess: () => {
-      setSaveStatusState('saved')
+    onSuccess: (_, { name, version }) => {
+      if (!pluginConfigsRef.current) return
+      if (pluginEditVersionsRef.current.get(name) === version) pluginDirtyRef.current.delete(name)
+      setSaveStatusState(dirtyRef.current || pluginDirtyRef.current.size > 0 ? 'dirty' : 'saved')
       queryClient.invalidateQueries({ queryKey: ['plugins'] })
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, { name }) => {
+      if (!pluginConfigsRef.current) return
       setSaveStatusState('error')
+      pluginDirtyRef.current.add(name)
+      if (err instanceof ApiError && err.status === 401) {
+        pushToast('error', 'Session expired. Please sign in again.')
+        setToken(null)
+        return
+      }
       const msg = err instanceof ApiError ? err.message : 'Plugin save failed'
       pushToast('error', msg)
     },
@@ -219,65 +257,68 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
     }
     debounceRef.current = setTimeout(() => {
       if (dirtyRef.current && configRef.current) {
-        dirtyRef.current = false
-        putConfigMutation.mutate(configRef.current)
+        putConfigMutation.mutate({ config: configRef.current, version: editVersionRef.current })
       }
     }, 1500)
   }
 
   const setValue = (path: string, value: unknown) => {
-    setConfig((cur) => {
-      if (!cur) return cur
-      const next = setPath(cur, path, value) as SiteConfig
-      configRef.current = next
-      dirtyRef.current = true
-      setSaveStatusState('dirty')
-      scheduleSave()
-      return next
-    })
+    if (!configRef.current) return
+    const next = setPath(configRef.current, path, value) as SiteConfig
+    configRef.current = next
+    editVersionRef.current++
+    dirtyRef.current = true
+    setConfig(next)
+    setSaveStatusState('dirty')
+    scheduleSave()
   }
 
   const getValue = (path: string) => getPath(config, path)
 
-  const flushSave = async () => {
+  const flushSave = async (): Promise<boolean> => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (hasErrors) {
       pushToast('error', 'Cannot save: Please fix validation errors first.')
       setSaveStatusState('error')
-      throw new Error('Validation errors')
+      return false
     }
-    if (dirtyRef.current && configRef.current) {
-      dirtyRef.current = false
-      await putConfigMutation.mutateAsync(configRef.current)
+    try {
+      if (dirtyRef.current && configRef.current) {
+        await putConfigMutation.mutateAsync({ config: configRef.current, version: editVersionRef.current })
+      }
+      // Navigation/publishing must wait if the user edited again during this save.
+      if (dirtyRef.current) return false
+      return true
+    } catch {
+      // onError restores dirty state and reports the failure to the user.
+      return false
     }
   }
 
   const setPluginValue = (name: string, path: string, value: unknown) => {
-    setPluginConfigs((cur) => {
-      if (!cur) return cur
-      const next = cur.map((p) => {
-        if (p.name !== name) return p
-        const newConfig = setPath(p.config, path, value) as Record<string, unknown>
-        return { ...p, config: newConfig }
-      })
-      return next
+    const cur = pluginConfigsRef.current
+    if (!cur?.some(p => p.name === name)) return
+    const next = cur.map((p) => {
+      if (p.name !== name) return p
+      const newConfig = setPath(p.config, path, value) as Record<string, unknown>
+      return { ...p, config: newConfig }
     })
+    pluginConfigsRef.current = next
+    setPluginConfigs(next)
+    pluginEditVersionsRef.current.set(name, (pluginEditVersionsRef.current.get(name) ?? 0) + 1)
     pluginDirtyRef.current.add(name)
     setSaveStatusState('dirty')
     const existing = pluginDebouncesRef.current.get(name)
     if (existing) clearTimeout(existing)
     const t = setTimeout(() => {
       pluginDebouncesRef.current.delete(name)
-      const dirty = pluginDirtyRef.current
-      const target = dirty.has(name) ? name : null
-      dirty.delete(name)
-      if (!target) return
-      setPluginConfigs((cur) => {
-        if (!cur) return cur
-        const plugin = cur.find((p) => p.name === target)
-        if (!plugin) return cur
-        putPluginMutation.mutate({ name: target, config: plugin.config })
-        return cur
+      if (!pluginDirtyRef.current.has(name)) return
+      const plugin = pluginConfigsRef.current?.find(p => p.name === name)
+      if (!plugin) return
+      putPluginMutation.mutate({
+        name,
+        config: plugin.config,
+        version: pluginEditVersionsRef.current.get(name) ?? 0,
       })
     }, 1500)
     pluginDebouncesRef.current.set(name, t)
@@ -297,11 +338,11 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
       pluginDebouncesRef.current.delete(name)
     }
     const names = Array.from(dirty)
-    dirty.clear()
     if (names.length === 0) return
-    const snapshots = pluginConfigs?.filter((p) => names.includes(p.name)) ?? []
+    const snapshots = (pluginConfigsRef.current ?? []).filter(p => names.includes(p.name))
+      .map(p => ({ name: p.name, config: p.config, version: pluginEditVersionsRef.current.get(p.name) ?? 0 }))
     for (const p of snapshots) {
-      await putPluginMutation.mutateAsync({ name: p.name, config: p.config })
+      await putPluginMutation.mutateAsync(p)
     }
   }
 
@@ -334,7 +375,7 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   }
 
   const republish = async () => {
-    await flushSave()
+    if (!await flushSave()) return
     await flushPluginSaves()
     setBuildStatus('running')
     setBuildLog(['Starting republish...'])

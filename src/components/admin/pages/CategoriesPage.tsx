@@ -132,7 +132,7 @@ export function CategoriesPage() {
 
   const saveAll = async () => {
     if (!cat) return
-    await flushSave()
+    if (!await flushSave()) return
     saveMutation.mutate({ slug: cat.slug, meta: localMeta })
   }
 
@@ -176,7 +176,7 @@ export function CategoriesPage() {
                     setPendingCategorySlug(c.slug)
                     setIsAlertOpen(true)
                   } else {
-                    flushSave().then(() => setSelectedCategory(c.slug))
+                    flushSave().then(saved => { if (saved) setSelectedCategory(c.slug) })
                   }
                 }
               }}
@@ -189,7 +189,7 @@ export function CategoriesPage() {
               <div class="aspect-[4/3] rounded-xs overflow-hidden bg-canvas mb-2 border border-border-light relative">
                 {coverFile ? (
                   <img
-                    src={`/photos/thumbs/${c.slug}/${thumbName}`}
+                    src={`/photos/thumbs/${c.slug}/${encodeURIComponent(thumbName)}`}
                     alt=""
                     loading="lazy"
                     onError={(e) => {
@@ -343,7 +343,7 @@ export function CategoriesPage() {
                           }`}
                         >
                           <img
-                            src={`/photos/thumbs/${cat.slug}/${thumbName}`}
+                            src={`/photos/thumbs/${cat.slug}/${encodeURIComponent(thumbName)}`}
                             alt={filename}
                             loading="lazy"
                             class="w-full h-full object-cover"
@@ -393,7 +393,7 @@ export function CategoriesPage() {
                         <div class="space-y-5">
                           <div class="w-full flex items-center justify-center bg-canvas/30 rounded-sm p-3 border border-border">
                             <img
-                              src={`/photos/thumbs/${cat.slug}/${filename.replace(/\.[^.]+$/, '.webp')}`}
+                              src={`/photos/thumbs/${cat.slug}/${encodeURIComponent(filename.replace(/\.[^.]+$/, '.webp'))}`}
                               alt={filename}
                               loading="lazy"
                               onError={(e) => {

@@ -6,6 +6,7 @@ import { execSync } from 'node:child_process'
 import sharp from 'sharp'
 import yaml from 'yaml'
 import Database from 'better-sqlite3'
+import { atomicWriteFileSync } from '../lib/atomic-write.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -16,8 +17,8 @@ const OUTPUT_DIR = join(PUBLIC_DIR, 'photos')
 const CACHE_PATH = resolveCachePath(process.env.PHOTOS_CACHE_PATH || join(dirname(DB_PATH), 'photos-cache.json'))
 const LEGACY_CACHE_PATH = join(OUTPUT_DIR, '.cache.json')
 const CACHE_VERSION = 2
-const MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'categories.json')
-const GALLERIES_MANIFEST_PATH = join(__dirname, '..', 'src', 'content', 'galleries.json')
+const MANIFEST_PATH = join(__dirname, '..', 'src', 'generated', 'categories.json')
+const GALLERIES_MANIFEST_PATH = join(__dirname, '..', 'src', 'generated', 'galleries.json')
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff', '.bmp'])
 
@@ -232,6 +233,36 @@ function hasDimensions(variant) {
   return variant?.w > 0 && variant.h > 0
 }
 
+// decodePixels bounds both edges before encoding. Keep only the first tier at
+// each resulting width, including the first tier that reaches that source bound.
+function expectedLadderTiers(width, height) {
+  const cappedWidth = Math.round(width * Math.min(1, HD_SIZE / Math.max(width, height)))
+  let previousWidth = 0
+  return LADDER_TIERS.filter((tier) => {
+    const targetWidth = Math.min(TIER_WIDTHS[tier], cappedWidth)
+    if (targetWidth <= previousWidth) return false
+    previousWidth = targetWidth
+    return true
+  })
+}
+
+function largestLadderTier(variants) {
+  return LADDER_TIERS.reduce((largest, tier) => hasDimensions(variants[tier])
+    && (!largest || variants[tier].w > variants[largest].w) ? tier : largest, null)
+}
+
+function resolvedTier(variants, tier) {
+  return hasDimensions(variants[tier]) ? tier : largestLadderTier(variants)
+}
+
+// Scalar photo URLs use the first tier at a width, like the full ladder srcset.
+// Preserve each srcset's existing tier selection, including cover-only ladders.
+function preferredLadderTier(variants, tier) {
+  const resolved = resolvedTier(variants, tier)
+  return LADDER_TIERS.find((candidate) => hasDimensions(variants[candidate])
+    && variants[candidate].w === variants[resolved].w)
+}
+
 function avifName(name, tier) {
   return `${parse(name).name}-${TIER_WIDTHS[tier]}.avif`
 }
@@ -243,8 +274,7 @@ function encodeAvif(image) {
 }
 
 function writeLadderVariant(image, tier, path, format = 'webp') {
-  // Keep stable tier URLs for small sources and legacy caches; srcsets deduplicate
-  // their actual widths, and withoutEnlargement prevents duplicate tiers upscaling.
+  // Callers select increasing widths; withoutEnlargement also protects small sources.
   const resized = image
     .resize(TIER_WIDTHS[tier], tier === 'hd' ? HD_SIZE : null, { fit: 'inside', withoutEnlargement: true })
     .withIccProfile('srgb')
@@ -264,7 +294,7 @@ function writePhotoVariant(image, tier, path) {
 
 // Use encoded widths for every responsive ladder; tiers that add no pixels are dropped.
 function buildSrcset(catSlug, name, variants, tiers = LADDER_TIERS, format = 'webp') {
-  return formatSrcset(tiers.map((tier) => [
+  return formatSrcset(tiers.map((tier) => resolvedTier(variants, tier)).map((tier) => [
     photoUrl(format === 'avif' ? 'avif' : VARIANT_DIRS[tier], catSlug, format === 'avif' ? avifName(name, tier) : name),
     variants[tier].w,
   ]))
@@ -291,7 +321,8 @@ function ogUrl(catSlug, photo) {
 async function generatePhotoAssets(catSlug, photo, cache, hero = false) {
   const cached = cache.files[`${catSlug}/${photo.filename}`]
   const name = parse(photo.filename).name
-  const source = cached.variants.hd
+  const source = cached.variants[largestLadderTier(cached.variants)]
+  const ladderTiers = expectedLadderTiers(cached.width, cached.height)
   const ogPath = join(OUTPUT_DIR, 'og', catSlug, `${name}.jpg`)
   // A re-encoded source (fresh cache entry) invalidates every crop derived from it.
   const sourceChanged = Boolean(cached.avifStale)
@@ -307,14 +338,21 @@ async function generatePhotoAssets(catSlug, photo, cache, hero = false) {
       .filter(([w]) => changedPortraitFocus || !existsSync(portraitPath(w, format)))
       .map(([w, h]) => ({ w, h, format })))
     : []
-  const missingAvif = hero ? LADDER_TIERS.filter((tier) => cached.avifStale || !existsSync(avifPath(tier))) : []
+  const missingAvif = hero ? ladderTiers.filter((tier) => cached.avifStale || !existsSync(avifPath(tier))) : []
 
   if (canPortrait) {
     if (changedPortraitFocus) cached.heroPortrait = { focus: photo.focus, framing: 'object-position', webp: {}, avif: {} }
     cached.heroPortrait.webp ||= {}
     cached.heroPortrait.avif ||= {}
   }
-  if (hero) cached.variants.avif ||= {}
+  if (hero) {
+    cached.variants.avif ||= {}
+    // Preserve usable version-2 duplicates, but never backfill an intentionally
+    // skipped tier after its old file has disappeared.
+    for (const tier of LADDER_TIERS) {
+      if (!ladderTiers.includes(tier) && !existsSync(avifPath(tier))) delete cached.variants.avif[tier]
+    }
+  }
 
   if (needsOg || missingPortrait.length || missingAvif.length) {
     await limitEncode(async () => {
@@ -339,7 +377,8 @@ async function generatePhotoAssets(catSlug, photo, cache, hero = false) {
 
   // Recover absent cache keys from existing files without rewriting their bytes or mtimes.
   await Promise.all([
-    ...(hero ? LADDER_TIERS.filter((tier) => !hasDimensions(cached.variants.avif[tier])).map(async (tier) => {
+    ...(hero ? LADDER_TIERS.filter((tier) => (ladderTiers.includes(tier) || (!sourceChanged && existsSync(avifPath(tier))))
+      && !hasDimensions(cached.variants.avif[tier])).map(async (tier) => {
       cached.variants.avif[tier] = variantDimensions(await sharp(avifPath(tier)).metadata())
     }) : []),
     ...['webp', 'avif'].flatMap((format) => portraitSizes.filter(([w]) => !hasDimensions(cached.heroPortrait[format][w])).map(async ([w]) => {
@@ -361,7 +400,7 @@ async function generatePhotoAssets(catSlug, photo, cache, hero = false) {
 
 // The last successfully written gallery manifest remains live when SQLite is unavailable.
 // Preserve every OG/portrait URL it references, including references in nested photo data.
-function selectedAssets(categories, heroPriority, galleries) {
+function selectedAssets(categories, heroPriority, galleries, cache) {
   const expected = new Map(categories.map((cat) => [cat.slug, { og: new Set(), heroPortrait: new Set(), avif: new Set() }]))
   const collect = (value, gallery = false) => {
     if (Array.isArray(value)) {
@@ -380,18 +419,21 @@ function selectedAssets(categories, heroPriority, galleries) {
     }
   }
   collect(heroPriority)
-  // Stable tier files can share an encoded width; srcset deduplication must not
-  // make pruning delete those files and trigger an encode on every warm run.
+  // Keep usable duplicate tiers from old version-2 caches, even when srcsets
+  // deduplicate them. Newly encoded ladders only have increasing widths.
   for (const hero of heroPriority) {
     const filename = decodeURIComponent(hero.full.split('/').at(-1))
-    for (const tier of LADDER_TIERS) expected.get(hero.category).avif.add(avifName(filename, tier))
+    const variants = cache?.files[`${hero.category}/${filename}`]?.variants.avif || {}
+    for (const tier of LADDER_TIERS.filter((tier) => hasDimensions(variants[tier]))) {
+      expected.get(hero.category).avif.add(avifName(filename, tier))
+    }
   }
   collect(galleries, true)
   return expected
 }
 
-async function pruneSelectedAssets(categories, heroPriority, galleries) {
-  const expected = selectedAssets(categories, heroPriority, galleries)
+async function pruneSelectedAssets(categories, heroPriority, galleries, cache) {
+  const expected = selectedAssets(categories, heroPriority, galleries, cache)
   for (const key of ['og', 'heroPortrait', 'avif']) {
     if (galleries === null && key !== 'avif') continue
     const root = join(OUTPUT_DIR, OUTPUT_DIRS[key])
@@ -418,7 +460,8 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
   let cached = cache.files[relPath]
   if (cached && cached.mtimeMs === srcStat.mtimeMs && cached.size === srcStat.size) {
     cached.variants ||= {}
-    const missing = Object.keys(VARIANT_DIRS).filter((tier) => !outputs[tier].has(thumbName))
+    const expectedTiers = ['thumb', 'thumbMobile', ...expectedLadderTiers(cached.width, cached.height)]
+    const missing = expectedTiers.filter((tier) => !outputs[tier].has(thumbName))
     if (!outputs.full.has(file)) await copyFile(srcPath, fullPath)
     if (missing.length) {
       await limitEncode(async () => {
@@ -428,9 +471,13 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
         }))
       })
     }
-    // A version-2 entry can predate new variant keys. Read existing dimensions;
-    // only absent files need an encode, including missing thumbnails or HD.
-    await Promise.all(Object.keys(VARIANT_DIRS).filter((tier) => !hasDimensions(cached.variants[tier])).map(async (tier) => {
+    // Recover old cache metadata without rewriting files, retaining any usable
+    // duplicate tiers. Absent skipped tiers require neither metadata nor files.
+    const activeTiers = Object.keys(VARIANT_DIRS).filter((tier) => expectedTiers.includes(tier) || outputs[tier].has(thumbName))
+    for (const tier of Object.keys(VARIANT_DIRS)) {
+      if (!activeTiers.includes(tier)) delete cached.variants[tier]
+    }
+    await Promise.all(activeTiers.filter((tier) => !hasDimensions(cached.variants[tier])).map(async (tier) => {
       cached.variants[tier] = variantDimensions(await sharp(variantPath(tier)).metadata())
     }))
   } else {
@@ -438,7 +485,11 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
       const srcBuf = await readFile(srcPath)
       const imgMeta = await sharp(srcBuf).metadata()
       const { width, height } = getOrientedDimensions(imgMeta)
+      const tiers = ['thumb', 'thumbMobile', ...expectedLadderTiers(width, height)]
       const pixels = await decodePixels(srcBuf)
+
+      // A changed source starts a new ladder; remove obsolete duplicate outputs.
+      await Promise.all(LADDER_TIERS.filter((tier) => !tiers.includes(tier)).map((tier) => rm(variantPath(tier), { force: true })))
 
       const [blur, , variants] = await Promise.all([
         pixels()
@@ -448,7 +499,7 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
           .then(b => `data:image/webp;base64,${b.toString('base64')}`)
           .catch(() => ''),
         copyFile(srcPath, fullPath),
-        Promise.all(Object.keys(VARIANT_DIRS).map(async (tier) => [tier, variantDimensions(await writePhotoVariant(pixels(), tier, variantPath(tier)))])),
+        Promise.all(tiers.map(async (tier) => [tier, variantDimensions(await writePhotoVariant(pixels(), tier, variantPath(tier)))])),
       ])
 
       return {
@@ -474,11 +525,10 @@ async function processPhoto(srcPath, catSlug, file, photoMeta, outputs, cache) {
     full: photoUrl('full', catSlug, file),
     thumb: photoUrl(VARIANT_DIRS.thumb, catSlug, thumbName),
     thumbMobile: photoUrl(VARIANT_DIRS.thumbMobile, catSlug, thumbName),
-    immersive: photoUrl(VARIANT_DIRS.immersive, catSlug, thumbName),
+    immersive: photoUrl(VARIANT_DIRS[preferredLadderTier(cached.variants, 'immersive')], catSlug, thumbName),
     immersiveMobile: photoUrl(VARIANT_DIRS.immersiveMobile, catSlug, thumbName),
-    hd: photoUrl(VARIANT_DIRS.hd, catSlug, thumbName),
+    hd: photoUrl(VARIANT_DIRS[preferredLadderTier(cached.variants, 'hd')], catSlug, thumbName),
     srcset: buildSrcset(catSlug, thumbName, cached.variants),
-    heroSrc: photoUrl(VARIANT_DIRS.immersive, catSlug, thumbName),
     gridSrcset: buildSrcset(catSlug, thumbName, cached.variants, ['thumbMobile', 'thumb', 'immersiveMobile']),
     width: cached.width,
     height: cached.height,
@@ -662,7 +712,7 @@ async function scanPhotos(sourceDir, previousGalleries) {
           thumbMobile: p.thumbMobile,
           hd: p.hd,
           srcset: p.srcset,
-          heroSrc: p.heroSrc,
+          heroSrc: p.immersive,
           heroPortrait: null,
           ogImage: ogUrl(cat.slug, p),
           title: p.title,
@@ -748,7 +798,7 @@ async function main() {
   const manifest = { categories, heroPriority }
 
   await ensureDir(dirname(MANIFEST_PATH))
-  await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2))
+  atomicWriteFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2))
 
   console.log(`Manifest written to ${MANIFEST_PATH}`)
 
@@ -756,7 +806,8 @@ async function main() {
   let galleries = []
   let galleriesWritten = false
   try {
-    if (existsSync(DB_PATH)) {
+    const hasDatabase = existsSync(DB_PATH)
+    if (hasDatabase) {
       const db = new Database(DB_PATH, { readonly: true })
       db.pragma('foreign_keys = ON')
 
@@ -831,9 +882,12 @@ async function main() {
 
       db.close()
       await Promise.all([...galleryCovers.values()].map((photo) => generatePhotoAssets(photo.category, photo, cache)))
-
+    }
+    // Bootstrap an empty library without a DB, while preserving an existing
+    // gallery manifest if its database has disappeared temporarily.
+    if (hasDatabase || !existsSync(GALLERIES_MANIFEST_PATH)) {
       await ensureDir(dirname(GALLERIES_MANIFEST_PATH))
-      await writeFile(GALLERIES_MANIFEST_PATH, JSON.stringify({ galleries }, null, 2))
+      atomicWriteFileSync(GALLERIES_MANIFEST_PATH, JSON.stringify({ galleries }, null, 2))
       galleriesWritten = true
       console.log(`Galleries manifest written to ${GALLERIES_MANIFEST_PATH} (${galleries.length} galleries)`)
     }
@@ -841,7 +895,7 @@ async function main() {
     console.warn(`Gallery manifest generation skipped: ${err.message}`)
   }
 
-  await pruneSelectedAssets(categories, heroPriority, galleriesWritten ? galleries : previousGalleries)
+  await pruneSelectedAssets(categories, heroPriority, galleriesWritten ? galleries : previousGalleries, cache)
   for (const entry of Object.values(cache.files)) delete entry.avifStale
   await saveCache(cache)
 }

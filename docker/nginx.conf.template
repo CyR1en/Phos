@@ -38,6 +38,10 @@ http {
     # Server-level denial also covers ^~ prefixes; allow /.well-known/ paths.
     if ($uri ~ "/\.(?!well-known/)") { return 404; }
 
+    # Block direct .gz downloads. gzip_static reads $uri.gz on disk without
+    # changing $uri, so regular asset and page URLs still serve precompressed files.
+    if ($uri ~ "\.gz$") { return 404; }
+
     absolute_redirect off;
     port_in_redirect off;
 

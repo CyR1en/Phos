@@ -8,6 +8,7 @@ const PAGE_TO_PUBLIC_ROUTE: Record<string, string> = {
   about: '/about/',
   contact: '/contact/',
   galleries: '/galleries/',
+  portfolio: '/galleries/',
 }
 
 const CONTENT_MIN = 480

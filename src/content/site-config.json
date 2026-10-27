@@ -158,7 +158,7 @@
     "button": "View photographs"
   },
   "portfolio": {
-    "page_description": "All photos with category filter and masonry lightbox",
+    "page_description": "Open Graph title and description for the /galleries/ index.",
     "og_title": "",
     "og_description": ""
   }

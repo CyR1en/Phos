@@ -43,7 +43,6 @@ export default defineConfig({
       alias: {
         '@components': path.resolve(__dirname, 'src/components'),
         '@layouts': path.resolve(__dirname, 'src/layouts'),
-        '@content': path.resolve(__dirname, 'src/content'),
         'react': 'preact/compat',
         'react-dom': 'preact/compat',
       },

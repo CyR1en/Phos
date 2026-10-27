@@ -272,7 +272,7 @@ function GalleryEditor({
                       }`}
                     >
                       <img
-                        src={`/photos/thumbs/${p.category}/${thumbName}`}
+                        src={`/photos/thumbs/${p.category}/${encodeURIComponent(thumbName)}`}
                         alt={p.filename}
                         loading="lazy"
                         class="w-full h-full object-cover pointer-events-none"
@@ -375,7 +375,7 @@ function GalleryEditor({
                             }`}
                           >
                             <img
-                              src={`/photos/thumbs/${cat.slug}/${thumbName}`}
+                              src={`/photos/thumbs/${cat.slug}/${encodeURIComponent(thumbName)}`}
                               alt={filename}
                               loading="lazy"
                               class="w-full h-full object-cover"
@@ -615,7 +615,7 @@ export function GalleriesPage() {
                   return (
                     <div class="aspect-[16/10] bg-canvas overflow-hidden border-b border-border-light relative">
                       <img
-                        src={`/photos/thumbs/${cat}/${thumbName}`}
+                        src={`/photos/thumbs/${cat}/${encodeURIComponent(thumbName)}`}
                         alt={g.name}
                         loading="lazy"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

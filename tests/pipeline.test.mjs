@@ -61,6 +61,17 @@ function widths(width, height, tiers) {
 const coverWidths = (w, h) => widths(w, h, COVER_TIERS)
 const gridWidths = (w, h) => widths(w, h, GRID_TIERS)
 const stageWidths = (w, h) => widths(w, h, STAGE_TIERS)
+function encodedStageTiers(w, h) {
+  const seen = new Set()
+  return STAGE_TIERS.filter(tier => {
+    const [width] = widths(w, h, [tier])
+    if (seen.has(width)) return false
+    seen.add(width)
+    return true
+  })
+}
+const photoTiers = (w, h) => ['thumb', 'thumbMobile', ...encodedStageTiers(w, h)]
+const photoFileCount = (w, h) => 1 + 2 + stageWidths(w, h).length // full, both thumbs, distinct ladder
 
 test('stripSecrets removes the whole contact.smtp block without mutating input or other keys', () => {
   const input = { site: { title: 'Test' }, contact: { format: { heading: 'Hello' }, smtp: { host: 'private.invalid', port: 587, user: 'user', pass: 'secret', fromEmail: 'private@invalid' } }, extra: [1, { keep: true }] }
@@ -96,6 +107,8 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   assert.notEqual(ROOT, repoRoot)
   await mkdir(join(ROOT, 'scripts'), { recursive: true })
   await cp(join(repoRoot, 'scripts/generate-content.mjs'), join(ROOT, 'scripts/generate-content.mjs'))
+  await mkdir(join(ROOT, 'lib'))
+  await cp(join(repoRoot, 'lib/atomic-write.mjs'), join(ROOT, 'lib/atomic-write.mjs'))
   // A tripwire, not the real merge-config: even a caught execution must fail this test.
   const syncSentinel = join(ROOT, 'merge-config-ran')
   await writeFile(join(ROOT, 'scripts/merge-config.mjs'), [
@@ -159,7 +172,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   }
   async function snapshot() {
     const obj = {}
-    for (const p of [...(await files(OUT)), ...(await files(join(ROOT, 'src/content')))]) {
+    for (const p of [...(await files(OUT)), ...(await files(join(ROOT, 'src/generated')))]) {
       const s = await stat(p)
       obj[relative(ROOT, p)] = { hash: hash(await readFile(p)), mtimeMs: s.mtimeMs, size: s.size }
     }
@@ -251,7 +264,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     ['g', 'g-between.jpg', 900, 600, {}],
     ['h', 'h-alpha.png', 1200, 800, { alpha: true }],
     ['j', 'j-panorama.jpg', 16000, 4000, {}],
-    ['k', 'My Photo.JPG', 2000, 1200, {}],
+    ['k', 'My Photo.JPG', 2000, 1333, {}],
     ['l', 'l-small-hero.jpg', 1400, 933, {}]
   ]
   await mkdir(EVIDENCE, { recursive: true })
@@ -318,7 +331,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   )
   await writeHeroConfig()
   run('01-cold')
-  const manifest = await json(join(ROOT, 'src/content/categories.json'))
+  const manifest = await json(join(ROOT, 'src/generated/categories.json'))
   const cache = await json(join(OUT, '.cache.json'))
   await save('01-categories.json', manifest)
   await save('01-cache.json', cache)
@@ -368,8 +381,15 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
       expected: [w, h]
     })
     const variantDims = {}
+    const encoded = photoTiers(w, h)
     for (const [tier, dir] of Object.entries(tiers)) {
       const out = join(OUT, dir, 'matrix', name.replace(/\.[^.]+$/, '.webp'))
+      if (!encoded.includes(tier)) {
+        check(id + '.' + tier + '.skippedFile', !existsSync(out), out)
+        check(id + '.' + tier + '.skippedCache',
+          !Object.hasOwn(cache.files['matrix/' + name].variants, tier), cache.files['matrix/' + name].variants)
+        continue
+      }
       const m = await sharp(out).metadata()
       const scale =
         tier === 'hd'
@@ -452,6 +472,12 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     for (const photo of category.photos) {
       check('assets.noCategoryAvif.' + category.slug + '/' + photo.filename,
         !Object.hasOwn(photo, 'srcsetAvif'), photo.srcsetAvif)
+      check('assets.noCategoryHeroSrc.' + category.slug + '/' + photo.filename,
+        !Object.hasOwn(photo, 'heroSrc'), photo.heroSrc)
+      for (const field of ['hd', 'immersive', 'immersiveMobile', 'thumb']) {
+        check('assets.existingFallback.' + category.slug + '/' + photo.filename + '.' + field,
+          typeof photo[field] === 'string' && existsSync(join(ROOT, 'public', decodeURIComponent(photo[field]))), photo[field])
+      }
     }
   }
   const expectedAvifs = []
@@ -460,13 +486,21 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     const id = name.replace(/\.[^.]+$/, '')
     const photo = mapping[name]
     const hero = manifest.heroPriority.find((entry) => entry.full === photo.full)
+    check(id + '.heroSrc', typeof hero.heroSrc === 'string' &&
+      existsSync(join(ROOT, 'public', decodeURIComponent(hero.heroSrc))), hero.heroSrc)
     await srcset(hero.srcsetAvif, id + '.heroSrcsetAvif', stageWidths(photo.width, photo.height))
     for (const tier of STAGE_TIERS) {
       const nominal = TIERS[tier].width === Infinity ? MAX_EDGE : TIERS[tier].width
       const path = join(OUT, 'avif', 'matrix', name.replace(/\.[^.]+$/, '-' + nominal + '.avif'))
+      const cached = cache.files['matrix/' + name].variants?.avif?.[tier]
+      if (!encodedStageTiers(photo.width, photo.height).includes(tier)) {
+        check(id + '.avif.' + tier + '.skippedFile', !existsSync(path), path)
+        check(id + '.avif.' + tier + '.skippedCache',
+          !Object.hasOwn(cache.files['matrix/' + name].variants.avif, tier), cached)
+        continue
+      }
       expectedAvifs.push(path)
       const metadata = await sharp(path).metadata()
-      const cached = cache.files['matrix/' + name].variants?.avif?.[tier]
       const scale = Math.min(
         1,
         TIERS[tier].width / photo.width,
@@ -500,10 +534,29 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   check('assets.smallLandscapeNoCrop', heroes[2].heroPortrait === null, heroes[2].heroPortrait)
   check('assets.smallLandscapeNoCropFiles',
     !(await files(join(OUT, 'hero-portrait'))).some((path) => path.includes('l-small-hero-')))
-  for (const tier of ['w1600', 'w2880', 'hd']) {
+  const smallHero = mapping['l-small-hero.jpg']
+  for (const tier of encodedStageTiers(smallHero.width, smallHero.height)) {
     const metadata = await sharp(join(OUT, TIERS[tier].dir, 'matrix/l-small-hero.webp')).metadata()
-    check('assets.smallLandscapeNoUpscale.' + tier, metadata.width <= 1400, metadata.width)
+    check('assets.smallLandscapeNoUpscale.' + tier, metadata.width <= smallHero.width, metadata.width)
   }
+  await t.test('2000×1333 and 6000×4000 sources encode only distinct ascending ladder widths', async () => {
+    for (const [name, w, h, expectedTiers, expectedWidths] of [
+      ['My Photo.JPG', 2000, 1333, ['immersiveMobile', 'w1600', 'immersive'], [1100, 1600, 2000]],
+      ['gradient.png', 6000, 4000, STAGE_TIERS, [1100, 1600, 2200, 2880, 3840]],
+    ]) {
+      const photo = mapping[name]
+      assert.deepEqual([photo.width, photo.height], [w, h], name + ': source dimensions')
+      const actualTiers = STAGE_TIERS.filter(tier => existsSync(join(OUT, TIERS[tier].dir, 'matrix', name.replace(/\.[^.]+$/, '.webp'))))
+      assert.deepEqual(actualTiers, expectedTiers, name + ': first tier reaching the source bound wins')
+      const metadata = await Promise.all(actualTiers.map(tier => sharp(join(OUT, TIERS[tier].dir, 'matrix', name.replace(/\.[^.]+$/, '.webp'))).metadata()))
+      assert.deepEqual(metadata.map(entry => entry.width), expectedWidths, name)
+      assert.deepEqual(STAGE_TIERS.filter(tier => Object.hasOwn(cache.files['matrix/' + name].variants, tier)), expectedTiers, name + ': cache inventory')
+      for (const field of ['hd', 'immersive']) {
+        const target = await sharp(join(ROOT, 'public', decodeURIComponent(photo[field]))).metadata()
+        assert.equal(target.width, field === 'hd' ? expectedWidths.at(-1) : Math.min(2200, expectedWidths.at(-1)), name + ': ' + field + ' fallback')
+      }
+    }
+  })
   for (const [format, field] of [
     ['webp', 'srcset'],
     ['avif', 'srcsetAvif']
@@ -615,7 +668,9 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     )
   // Check alpha separately from RGB because fully transparent RGB is intentionally undefined.
   const alpha = []
-  for (const [tier, dir] of Object.entries(tiers)) {
+  const alphaPhoto = mapping['h-alpha.png']
+  for (const tier of photoTiers(alphaPhoto.width, alphaPhoto.height)) {
+    const dir = tiers[tier]
     const path = join(OUT, dir, 'matrix/h-alpha.webp')
     const { data, info } = await sharp(path).raw().toBuffer({ resolveWithObject: true })
     const av = [
@@ -646,7 +701,9 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     .toBuffer({ resolveWithObject: true })
   const refPixel = [...reference.data.subarray(0, 3)]
   const profiles = []
-  for (const [tier, dir] of Object.entries(tiers)) {
+  const p3Photo = mapping['i-p3.jpg']
+  for (const tier of photoTiers(p3Photo.width, p3Photo.height)) {
+    const dir = tiers[tier]
     const path = join(OUT, dir, 'matrix/i-p3.webp')
     const actual = (await sample(path, true))[0],
       deltas = actual.map((v, i) => v - refPixel[i])
@@ -663,7 +720,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
       iccLength: m.icc?.length || 0,
       iccHasSrgbDescription: isSrgb(m.icc)
     })
-    if (tier === 'hd') await writeFile(join(EVIDENCE, 'hd-srgb.icc'), m.icc)
+    if (tier === encodedStageTiers(p3Photo.width, p3Photo.height).at(-1)) await writeFile(join(EVIDENCE, 'capped-srgb.icc'), m.icc)
   }
   details.p3 = { rawP3: rawSource, srgbReference: refPixel, profiles }
   await save('dimensions.json', dimensionEvidence)
@@ -678,13 +735,30 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     diff(images(first), images(second), 'mtimeMs').length === 0,
     diff(images(first), images(second), 'mtimeMs')
   )
+  const expectedHd = manifest.categories.flatMap(category => category.photos
+    .filter(photo => encodedStageTiers(photo.width, photo.height).includes('hd'))
+    .map(photo => 'public/photos/hd/' + category.slug + '/' + photo.filename.replace(/\.[^.]+$/, '.webp'))).sort()
+  check('cache2.hdFixtureSelection',
+    JSON.stringify(expectedHd) === JSON.stringify([
+      'public/photos/hd/matrix/a-landscape.webp',
+      'public/photos/hd/matrix/e-orientation3.webp',
+      'public/photos/hd/matrix/gradient.webp',
+      'public/photos/hd/matrix/j-panorama.webp',
+    ]), expectedHd)
   await rm(join(OUT, 'hd'), { recursive: true })
   const poison = await json(join(OUT, '.cache.json'))
   poison.files['matrix/c-orientation6.jpg'].variants.hd = { w: 1, h: 1 }
+  poison.files['matrix/a-landscape.jpg'].variants.hd = { w: 1, h: 1 }
   await writeFile(join(OUT, '.cache.json'), JSON.stringify(poison, null, 2))
   run('03-hd-backfill')
   const backfill = await snapshot()
   await save('03-snapshot.json', backfill)
+  check('cache2.hdOnlyEncodedTiersBackfilled',
+    JSON.stringify(diff(images(second), images(backfill), 'mtimeMs').sort()) === JSON.stringify(expectedHd),
+    diff(images(second), images(backfill), 'mtimeMs'))
+  check('cache2.hdBackfillInventory',
+    JSON.stringify((await files(join(OUT, 'hd'))).map(path => relative(ROOT, path))) === JSON.stringify(expectedHd),
+    await files(join(OUT, 'hd')))
   check(
     'cache2.nonHdUntouched',
     diff(images(second), images(backfill), 'mtimeMs').filter(
@@ -692,24 +766,31 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     ).length === 0,
     diff(images(second), images(backfill), 'mtimeMs')
   )
-  const hdMeta = await sharp(join(OUT, 'hd/matrix/c-orientation6.webp')).metadata()
+  // This portrait reaches 2000px at immersive; its hd URL resolves to that file.
+  // A poisoned skipped-tier cache entry must not cause another encode.
+  const orientedFallback = join(ROOT, 'public', decodeURIComponent(mapping['c-orientation6.jpg'].hd))
+  const hdMeta = await sharp(orientedFallback).metadata()
   const hc = await json(join(OUT, '.cache.json'))
+  await t.test('HD backfill replaces stale dimensions for an encoded tier', () => {
+    const photo = mapping['a-landscape.jpg']
+    assert.deepEqual(hc.files['matrix/a-landscape.jpg'].variants.hd, { w: photo.width, h: photo.height })
+  })
   check(
     'cache2.hdOriented',
     hdMeta.width === 2000 &&
       hdMeta.height === 3000 &&
-      JSON.stringify((await sample(join(OUT, 'hd/matrix/c-orientation6.webp'))).map(label)) ===
+      JSON.stringify((await sample(orientedFallback)).map(label)) ===
         '[2,0,3,1]',
     {
       dims: [hdMeta.width, hdMeta.height],
-      pixels: await sample(join(OUT, 'hd/matrix/c-orientation6.webp'))
+      pixels: await sample(orientedFallback)
     }
   )
   check(
-    'cache2.hdCacheUpdated',
-    hc.files['matrix/c-orientation6.jpg'].variants.hd.w === 2000 &&
-      hc.files['matrix/c-orientation6.jpg'].variants.hd.h === 3000,
-    hc.files['matrix/c-orientation6.jpg'].variants.hd
+    'cache2.skippedHdCacheRemoved',
+    !Object.hasOwn(hc.files['matrix/c-orientation6.jpg'].variants, 'hd') &&
+      !existsSync(join(OUT, 'hd/matrix/c-orientation6.webp')),
+    hc.files['matrix/c-orientation6.jpg'].variants
   )
   check('cache2.hdIcc', isSrgb(hdMeta.icc), hdMeta.icc?.length)
   await rm(join(OUT, 'avif'), { recursive: true })
@@ -717,7 +798,10 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   const avifBackfill = await snapshot()
   const avifChanges = diff(images(backfill), images(avifBackfill), 'mtimeMs')
   check('cache2.avifOnlyHeroBackfill',
-    avifChanges.length === heroConfig.length * STAGE_TIERS.length &&
+    avifChanges.length === heroConfig.reduce((sum, path) => {
+      const photo = mapping[path.slice('matrix/'.length)]
+      return sum + stageWidths(photo.width, photo.height).length
+    }, 0) &&
       avifChanges.every((path) => path.startsWith('public/photos/avif/')),
     avifChanges)
   check('cache2.avifBackfillWebpMtimes',
@@ -749,7 +833,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   const touchedImages = diff(images(legacy), images(touchSnap), 'mtimeMs')
   check(
     'cache4.onePhotoRegenerated',
-    touchedImages.length === 1 + Object.keys(TIERS).length &&
+    touchedImages.length === photoFileCount(mapping['a-landscape.jpg'].width, mapping['a-landscape.jpg'].height) &&
       touchedImages.every((p) => /\/a-landscape(?:-\d+)?\.(?:jpg|webp|avif)$/.test(p)),
     touchedImages
   )
@@ -761,14 +845,16 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   await save('05b-snapshot.json', heroTouchSnap)
   const heroTouchedImages = diff(images(touchSnap), images(heroTouchSnap), 'mtimeMs')
   const portraitCount = PORTRAIT_SIZES.length * 2 // webp + avif per crop
+  const portrait = mapping['b-portrait.jpg']
+  const heroStageCount = stageWidths(portrait.width, portrait.height).length
   const under = (dir) => heroTouchedImages.filter((p) => p.startsWith(`public/photos/${dir}/`)).length
   check(
     'cache4.heroSourceRegeneratesDerivedAssets',
-    heroTouchedImages.length === 1 + Object.keys(TIERS).length + STAGE_TIERS.length + portraitCount + 1 &&
+    heroTouchedImages.length === photoFileCount(portrait.width, portrait.height) + heroStageCount + portraitCount + 1 &&
       heroTouchedImages.every((p) => /\/b-portrait(?:-\d+)?\.(?:jpg|webp|avif)$/.test(p)) &&
       under('og') === 1 &&
       under('hero-portrait') === portraitCount &&
-      under('avif') === STAGE_TIERS.length,
+      under('avif') === heroStageCount,
     heroTouchedImages
   )
   await rm(join(SRC, 'Matrix/f-tiny.jpg'))
@@ -779,7 +865,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   check('cache5.outputsPruned', stale.length === 0, stale)
   check(
     'cache5.manifestPruned',
-    !(await json(join(ROOT, 'src/content/categories.json'))).categories
+    !(await json(join(ROOT, 'src/generated/categories.json'))).categories
       .find((c) => c.slug === 'matrix')
       .photos.some((p) => p.filename === 'f-tiny.jpg')
   )
@@ -806,7 +892,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   add.run(fallback, 'matrix', 'a-landscape.jpg', 1)
   db.close()
   run('07-galleries')
-  const galleries = (await json(join(ROOT, 'src/content/galleries.json'))).galleries
+  const galleries = (await json(join(ROOT, 'src/generated/galleries.json'))).galleries
   await save('07-galleries.json', { galleries })
   for (const g of galleries) {
     if (g.slug === 'empty') {
@@ -874,7 +960,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     ) === '{"width":111,"height":222}'
   )
   for (const [name, expected] of [
-    ['hd-srgb.icc', /sRGB/],
+    ['capped-srgb.icc', /sRGB/],
     ['p3-source.icc', /P3/]
   ]) {
     const icc = await readFile(join(EVIDENCE, name))
@@ -914,7 +1000,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   }
   await writeFile(join(SRC, 'No Meta/_meta.yaml'), 'name: No Meta\ncover: missing-cover.jpg\n')
   run('08-stale-cover')
-  const staleCover = (await json(join(ROOT, 'src/content/categories.json'))).categories.find(
+  const staleCover = (await json(join(ROOT, 'src/generated/categories.json'))).categories.find(
     (category) => category.slug === 'no-meta'
   )
   check(
@@ -929,6 +1015,48 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     'probes.staleCoverExists',
     existsSync(join(ROOT, 'public', decodeURIComponent(staleCover.cover)))
   )
+
+  await t.test('replacing a five-tier hero with a smaller source removes obsolete tiers and refreshes pixels twice', async () => {
+    const dimensions = { width: 2000, height: 1333 }
+    const colour = { r: 25, g: 55, b: 225 }
+    for (const tier of ['w2880', 'hd']) {
+      assert.ok(existsSync(join(OUT, TIERS[tier].dir, 'matrix/gradient.webp')), tier + ': starts encoded')
+      const nominal = tier === 'hd' ? MAX_EDGE : TIERS[tier].width
+      assert.ok(existsSync(join(OUT, 'avif', 'matrix', `gradient-${nominal}.avif`)), tier + ': starts encoded as AVIF')
+    }
+    const previous = await stat(gradientSource)
+    await writeFile(gradientSource, await sharp({ create: { ...dimensions, channels: 3, background: colour } }).png().toBuffer())
+    await utimes(gradientSource, previous.atime, new Date(previous.mtimeMs + 10000))
+    for (const pass of [1, 2]) {
+      run('08b-smaller-source-' + pass)
+      const updated = await json(join(ROOT, 'src/generated/categories.json'))
+      const photo = updated.categories.find(category => category.slug === 'matrix').photos.find(photo => photo.filename === 'gradient.png')
+      const hero = updated.heroPriority.find(hero => hero.full === photo.full)
+      const variants = (await json(join(OUT, '.cache.json'))).files['matrix/gradient.png'].variants
+      assert.deepEqual([photo.width, photo.height], [dimensions.width, dimensions.height])
+      assert.equal(photo.hd, photo.immersive, 'HD falls back to the newly encoded immersive file')
+      assert.equal(photo.hd, '/photos/immersive/matrix/gradient.webp')
+      for (const tier of ['w2880', 'hd']) {
+        assert.ok(!existsSync(join(OUT, TIERS[tier].dir, 'matrix/gradient.webp')), tier + ': obsolete WebP removed')
+        const nominal = tier === 'hd' ? MAX_EDGE : TIERS[tier].width
+        assert.ok(!existsSync(join(OUT, 'avif', 'matrix', `gradient-${nominal}.avif`)), tier + ': obsolete AVIF removed')
+        assert.ok(!Object.hasOwn(variants, tier), tier + ': obsolete WebP cache removed')
+        assert.ok(!Object.hasOwn(variants.avif, tier), tier + ': obsolete AVIF cache removed')
+      }
+      const expectedWidths = stageWidths(dimensions.width, dimensions.height)
+      for (const [field, entry] of [['srcset', photo], ['srcsetAvif', hero]]) {
+        const candidates = await srcset(entry[field], 'replacement.' + pass + '.' + field, expectedWidths)
+        assert.deepEqual(candidates.map(candidate => candidate.w), expectedWidths, field + ': exact new ladder')
+        for (const { url } of candidates) {
+          for (const pixel of await sample(join(ROOT, 'public', decodeURIComponent(url)))) {
+            assert.ok(pixel.every((value, channel) => Math.abs(value - Object.values(colour)[channel]) <= 8),
+              url + ': replacement colour, got ' + pixel)
+          }
+        }
+      }
+    }
+  })
+
   // Remove selection without removing the source: stale hero-only outputs must go.
   heroConfig = heroConfig.filter((path) => path !== 'matrix/gradient.png')
   await writeHeroConfig()
@@ -937,7 +1065,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     const stale = (await files(join(OUT, dir))).filter((path) => /\/gradient(?:-\d+)?\./.test(path))
     check('selection.' + dir + '.pruned', stale.length === 0, stale)
   }
-  const deselected = await json(join(ROOT, 'src/content/categories.json'))
+  const deselected = await json(join(ROOT, 'src/generated/categories.json'))
   check('selection.sourceRemains', deselected.categories.find((category) => category.slug === 'matrix')
     .photos.some((photo) => photo.filename === 'gradient.png'))
   check('selection.heroRemoved', !deselected.heroPriority.some((photo) => photo.full === gradientHero.full))
@@ -945,7 +1073,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   // Model the last good gallery manifest retaining real selected-asset URLs, then
   // make SQLite unreadable and deselect that hero. No manifest or referenced asset
   // may be lost just because the current DB cannot be read.
-  const galleryPath = join(ROOT, 'src/content/galleries.json')
+  const galleryPath = join(ROOT, 'src/generated/galleries.json')
   const previousGalleries = await json(galleryPath)
   previousGalleries.galleries.find((gallery) => gallery.slug === 'fallback').photos[0].heroPortrait =
     heroes[0].heroPortrait
@@ -972,6 +1100,46 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
         hash(await readFile(path)) === before.hash && (await stat(path)).mtimeMs === before.mtimeMs)
     }
   }
+
+  await t.test('unchanged Phase 6 duplicate tiers and cache entries survive with the first top-width HD URL', async () => {
+    const name = 'l-small-hero.jpg'
+    const photo = mapping[name]
+    const topTier = encodedStageTiers(photo.width, photo.height).at(-1)
+    assert.equal(topTier, 'w1600', 'fixture reaches its 1400px bound at w1600')
+    const phase6 = await json(join(OUT, '.cache.json'))
+    const variants = phase6.files['matrix/' + name].variants
+    const before = new Map()
+    for (const tier of ['immersive', 'w2880', 'hd']) {
+      const path = join(OUT, TIERS[tier].dir, 'matrix/l-small-hero.webp')
+      await mkdir(dirname(path), { recursive: true })
+      await cp(join(OUT, TIERS[topTier].dir, 'matrix/l-small-hero.webp'), path)
+      variants[tier] = { w: photo.width, h: photo.height }
+      const avif = join(OUT, 'avif/matrix', 'l-small-hero-' + (tier === 'hd' ? MAX_EDGE : TIERS[tier].width) + '.avif')
+      await cp(join(OUT, 'avif/matrix/l-small-hero-' + TIERS[topTier].width + '.avif'), avif)
+      variants.avif[tier] = { w: photo.width, h: photo.height }
+      for (const file of [path, avif]) before.set(file, { hash: hash(await readFile(file)), mtimeMs: (await stat(file)).mtimeMs })
+    }
+    await writeFile(join(OUT, '.cache.json'), JSON.stringify(phase6))
+    run('10b-legacy-duplicates')
+    const retained = (await json(join(OUT, '.cache.json'))).files['matrix/' + name].variants
+    for (const tier of ['immersive', 'w2880', 'hd']) {
+      assert.deepEqual(retained[tier], variants[tier], tier + ': WebP cache retained')
+      assert.deepEqual(retained.avif[tier], variants.avif[tier], tier + ': AVIF cache retained')
+    }
+    for (const [file, original] of before) {
+      assert.equal(hash(await readFile(file)), original.hash, file + ': bytes unchanged')
+      assert.equal((await stat(file)).mtimeMs, original.mtimeMs, file + ': no re-encode')
+    }
+    const updated = await json(join(ROOT, 'src/generated/categories.json'))
+    const result = updated.categories.find(category => category.slug === 'matrix').photos.find(photo => photo.filename === name)
+    assert.equal(result.hd, '/photos/w1600/matrix/l-small-hero.webp', 'first tier at the largest width wins')
+    const hero = updated.heroPriority.find(hero => hero.full === result.full)
+    for (const [value, context] of [[result.srcset, 'legacy.webp'], [hero.srcsetAvif, 'legacy.avif']]) {
+      const candidates = await srcset(value, context, stageWidths(photo.width, photo.height))
+      assert.match(candidates.at(-1).url, /(?:\/w1600\/|\-1600\.avif$)/, 'srcset also retains the first tier at the top width')
+    }
+  })
+
   // These final probes use one tiny source, so exercising the default cache path
   // adds milliseconds rather than re-encoding the fidelity matrix. All earlier
   // runs retain their explicit PHOTOS_CACHE_PATH and their existing snapshots.
@@ -1000,13 +1168,13 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     const cache = await json(defaultCache)
     assert.equal(cache.version, CACHE_VERSION)
     assert.ok(cache.files['probe/seed.png'])
-    assert.deepEqual((await json(join(ROOT, 'src/content/categories.json'))).heroPriority, [], 'generated empty selection takes precedence over defaults')
+    assert.deepEqual((await json(join(ROOT, 'src/generated/categories.json'))).heroPriority, [], 'generated empty selection takes precedence over defaults')
   })
 
   await t.test('hero config falls back to src/content only when src/generated is absent', async () => {
     await rm(join(ROOT, 'src/generated/site-config.json'))
     run('11b-default-config-fallback', cacheEnv)
-    const heroes = (await json(join(ROOT, 'src/content/categories.json'))).heroPriority
+    const heroes = (await json(join(ROOT, 'src/generated/categories.json'))).heroPriority
     assert.equal(heroes.length, 1, 'fallback selects the configured hero')
     assert.equal(heroes[0].category, 'probe')
     assert.match(heroes[0].full, /\/probe\/seed\.png$/)
