@@ -34,6 +34,19 @@ export default defineConfig({
   },
   vite: {
     cacheDir: './node_modules/.vite-cache',
+    optimizeDeps: {
+      esbuildOptions: {
+        // Dev pre-bundling only defines process.env.NODE_ENV (this object replaces Vite's own define,
+        // so NODE_ENV stays). react-draggable, pulled in by react-rnd for the admin layout editor, reads
+        // process.env.DRAGGABLE_DEBUG at render time; without a define `process` is undefined in the
+        // browser and the editor crashes with "Something went wrong". Production builds already
+        // replace `process.env` with an empty object.
+        define: {
+          'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+          'process.env.DRAGGABLE_DEBUG': 'false',
+        },
+      },
+    },
     css: {
       postcss: {
         plugins: [tailwindcss()],
