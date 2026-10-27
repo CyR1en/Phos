@@ -7,7 +7,7 @@
   letter-spacing: .01em;
   font-size: .875rem;
   line-height: 1.25;
-  /* translate/scale (not transform) so framer-motion inline transforms don't block the press feedback */
+  /* Independent translate/scale properties keep hover and press feedback composable. */
   transition: translate var(--duration-press) var(--ease-out-expo),
     scale var(--duration-press) var(--ease-out-expo),
     color var(--duration-ui) var(--ease-out-expo),

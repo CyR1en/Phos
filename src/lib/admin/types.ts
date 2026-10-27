@@ -77,6 +77,10 @@ export interface SiteConfig {
     immersiveGallery?: {
       enabled: boolean
       text: string
+      eyebrow?: string
+      intensity?: 'dramatic' | 'balanced' | 'subtle'
+      scrollLength?: 'short' | 'standard' | 'long'
+      atmosphere?: 'stars' | 'vignette' | 'none'
       // Photos and positions are tracked per-device so mobile and desktop can
       // be curated independently. Positions are parallel to the matching
       // *Photos array; null = use hardcoded DEFAULT_POSITIONS.

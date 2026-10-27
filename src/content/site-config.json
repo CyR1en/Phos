@@ -20,9 +20,9 @@
     "og_description": "",
     "layout": [
       "subheading",
+      "immersiveGallery",
       "selectedWork",
       "showcase",
-      "immersiveGallery",
       "services",
       "testimonials",
       "cta"
@@ -84,8 +84,8 @@
       "button": "Get in touch"
     },
     "immersiveGallery": {
-      "enabled": false,
-      "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      "enabled": true,
+      "text": "A different way of seeing.",
       "mobilePhotos": [
         "wedding/sample-01.jpg",
         "wedding/sample-02.jpg",
@@ -103,7 +103,11 @@
         "wedding/sample-05.jpg",
         "wedding/sample-06.jpg"
       ],
-      "desktopPositions": null
+      "desktopPositions": null,
+      "eyebrow": "",
+      "intensity": "dramatic",
+      "scrollLength": "standard",
+      "atmosphere": "stars"
     }
   },
   "about": {

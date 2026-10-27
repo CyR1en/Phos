@@ -114,6 +114,20 @@ export function ConfigProvider({ children }: { children: ComponentChildren }) {
   const pluginConfigsRef = useRef<PluginManifest[] | null>(pluginConfigs)
   const pluginEditVersionsRef = useRef<Map<string, number>>(new Map())
 
+  const hasUnsavedChanges = dirtyRef.current || pluginDirtyRef.current.size > 0
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Read refs so a completed save stops prompting before the next effect.
+      if (!dirtyRef.current && pluginDirtyRef.current.size === 0) return
+      event.preventDefault()
+      // returnValue is deprecated, but older WebKit still needs it to show the prompt.
+      ;(event as { returnValue: string }).returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [hasUnsavedChanges])
+
   const queryClient = useQueryClient()
 
   const setToken = (t: string | null) => {

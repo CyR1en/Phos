@@ -1,7 +1,7 @@
 import type { PositionConfig } from "@lib/admin/types"
 
 /**
- * Hardcoded default positions for the ImmersiveScrollGallery, transcribed from
+ * Shared first-frame positions for ImmersiveGallery, transcribed from
  * the original IMAGE_STYLES Tailwind classes. Used as a fallback when
  * `home.immersiveGallery.mobilePositions` / `desktopPositions` is null/absent
  * in config, and as the "Reset to default" target in the visual layout editor.

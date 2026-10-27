@@ -7,7 +7,7 @@ import CTA from '@components/CTA.astro'
 import CategoryCard from '@components/CategoryCard.astro'
 import SelectedWork from '@components/SelectedWork.astro'
 import Lightbox from '@components/Lightbox.astro'
-import ImmersiveScrollGallery from '@components/ui/immersive-scroll-gallery'
+import ImmersiveGallery from '@components/ImmersiveGallery.astro'
 import manifest from '@lib/categories'
 import config from '@lib/config'
 import type { PhotoPosition } from '@lib/admin/types'
@@ -34,24 +34,32 @@ const immersive = config.home.immersiveGallery
 const filterImmersiveLayout = (photos: string[] = [], positions?: PhotoPosition[] | null) => {
   const entries = photos.map((key, index) => ({ key, index })).filter(({ key }) => photoByKey.has(key))
   return {
-    photos: entries.map(({ key }) => key),
-    positions: positions ? entries.map(({ index }) => positions[index]) : null,
+    photos: entries.map(({ key }) => photoByKey.get(key)!),
+    positions: positions ? entries.map(({ index }) => positions[index] ?? null) : null,
   }
 }
 const { photos: desktopPhotos, positions: desktopPositions } = filterImmersiveLayout(immersive?.desktopPhotos, immersive?.desktopPositions)
 const { photos: mobilePhotos, positions: mobilePositions } = filterImmersiveLayout(immersive?.mobilePhotos, immersive?.mobilePositions)
-const immersiveSources = Object.fromEntries([...desktopPhotos, ...mobilePhotos].flatMap(key => {
-  const photo = photoByKey.get(key)
-  return photo ? [[key, { thumb: photo.thumb, immersive: photo.immersive, immersiveMobile: photo.immersiveMobile }]] : []
-}))
-const configuredImmersiveText = immersive?.text?.trim() || ''
-const immersiveText = /^lorem/i.test(configuredImmersiveText) ? '' : configuredImmersiveText
-const auto = [
+const immersiveText = immersive?.text ?? ''
+const immersiveVisible = Boolean(immersive?.enabled && (desktopPhotos.length || mobilePhotos.length))
+const photoKey = (photo: (typeof allPhotos)[number]) => `${photo.category}/${photo.filename}`
+const sceneKeys = new Set([...desktopPhotos, ...mobilePhotos].map(photoKey))
+const auto = [...new Map([
   ...heroPriority.flatMap(hero => allPhotos.filter(photo => photo.category === hero.category && photo.full === hero.full).slice(0, 1)),
   ...[...categories].sort((a, b) => a.order - b.order).flatMap(category => resolvePhotos(category.photos.slice(0, 2).map(photo => `${category.slug}/${photo.filename}`))),
-]
-const selectedCandidates = [resolvePhotos(sw.photos || []), resolvePhotos(immersive?.desktopPhotos || [])]
-  .find(list => list.length >= 3) ?? auto
+].map(photo => [photoKey(photo), photo] as const)).values()]
+// Keep automatic tiles distinct from the scene. When fewer than three distinct picks remain,
+// pad with other photographs outside the scene before admitting any scene photo, so the reveal
+// is not spoiled above it. The independently rendered hero may still share a photograph.
+const distinctAuto = auto.filter(photo => !sceneKeys.has(photoKey(photo)))
+const outsideScene = allPhotos.filter(photo => !sceneKeys.has(photoKey(photo)) && !distinctAuto.includes(photo))
+const paddedAuto = [...distinctAuto, ...outsideScene].slice(0, Math.max(3, distinctAuto.length))
+const topUp = paddedAuto.length < 3 ? auto.filter(photo => sceneKeys.has(photoKey(photo))).slice(0, 3 - paddedAuto.length) : []
+const autoSelected = immersiveVisible ? [...paddedAuto, ...topUp] : auto
+const curatedSelected = resolvePhotos(sw.photos || [])
+// With no scene, preserve the existing fallback to its curated photo list.
+const curatedImmersive = immersiveVisible ? [] : resolvePhotos(immersive?.desktopPhotos || [])
+const selectedCandidates = curatedSelected.length >= 3 ? curatedSelected : curatedImmersive.length >= 3 ? curatedImmersive : autoSelected
 const selected = [...new Map(selectedCandidates.map(photo => [`${photo.category}/${photo.filename}`, photo] as const)).values()].slice(0, 9)
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321'
 const ogImage = config.site?.og?.image || heroPriority[0]?.ogImage || heroPriority[0]?.full
@@ -66,7 +74,7 @@ const jsonLd = {
 
 const ogTitle = config.home?.og_title || config.site.title
 const ogDescription = config.home?.og_description || config.site.description
-const defaultLayout = ['subheading', 'selectedWork', 'showcase', 'immersiveGallery', 'services', 'testimonials', 'cta']
+const defaultLayout = ['subheading', 'immersiveGallery', 'selectedWork', 'showcase', 'services', 'testimonials', 'cta']
 const layout = [...new Set(config.home.layout || defaultLayout)]
 // Older saved layouts may predate known sections; preserve their existing order.
 for (const section of defaultLayout) {
@@ -78,138 +86,148 @@ for (const section of defaultLayout) {
   }
 }
 if (!layout.includes('immersiveGallery')) layout.push('immersiveGallery')
+// Calculate the actual next rendered section, including empty/disabled content.
+const visibleLayout = layout.filter(section => {
+  if (section === 'subheading') return Boolean(config.home.hero.subheading)
+  if (section === 'immersiveGallery') return immersive?.enabled && (desktopPhotos.length || mobilePhotos.length)
+  if (section === 'selectedWork') return sw.enabled !== false && selected.length >= 3
+  if (section === 'services') return config.home.services.enabled !== false && categories.some(category => category.offer_service)
+  if (section === 'testimonials') return config.home.testimonials.enabled !== false && config.home.testimonials.testimonials.length > 0
+  if (section === 'cta') return config.home.cta.enabled !== false
+  if (section === 'showcase') {
+    if (config.home.showcase?.enabled === false) return false
+    const items = config.home.showcase?.items || []
+    return items.length === 0 ? categories.length > 0 : items.some(item => item.type === 'gallery'
+      ? galleries.some(gallery => gallery.slug === item.slug)
+      : categories.some(category => category.slug === item.slug))
+  }
+  return false
+})
 ---
 
 <BaseLayout title={ogTitle} description={ogDescription} image={ogImage}>
   <Hero heroPriority={heroPriority} />
 
-  {layout.map((sectionName: string) => {
-    if (sectionName === 'subheading' && config.home.hero.subheading) {
-      return (
-        <section data-animate class="animate-reveal py-[calc(var(--spacing-section)/2)]">
-          <div class="mx-auto max-w-2xl px-6 text-center">
-            <p class="text-lead text-body-muted" data-config="home.hero.subheading">{config.home.hero.subheading}</p>
-          </div>
-        </section>
-      )
-    }
-
-    if (sectionName === 'selectedWork' && sw.enabled !== false && selected.length >= 3) {
-      return <SelectedWork photos={selected} heading={sw.heading || 'Selected work'} />
-    }
-
-    if (sectionName === 'services' && config.home.services.enabled !== false) {
-      return <Services />
-    }
-
-    if (sectionName === 'immersiveGallery' && immersive?.enabled && desktopPhotos.length) {
-      return (
-        <div class="immersive-gallery relative h-[200vh] motion-reduce:h-auto">
-          <ImmersiveScrollGallery
-            client:only="preact"
-            sources={immersiveSources}
-            mobilePhotos={mobilePhotos}
-            mobilePositions={mobilePositions}
-            desktopPhotos={desktopPhotos}
-            desktopPositions={desktopPositions}
-            text={immersiveText}
-          >
-            <div slot="fallback" class="mx-auto max-w-6xl px-6 py-12">
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-start gap-4">
-                {resolvePhotos(desktopPhotos.slice(0, 6)).map(photo => (
-                  <img src={photo.thumb} alt={photo.title || ''} width={photo.width} height={photo.height} class="block w-full h-auto" loading="lazy" decoding="async" />
-                ))}
-              </div>
-              {immersiveText && <h2 class="max-w-3xl mx-auto text-ink text-2xl md:text-4xl py-8 font-display text-center" data-config="home.immersiveGallery.text">{immersiveText}</h2>}
-            </div>
-          </ImmersiveScrollGallery>
-        </div>
-      )
-    }
-
-    if (sectionName === 'showcase' && config.home.showcase?.enabled !== false) {
-      return (() => {
-        const showcase = config.home.showcase || { heading: 'Showcase', items: [] }
-        const configured = showcase.items || []
-        const sourceItems = configured.length === 0
-          ? categories.map((c: any) => ({ type: 'category', slug: c.slug }))
-          : configured
-        const items = sourceItems.map((item: any) => {
-          if (item.type === 'gallery') {
-            const gal = galleries.find((g: any) => g.slug === item.slug)
-            if (!gal) return null
-            return {
-              name: gal.name,
-              slug: gal.slug,
-              description: gal.description,
-              cover: gal.cover,
-              coverSrcset: gal.coverSrcset || '',
-              coverWidth: gal.coverWidth ?? null,
-              coverHeight: gal.coverHeight ?? null,
-              coverFocus: gal.coverFocus,
-              photoCount: gal.photoCount,
-              blur: gal.coverBlur,
-              link: `/galleries/${gal.slug}/`,
-              actionLabel: 'View gallery',
-              displayTitle: item.title || undefined,
-              displayDescription: item.description !== undefined ? item.description : undefined,
-            }
-          }
-          const cat: any = categories.find((c: any) => c.slug === item.slug)
-          if (!cat) return null
-          return {
-            name: cat.name,
-            slug: cat.slug,
-            description: cat.description,
-            cover: cat.cover,
-            coverSrcset: cat.coverSrcset || '',
-            coverWidth: cat.coverWidth,
-            coverHeight: cat.coverHeight,
-            coverFocus: cat.coverFocus,
-            photoCount: cat.photoCount,
-            blur: cat.coverBlur,
-            link: `/photos/all/?cat=${cat.slug}`,
-            actionLabel: 'View photos',
-            displayTitle: item.title || undefined,
-            displayDescription: item.description !== undefined ? item.description : undefined,
-          }
-        }).filter(Boolean)
-
-        if (items.length === 0) return null
-
+  {visibleLayout.map((sectionName: string, sectionIndex: number) => {
+    const content = (() => {
+      if (sectionName === 'subheading' && config.home.hero.subheading) {
         return (
-          <section id="showcase" class="showcase-section" aria-labelledby="showcase-heading">
-            <div class="mx-auto w-full max-w-wide px-6 lg:px-8">
-              <div class="showcase-header">
-                <div data-animate-header>
-                  <h2 id="showcase-heading" class="section-heading font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
-                </div>
-                <a href="/photos/all/" class="showcase-browse">Browse all photos</a>
-              </div>
-
-              <div class="showcase-list">
-                {items.map((item: any) => (
-                  <CategoryCard
-                    name={item.name}
-                    slug={item.slug}
-                    description={item.description}
-                    cover={item.cover}
-                    coverSrcset={item.coverSrcset || undefined}
-                    coverWidth={item.coverWidth}
-                    coverHeight={item.coverHeight}
-                    coverFocus={item.coverFocus ?? undefined}
-                    photoCount={item.photoCount}
-                    blur={item.blur}
-                    link={item.link}
-                    displayTitle={item.displayTitle}
-                    displayDescription={item.displayDescription}
-                    actionLabel={item.actionLabel}
-                  />
-                ))}
-              </div>
+          <section data-animate class="animate-reveal py-[calc(var(--spacing-section)/2)]">
+            <div class="mx-auto max-w-2xl px-6 text-center">
+              <p class="text-lead text-body-muted" data-config="home.hero.subheading">{config.home.hero.subheading}</p>
             </div>
           </section>
         )
+      }
+
+      if (sectionName === 'selectedWork' && sw.enabled !== false && selected.length >= 3) {
+        return <SelectedWork photos={selected} heading={sw.heading || 'Selected work'} />
+      }
+
+      if (sectionName === 'services' && config.home.services.enabled !== false) {
+        return <Services />
+      }
+
+      if (sectionName === 'immersiveGallery' && immersive?.enabled && (desktopPhotos.length || mobilePhotos.length)) {
+        return (
+            <ImmersiveGallery
+              mobilePhotos={mobilePhotos}
+              mobilePositions={mobilePositions}
+              desktopPhotos={desktopPhotos}
+              desktopPositions={desktopPositions}
+              text={immersiveText}
+              eyebrow={immersive.eyebrow ?? ''}
+              intensity={immersive.intensity ?? 'dramatic'}
+              scrollLength={immersive.scrollLength ?? 'standard'}
+              atmosphere={immersive.atmosphere ?? 'stars'}
+              hasNext={sectionIndex < visibleLayout.length - 1}
+            />
+        )
+      }
+
+      if (sectionName === 'showcase' && config.home.showcase?.enabled !== false) {
+        return (() => {
+          const showcase = config.home.showcase || { heading: 'Showcase', items: [] }
+          const configured = showcase.items || []
+          const sourceItems = configured.length === 0
+            ? categories.map((c: any) => ({ type: 'category', slug: c.slug }))
+            : configured
+          const items = sourceItems.map((item: any) => {
+            if (item.type === 'gallery') {
+              const gal = galleries.find((g: any) => g.slug === item.slug)
+              if (!gal) return null
+              return {
+                name: gal.name,
+                slug: gal.slug,
+                description: gal.description,
+                cover: gal.cover,
+                coverSrcset: gal.coverSrcset || '',
+                coverWidth: gal.coverWidth ?? null,
+                coverHeight: gal.coverHeight ?? null,
+                coverFocus: gal.coverFocus,
+                photoCount: gal.photoCount,
+                blur: gal.coverBlur,
+                link: `/galleries/${gal.slug}/`,
+                actionLabel: 'View gallery',
+                displayTitle: item.title || undefined,
+                displayDescription: item.description !== undefined ? item.description : undefined,
+              }
+            }
+            const cat: any = categories.find((c: any) => c.slug === item.slug)
+            if (!cat) return null
+            return {
+              name: cat.name,
+              slug: cat.slug,
+              description: cat.description,
+              cover: cat.cover,
+              coverSrcset: cat.coverSrcset || '',
+              coverWidth: cat.coverWidth,
+              coverHeight: cat.coverHeight,
+              coverFocus: cat.coverFocus,
+              photoCount: cat.photoCount,
+              blur: cat.coverBlur,
+              link: `/photos/all/?cat=${cat.slug}`,
+              actionLabel: 'View photos',
+              displayTitle: item.title || undefined,
+              displayDescription: item.description !== undefined ? item.description : undefined,
+            }
+          }).filter(Boolean)
+
+          if (items.length === 0) return null
+
+          return (
+            <section id="showcase" class="showcase-section" aria-labelledby="showcase-heading">
+              <div class="mx-auto w-full max-w-wide px-6 lg:px-8">
+                <div class="showcase-header">
+                  <div data-animate-header>
+                    <h2 id="showcase-heading" class="section-heading font-display text-ink" data-config="home.showcase.heading">{showcase.heading}</h2>
+                  </div>
+                  <a href="/photos/all/" class="showcase-browse">Browse all photos</a>
+                </div>
+
+                <div class="showcase-list">
+                  {items.map((item: any) => (
+                    <CategoryCard
+                      name={item.name}
+                      slug={item.slug}
+                      description={item.description}
+                      cover={item.cover}
+                      coverSrcset={item.coverSrcset || undefined}
+                      coverWidth={item.coverWidth}
+                      coverHeight={item.coverHeight}
+                      coverFocus={item.coverFocus ?? undefined}
+                      photoCount={item.photoCount}
+                      blur={item.blur}
+                      link={item.link}
+                      displayTitle={item.displayTitle}
+                      displayDescription={item.displayDescription}
+                      actionLabel={item.actionLabel}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+          )
       })()
     }
 
@@ -230,6 +248,10 @@ if (!layout.includes('immersiveGallery')) layout.push('immersiveGallery')
     }
 
     return null
+    })()
+    return visibleLayout[sectionIndex - 1] === 'immersiveGallery'
+      ? <div class="immersive-next">{content}</div>
+      : content
   })}
 
   {sw.enabled !== false && selected.length >= 3 && <Lightbox photos={selected} />}

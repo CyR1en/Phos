@@ -1,0 +1,132 @@
+/* One sticky stage, two authored collages, and one set of sampled camera curves. */
+.immersive {
+  position: relative;
+  isolation: isolate;
+  view-timeline-name: --immersive;
+  view-timeline-axis: block;
+}
+.immersive[data-has-next] { margin-bottom: -20vh; margin-bottom: -20lvh; }
+.immersive-next { position: relative; z-index: 1; }
+.immersive-stage { position: sticky; top: 0; height: 100vh; height: 100lvh; overflow: clip; }
+.immersive-frame, .immersive-scene { position: absolute; inset: 0; pointer-events: none; }
+.immersive-frame { z-index: 1; transform-origin: center; }
+.immersive-scene[data-device="desktop"] { display: none; }
+.immersive-layer { position: absolute; overflow: hidden; }
+.immersive-layer > img { display: block; width: 100%; height: 100%; object-fit: cover; transform-origin: center; }
+.immersive-copy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.5rem;
+  pointer-events: none;
+}
+.immersive-copy-content {
+  width: 100%;
+  max-height: calc(100lvh - var(--site-header-height) - 2rem);
+  overflow-y: auto;
+  pointer-events: auto;
+  text-align: center;
+  translate: 0 calc(var(--site-header-height)/2);
+}
+.immersive[data-atmosphere="vignette"] .immersive-copy { transition: translate 600ms var(--ease-out-expo); }
+.immersive-tagline {
+  max-width: 22ch;
+  margin: 0 auto;
+  font-size: min(var(--text-h2), 8.5vh);
+  font-weight: 400;
+  line-height: var(--text-h2--line-height);
+  letter-spacing: var(--text-h2--letter-spacing);
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+.immersive-tagline-long {
+  max-width: 30ch;
+  font-size: min(var(--text-h3), 6.5vh);
+  line-height: var(--text-h3--line-height);
+  letter-spacing: var(--text-h3--letter-spacing);
+}
+.immersive-eyebrow { margin: 0 0 1.25rem; }
+:where(.js) :is(.immersive-tagline, .immersive-eyebrow) { opacity: 0; }
+.immersive-atmosphere { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.immersive-starfield { mask-image: radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%); }
+.immersive-stars {
+  position: absolute;
+  inset: -24px;
+  background-color: var(--color-ink);
+  opacity: 0;
+  mask-image: var(--immersive-star-mask);
+  mask-size: var(--immersive-star-tile) var(--immersive-star-tile);
+  mask-repeat: repeat;
+  transition: translate 600ms var(--ease-out-expo);
+}
+/* Seed 7319: fixed 20/8/3-dot tiles, processed with the stylesheet for WebKit masks. */
+.immersive-stars-far {
+  --immersive-star-alpha: .14;
+  --immersive-star-tile: 997px;
+  --immersive-star-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22997%22%20height%3D%22997%22%3E%3Ccircle%20cx%3D%2274.06%22%20cy%3D%22140.45%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22199.98%22%20cy%3D%22588.51%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22250.86%22%20cy%3D%22118.82%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22105.04%22%20cy%3D%22958.82%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22790.28%22%20cy%3D%2248.99%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22612.44%22%20cy%3D%22873.69%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22261.40%22%20cy%3D%22238.63%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22130.81%22%20cy%3D%22861.64%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22640.91%22%20cy%3D%22560.82%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22718.82%22%20cy%3D%22987.88%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22588.36%22%20cy%3D%22881.76%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22829.55%22%20cy%3D%2289.78%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22246.61%22%20cy%3D%22876.61%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22456.63%22%20cy%3D%22831.61%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22764.06%22%20cy%3D%22241.88%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%2216.94%22%20cy%3D%22361.80%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22850.46%22%20cy%3D%22561.27%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22370.77%22%20cy%3D%22225.99%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22870.47%22%20cy%3D%22399.86%22%20r%3D%220.5%22%2F%3E%3Ccircle%20cx%3D%22705.71%22%20cy%3D%22920.64%22%20r%3D%220.5%22%2F%3E%3C%2Fsvg%3E");
+}
+.immersive-stars-mid {
+  --immersive-star-alpha: .20;
+  --immersive-star-tile: 769px;
+  --immersive-star-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22769%22%20height%3D%22769%22%3E%3Ccircle%20cx%3D%22310.27%22%20cy%3D%22212.34%22%20r%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%22151.22%22%20cy%3D%22263.94%22%20r%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%22201.61%22%20cy%3D%22492.33%22%20r%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%22507.25%22%20cy%3D%22569.55%22%20r%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%22292.46%22%20cy%3D%2265.36%22%20r%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%22560.61%22%20cy%3D%22175.38%22%20r%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%2253.41%22%20cy%3D%22195.13%22%20r%3D%220.75%22%2F%3E%3Ccircle%20cx%3D%2293.67%22%20cy%3D%22605.34%22%20r%3D%220.75%22%2F%3E%3C%2Fsvg%3E");
+  display: none;
+}
+.immersive-stars-near {
+  --immersive-star-alpha: .26;
+  --immersive-star-tile: 613px;
+  --immersive-star-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22613%22%20height%3D%22613%22%3E%3Ccircle%20cx%3D%22310.51%22%20cy%3D%22194.98%22%20r%3D%221%22%2F%3E%3Ccircle%20cx%3D%2228.81%22%20cy%3D%22211.95%22%20r%3D%221%22%2F%3E%3Ccircle%20cx%3D%22345.42%22%20cy%3D%22568.37%22%20r%3D%221%22%2F%3E%3C%2Fsvg%3E");
+}
+.dark .immersive-stars-far { --immersive-star-alpha: .28; }
+.dark .immersive-stars-mid { --immersive-star-alpha: .40; }
+.dark .immersive-stars-near { --immersive-star-alpha: .55; }
+.immersive-vignette {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse 80% 70% at 50% 52%, transparent 55%, color-mix(in oklab, var(--color-canvas) 70%, transparent) 100%);
+}
+
+@supports (animation-timeline: scroll()) {
+  .immersive [data-immersive-animate], .immersive [data-immersive-exit] {
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: --immersive;
+  }
+  .immersive [data-immersive-animate] { animation-range: contain 0% contain 100%; }
+  .immersive [data-immersive-exit] { animation-range: exit 0% exit 100%; }
+}
+/* The fallback pauses these exact animations and scrubs them with a negative delay. */
+html[data-immersive-fallback] .immersive :is([data-immersive-animate], [data-immersive-exit]) {
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-play-state: paused;
+  animation-timeline: auto;
+  animation-delay: calc(var(--immersive-progress, 0) * -1s);
+}
+html[data-immersive-fallback] .immersive [data-immersive-exit] { animation-delay: calc(var(--immersive-exit, 0) * -1s); }
+html[data-immersive-fallback] .immersive[data-immersive-moving] .immersive-layer { will-change: transform; }
+
+@media (width < 768px) {
+  .immersive[data-empty-mobile] { display: none; }
+}
+@media (width >= 768px) {
+  .immersive-scene[data-device="mobile"] { display: none; }
+  .immersive-scene[data-device="desktop"], .immersive-stars-mid { display: block; }
+  .immersive[data-empty-desktop] { display: none; }
+}
+@media (prefers-reduced-motion: reduce), print {
+  .immersive { height: auto !important; margin-bottom: 0 !important; }
+  .immersive .immersive-stage { position: relative; height: auto; overflow: clip; }
+  .immersive .immersive-frame { position: relative; height: 100vh; height: 100svh; visibility: visible; }
+  .immersive [data-immersive-animate], .immersive [data-immersive-exit] { animation-name: none !important; will-change: auto !important; }
+  .immersive .immersive-atmosphere { display: none; }
+  .immersive .immersive-copy { position: relative; padding: calc(var(--spacing-section)/2) 1.5rem; transform: none; translate: none; }
+  .immersive .immersive-copy-content { translate: none; max-height: none; overflow: visible; }
+  .immersive .immersive-tagline, .immersive .immersive-eyebrow { opacity: 1; transform: none; }
+  .immersive .immersive-tagline { font-size: var(--text-h2); }
+  .immersive .immersive-tagline-long { font-size: var(--text-h3); }
+}

@@ -1,4 +1,5 @@
 import { RANGES } from './utils'
+import { useId } from 'preact/hooks'
 
 interface Props {
   /** Current value, or undefined when photos have differing br values. */
@@ -19,14 +20,15 @@ interface Props {
  * "-" / "." are valid intermediate states).
  */
 export function BorderRadiusSlider({ value, isMulti, isMixed, onChange }: Props) {
+  const id = useId()
   // Render 0 for the thumb position when mixed; the label shows "mixed".
   // Once the user drags, onChange fires and all selected photos adopt the new
   // value, so isMixed becomes false and the thumb tracks normally.
-  const sliderVal = isMixed ? 0 : (value ?? 0)
+  const sliderVal = isMixed ? 0 : (value ?? 3)
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-xs text-muted uppercase tracking-wide">
+        <label htmlFor={id} className="text-xs text-muted uppercase tracking-wide">
           Border Radius (px){isMulti ? ' (bulk)' : ''}
         </label>
         <span className="text-xs font-mono text-ink tabular-nums">
@@ -34,16 +36,14 @@ export function BorderRadiusSlider({ value, isMulti, isMixed, onChange }: Props)
         </span>
       </div>
       <input
+        id={id}
         type="range"
         min={RANGES.br.min}
         max={RANGES.br.max}
         step={1}
         value={sliderVal}
-        // Preact/React wire `onChange` for range inputs to the input event
-        // (continuous), so a single handler is enough and the thumb tracks the
-        // cursor.
-        onChange={(e) => onChange(Number((e.currentTarget as HTMLInputElement).value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-canvas border border-border accent-primary"
+        onInput={(e) => onChange(Number((e.currentTarget as HTMLInputElement).value))}
+        className="w-full min-h-11 cursor-pointer accent-primary"
       />
     </div>
   )

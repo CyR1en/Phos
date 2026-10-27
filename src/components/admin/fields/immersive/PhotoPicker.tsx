@@ -1,6 +1,8 @@
 import { Button } from '@components/admin/ui/Button'
 import { CheckIcon } from './icons'
 import { thumbUrl } from './utils'
+import { useId } from 'preact/hooks'
+import { useModalFocus } from './dialog'
 
 export interface PickerCategory {
   slug: string
@@ -32,18 +34,23 @@ export function PhotoPicker({
   onConfirm,
   onClose,
 }: Props) {
+  const dialogRef = useModalFocus()
+  const id = useId()
   return (
     <div
+      ref={dialogRef}
+      role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} tabIndex={-1}
       className="fixed inset-0 z-[110] bg-black/80 flex items-center justify-center p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
+      onKeyDown={(e) => { if (e.key === 'Tab') return; e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); onClose() } }}
     >
       <div className="bg-canvas border border-border rounded-lg w-full max-w-3xl max-h-[80vh] flex flex-col shadow-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface">
-          <h3 className="text-sm font-semibold text-ink">Add photos to {device} layout</h3>
+          <h3 id={`${id}-title`} className="text-sm font-semibold text-ink">Add photos to {device} layout</h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-muted hover:text-ink transition-colors text-lg leading-none px-1"
+            className="text-muted hover:text-ink transition-colors text-lg leading-none min-w-11 min-h-11"
             aria-label="Close"
           >
             &times;
@@ -51,7 +58,7 @@ export function PhotoPicker({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-3 text-xs text-muted">Selected: {pendingAdd.length}</div>
+          <div className="mb-3 text-xs text-muted">Selected: {pendingAdd.length} · Up to {24 - activePhotos.length} more photos</div>
           {categories.length === 0 && (
             <p className="text-sm text-muted">No categories available. Add photos to your photos source and regenerate.</p>
           )}
@@ -64,10 +71,14 @@ export function PhotoPicker({
                   const isSelected = pendingAdd.includes(photoPath)
                   const alreadyAdded = activePhotos.includes(photoPath)
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={photoPath}
+                      aria-label={filename}
+                      aria-pressed={isSelected}
+                      disabled={alreadyAdded || (!isSelected && pendingAdd.length + activePhotos.length >= 24)}
                       onClick={() => !alreadyAdded && onToggle(photoPath)}
-                      className={`relative aspect-square rounded-sm overflow-hidden border-2 transition-all ${
+                      className={`relative min-w-11 min-h-11 aspect-square rounded-sm overflow-hidden border-2 transition-all ${
                         isSelected
                           ? 'border-primary ring-1 ring-primary'
                           : 'border-transparent hover:border-border'
@@ -87,10 +98,10 @@ export function PhotoPicker({
                       )}
                       {alreadyAdded && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <span className="text-[10px] text-white">Added</span>
+                          <span className="text-xs text-white">Added</span>
                         </div>
                       )}
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -99,8 +110,8 @@ export function PhotoPicker({
         </div>
 
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-border bg-surface">
-          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" size="sm" onClick={onConfirm} disabled={pendingAdd.length === 0}>
+          <Button variant="secondary" size="sm" className="min-h-11" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="sm" className="min-h-11" onClick={onConfirm} disabled={pendingAdd.length === 0}>
             Add Selected ({pendingAdd.length})
           </Button>
         </div>

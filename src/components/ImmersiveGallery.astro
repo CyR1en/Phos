@@ -1,0 +1,122 @@
+---
+import type { ManifestPhoto, PhotoPosition } from '@lib/admin/types'
+import {
+  cropImageStyle,
+  ASPECT, BREAKPOINT, INTENSITY, RUNWAY, STAGE, frameStyle, peakSizes, resolveLayers, sceneKeyframes,
+  type Atmosphere, type Device, type Intensity, type ScrollLength,
+} from '@lib/immersive-motion'
+
+interface Props {
+  mobilePhotos: ManifestPhoto[]
+  desktopPhotos: ManifestPhoto[]
+  mobilePositions?: (PhotoPosition | null)[] | null
+  desktopPositions?: (PhotoPosition | null)[] | null
+  text?: string
+  eyebrow?: string
+  intensity?: Intensity
+  scrollLength?: ScrollLength
+  atmosphere?: Atmosphere
+  hasNext?: boolean
+}
+
+const {
+  mobilePhotos, desktopPhotos, mobilePositions = null, desktopPositions = null,
+  text = '', eyebrow = '', intensity = 'dramatic', scrollLength = 'standard', atmosphere = 'stars', hasNext = false,
+} = Astro.props
+const travel = RUNWAY[scrollLength] ?? RUNWAY.standard
+const strength = INTENSITY[intensity] ?? INTENSITY.dramatic
+const headingId = 'immersive-tagline'
+// Text renders verbatim; only an all-whitespace tagline counts as absent.
+const hasCopy = text.trim().length > 0
+const style = (values: Record<string, string>) => Object.entries(values).map(([key, value]) => `${key}:${value}`).join(';')
+const cropStyle = (pos: PhotoPosition) => {
+  const crop = cropImageStyle(pos.cropX ?? 50, pos.cropY ?? 50, pos.cropZoom ?? 1)
+  return { 'object-position': crop.objectPosition, transform: crop.transform, 'transform-origin': crop.transformOrigin }
+}
+
+// Merge real manifest tiers; retain the 1100w mobile tier and up to 2200w on desktop.
+const ladder = (photo: ManifestPhoto, device: Device) => {
+  const cap = device === 'mobile' ? 1100 : 2200
+  const widths = new Map<number, string>()
+  for (const entry of [photo.gridSrcset, photo.srcset].filter(Boolean).join(',').split(',')) {
+    const [url, descriptor] = entry.trim().split(/\s+/)
+    const width = /^\d+w$/.test(descriptor ?? '') ? parseInt(descriptor) : 0
+    if (url && width > 0 && width <= cap && !widths.has(width)) widths.set(width, url)
+  }
+  return [...widths].sort(([a], [b]) => a - b).map(([width, url]) => `${url} ${width}w`).join(', ')
+}
+
+const scenes = ([
+  ['mobile', mobilePhotos, mobilePositions], ['desktop', desktopPhotos, desktopPositions],
+] as const).map(([device, photos, positions]) => {
+  const layers = resolveLayers(positions, photos.length, device)
+    .filter(layer => !layer.hidden)
+  return { device, layers, photos: layers.map(layer => {
+    const photo = photos[layer.index]
+    // sizes describes the source's covered width, including a portrait box's horizontal crop.
+    const aspect = photo.width && photo.height ? photo.width / photo.height : 1
+    const coveredWidth = Math.max(layer.pos.w, layer.pos.h / ASPECT[device] * aspect)
+    const sizes = peakSizes({ ...layer, pos: { ...layer.pos, w: coveredWidth } }, strength, device as Device)
+    return { layer, photo, srcset: ladder(photo, device), sizes }
+  }) }
+})
+// Device media blocks allow the same public animation names with independently authored layouts.
+const keyframes = scenes.map(scene => `@media (width ${scene.device === 'mobile' ? '<' : '>='} ${BREAKPOINT}px){${sceneKeyframes(scene.layers, strength)}}`).join('\n')
+---
+
+<section
+  class="immersive" data-immersive-gallery data-atmosphere={atmosphere} data-intensity={intensity}
+  data-scroll-length={scrollLength} data-has-next={hasNext || undefined}
+  data-empty-mobile={!scenes[0].layers.length || undefined} data-empty-desktop={!scenes[1].layers.length || undefined}
+  aria-labelledby={hasCopy ? headingId : undefined} aria-label={hasCopy ? undefined : 'Immersive gallery'} style={`--immersive-travel:${travel};height:calc(100vh + ${travel}vh);height:calc(100lvh + ${travel}lvh)`}
+>
+  <div class="immersive-stage">
+    {atmosphere !== 'none' && (
+      <div class:list={['immersive-atmosphere', { 'immersive-starfield': atmosphere === 'stars' }]} aria-hidden="true" data-immersive-exit style="animation-name:immersive-exit-stars">
+        {atmosphere === 'stars' ? ['far', 'mid', 'near'].map(name => (
+          <div class={`immersive-stars immersive-stars-${name}`} data-immersive-animate style={`animation-name:immersive-stars-${name}`} />
+        )) : <div class="immersive-vignette" data-immersive-animate style="animation-name:immersive-vignette" />}
+      </div>
+    )}
+    <div class="immersive-frame" aria-hidden="true" data-immersive-animate style={`transform:translateY(${STAGE.offsetY}vh) scale(${STAGE.scale});animation-name:immersive-plane`}>
+      {scenes.map(({ device, photos }) => (
+        <div class="immersive-scene" data-device={device}>
+          {photos.map(({ layer, photo, srcset, sizes }) => (
+            <div class="immersive-layer rounded-photo" data-immersive-animate style={style({
+              ...frameStyle(layer.pos), '--immersive-layer': String(layer.index),
+              'animation-name': `immersive-layer-${layer.index}`,
+            })}>
+              <img src={device === 'mobile' ? photo.thumbMobile || photo.thumb : photo.thumb} srcset={srcset || undefined}
+                sizes={sizes.first} data-sizes-peak={sizes.peak} width={photo.width} height={photo.height}
+                loading="lazy" decoding="async" fetchpriority="low" alt="" aria-hidden="true"
+                style={style({ ...cropStyle(layer.pos), ...(photo.blur ? { background: `url("${photo.blur}") ${layer.pos.cropX ?? 50}% ${layer.pos.cropY ?? 50}% / cover` } : {}) })} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+    {hasCopy ? (
+      <div class="immersive-copy" data-immersive-exit style="animation-name:immersive-exit-copy">
+        <div class="immersive-copy-content">
+          {eyebrow && <p class="eyebrow immersive-eyebrow" data-immersive-animate style="animation-name:immersive-eyebrow">{eyebrow}</p>}
+          <h2 id={headingId} class:list={['immersive-tagline font-display', { 'immersive-tagline-long': text.length > 90 }]}
+            data-immersive-animate style="animation-name:immersive-tagline" data-config="home.immersiveGallery.text">{text}</h2>
+        </div>
+      </div>
+    ) : <h2 id={headingId} class="sr-only">Photo gallery</h2>}
+  </div>
+  <style is:inline set:html={keyframes}></style>
+  <noscript>
+    <style is:inline>
+      .immersive { height: auto !important; margin-bottom: 0 !important; }
+      .immersive .immersive-stage { position: relative; height: auto; overflow: clip; }
+      .immersive .immersive-frame { position: relative; height: 100vh; height: 100svh; visibility: visible; }
+      .immersive [data-immersive-animate], .immersive [data-immersive-exit] { animation-name: none !important; }
+      .immersive .immersive-atmosphere { display: none; }
+      .immersive .immersive-copy { position: relative; padding: calc(var(--spacing-section)/2) 1.5rem; transform: none; translate: none; }
+      .immersive .immersive-copy-content { translate: none; max-height: none; overflow: visible; }
+      .immersive .immersive-tagline, .immersive .immersive-eyebrow { opacity: 1; transform: none; }
+    </style>
+  </noscript>
+</section>
+<script src="../scripts/immersive.ts"></script>

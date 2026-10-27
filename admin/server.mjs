@@ -7,6 +7,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import nodemailer from 'nodemailer'
 import { assembleConfig, writeFullConfig, getMeta, getPluginConfig, setPluginConfig, getGalleries, getGallery, createGallery, updateGallery, deleteGallery, setGalleryPhotos } from '../lib/db.mjs'
 import { deepMerge } from '../lib/merge.mjs'
+import { validateImmersive } from '../lib/immersive-schema.mjs'
 import { stripSecrets, publicConfigJson } from '../lib/config-secrets.mjs'
 import { atomicWriteFileSync } from '../lib/atomic-write.mjs'
 
@@ -122,7 +123,7 @@ function stripCrlf(s) {
 
 const ALLOWED_CONFIG_KEYS = new Set(['site', 'home', 'about', 'contact', 'notFound', 'portfolio'])
 
-function validateConfig(body) {
+function validateConfig(body, storedGallery) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return 'Config must be a JSON object'
   }
@@ -130,6 +131,9 @@ function validateConfig(body) {
     if (!ALLOWED_CONFIG_KEYS.has(key)) {
       return `Unknown config key: "${key}". Allowed: ${[...ALLOWED_CONFIG_KEYS].join(', ')}`
     }
+  }
+  if (body.home && Object.hasOwn(body.home, 'immersiveGallery')) {
+    return validateImmersive(body.home.immersiveGallery, storedGallery)
   }
   return null // null = valid
 }
@@ -336,14 +340,22 @@ createServer(async (req, res) => {
     if (!requireAuth(req, res)) return
     const body = await parseBody(req)
     if (!body) return json(res, { error: 'Invalid JSON' }, 400)
-    const validationError = validateConfig(body)
-    if (validationError) {
-      return json(res, { error: validationError }, 400)
-    }
     const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
     const current = assembleConfig()
     const baseline = deepMerge(defaults, current)
+    const storedGallery = baseline.home?.immersiveGallery
+    const validationError = validateConfig(body, storedGallery)
+    if (validationError) {
+      return json(res, { error: validationError }, 400)
+    }
     const merged = deepMerge(baseline, body)
+    // A partial photo-list update can invalidate positions retained by the merge.
+    const mergedValidationError = body.home && Object.hasOwn(body.home, 'immersiveGallery')
+      ? validateImmersive(merged.home.immersiveGallery, storedGallery)
+      : null
+    if (mergedValidationError) {
+      return json(res, { error: mergedValidationError }, 400)
+    }
     writeFullConfig(merged)
     // Reassemble normalized SQLite values with the same schema filter as merge-config.
     const buildConfig = deepMerge(defaults, assembleConfig(), { skipUnknownKeys: true })

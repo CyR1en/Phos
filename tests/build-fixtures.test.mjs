@@ -6,22 +6,14 @@ import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { repoRoot } from './helpers/bundle.mjs'
+import { repoRoot, bundle } from './helpers/bundle.mjs'
+import { assertImmersiveScene, assertImmersiveImages, keyframeStops, assertFrameGeometry } from './helpers/immersive-contracts.mjs'
+import postcss from 'postcss'
 
 const run = promisify(execFile)
-const decodeAttribute = value => value.replace(/&(?:amp|quot|apos|lt|gt|#(x[\da-f]+|\d+));/gi, (entity, number) => number
-  ? String.fromCodePoint(parseInt(number.replace(/^x/i, ''), /^x/i.test(number) ? 16 : 10))
-  : ({ '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>' }[entity.toLowerCase()]))
-const attributes = tag => new Map([...tag.matchAll(/([^\s=<>/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)]
-  .map(([, name, double, single, bare]) => [name, decodeAttribute(double ?? single ?? bare ?? '')]))
-function photoUrls(value) {
-  if (typeof value === 'string') return value.startsWith('/photos/') ? [value] : []
-  return value && typeof value === 'object' ? Object.values(value).flatMap(photoUrls) : []
-}
-
-test('isolated Astro build serves immersive manifest sources with the gallery enabled', {
+test('isolated Astro builds render immersive manifest scenes with default and saved layouts', {
   skip: process.env.PHOS_BUILD_FIXTURES !== '1' && 'opt-in: PHOS_BUILD_FIXTURES=1 node --test tests/build-fixtures.test.mjs',
-  timeout: 300000,
+  timeout: 600000,
 }, async t => {
   const ROOT = await realpath(await mkdtemp(join(tmpdir(), 'phos-build-fixture-')))
   t.after(() => rm(ROOT, { recursive: true, force: true }))
@@ -49,40 +41,64 @@ test('isolated Astro build serves immersive manifest sources with the gallery en
   assert.equal(keys.length, 6, 'build fixture requires six generated manifest photos')
   const configPath = join(ROOT, 'src/generated/site-config.json')
   const config = JSON.parse(await readFile(configPath, 'utf8'))
-  config.home.immersiveGallery = {
-    ...config.home.immersiveGallery, enabled: true,
-    desktopPhotos: keys, mobilePhotos: keys, desktopPositions: null, mobilePositions: null,
-  }
-  if (Array.isArray(config.home.layout) && !config.home.layout.includes('immersiveGallery')) config.home.layout.push('immersiveGallery')
-  await writeFile(configPath, JSON.stringify(config, null, 2))
-  try {
-    await run('npx', ['astro', 'build'], {
-      cwd: ROOT, env: { ...process.env, PHOS_SKIP_CONFIG_SYNC: '1', PUBLIC_SITE_URL: 'https://phos.test' },
-      timeout: 240000, maxBuffer: 16 * 1024 * 1024,
-    })
-  } catch (error) {
-    assert.fail(`isolated Astro build failed (${error.code ?? error.signal}):\n${error.stdout ?? ''}\n${error.stderr ?? ''}`)
-  }
-  const html = await readFile(join(ROOT, 'dist/index.html'), 'utf8')
-  const islands = [...html.matchAll(/<astro-island\b[^>]*>/g)].map(([tag]) => attributes(tag))
-  const gallery = islands.find(attrs => /immersive-scroll-gallery/.test(attrs.get('component-url') || ''))
-  assert.ok(gallery, 'enabled gallery emits an astro-island')
-  assert.equal(gallery.get('client'), 'only', 'browser-only island avoids gallery SSR')
-  const props = JSON.parse(gallery.get('props') || '{}')
-  assert.ok(Object.hasOwn(props, 'sources'), 'serialized island props include sources')
-  const urls = photoUrls(props.sources)
-  assert.equal(urls.length, keys.length * 3, 'each selected photo has thumb, immersive and mobile sources')
-  for (const url of urls) {
-    const path = decodeURIComponent(new URL(url, 'https://phos.test').pathname)
-    assert.ok(existsSync(join(ROOT, 'public', path)), 'serialized manifest URL exists: ' + url)
-  }
-  const markup = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
-  for (const [tag] of markup.matchAll(/<[a-z][\w:-]*\b[^>]*>/gi)) {
-    for (const field of ['src', 'srcset', 'href', 'data-src', 'data-srcset']) {
-      for (const [url] of (attributes(tag).get(field) || '').matchAll(/\/photos\/immersive\/[^\s,"'<>]+/g)) {
-        const path = decodeURIComponent(new URL(url, 'https://phos.test').pathname)
-        assert.ok(existsSync(join(ROOT, 'public', path)), 'SSR immersive reference exists: ' + url)
+  const { frameStyle, peakSizes, ASPECT, INTENSITY } = await bundle('src/lib/immersive-motion.ts')
+  const photosByKey = new Map(manifest.categories.flatMap(category => category.photos.map(photo => [category.slug + '/' + photo.filename, photo])))
+  const { DEFAULT_POSITIONS } = await bundle('src/lib/immersive-defaults.ts')
+  for (const saved of [false, true]) await t.test(saved ? 'saved device positions' : 'default device positions', async () => {
+    const desktopPositions = saved ? keys.map((_, i) => ({ x: -24 + i * 9, y: 13 - i * 6, w: 23 + i, h: 18 + i * 2, z: 10 + i, br: i + 2, cropX: 35 + i, cropZoom: 1.1 })) : null
+    const mobilePositions = saved ? keys.map((_, i) => ({ x: 20 - i * 7, y: -22 + i * 9, w: 35 + i, h: 18 + i, z: 20 - i, br: i + 3 })) : null
+    config.home.immersiveGallery = {
+      ...config.home.immersiveGallery, enabled: true, text: 'Lorem ipsum is deliberately rendered verbatim.', eyebrow: 'Photographs',
+      intensity: 'balanced', scrollLength: 'short', atmosphere: 'stars',
+      desktopPhotos: keys, mobilePhotos: keys, desktopPositions, mobilePositions,
+    }
+    if (Array.isArray(config.home.layout) && !config.home.layout.includes('immersiveGallery')) config.home.layout.push('immersiveGallery')
+    await writeFile(configPath, JSON.stringify(config, null, 2))
+    try {
+      await run('npx', ['astro', 'build'], {
+        cwd: ROOT, env: { ...process.env, PHOS_SKIP_CONFIG_SYNC: '1', PUBLIC_SITE_URL: 'https://phos.test' },
+        timeout: 240000, maxBuffer: 16 * 1024 * 1024,
+      })
+    } catch (error) {
+      assert.fail(`isolated Astro build failed (${error.code ?? error.signal}):\n${error.stdout ?? ''}\n${error.stderr ?? ''}`)
+    }
+    const html = await readFile(join(ROOT, 'dist/index.html'), 'utf8')
+    const cssFiles = (await readdir(join(ROOT, 'dist/_assets'))).filter(name => name.endsWith('.css'))
+    const css = (await Promise.all(cssFiles.map(name => readFile(join(ROOT, 'dist/_assets', name), 'utf8')))).join('\n')
+    const section = assertImmersiveScene(html, css, config.home.immersiveGallery)
+    assert.equal(section.querySelectorAll('.immersive-layer').length, keys.length * 2)
+    assertImmersiveImages(section)
+    assert.match(section.getAttribute('style'), /140lvh/, 'short Feel setting reaches section height')
+    const inline = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map(([, code]) => code).join('\n')
+    for (const device of ['mobile', 'desktop']) {
+      const stops = keyframeStops(inline, 'immersive-layer-0', device)
+      const max = Math.max(...stops.map(s => Number(s.props.get('transform').match(/scale\(([\d.]+)\)/)[1])))
+      assert.ok(Math.abs(max / 2.5491212546 - 1) < 0.01, `${device}: balanced maximum ${max}`)
+    }
+    for (const scene of section.querySelectorAll('.immersive-scene')) {
+      const positions = scene.dataset.device === 'mobile' ? mobilePositions : desktopPositions
+      for (const [index, layer] of scene.querySelectorAll('.immersive-layer').entries()) {
+        const styles = new Map()
+        postcss.parse('a{' + layer.getAttribute('style') + '}').walkDecls(decl => styles.set(decl.prop, decl.value))
+        const slot = Number(styles.get('--immersive-layer'))
+        const position = saved ? positions[slot] : DEFAULT_POSITIONS[slot % 7][scene.dataset.device]
+        for (const [property, value] of Object.entries(frameStyle(position))) assert.equal(styles.get(property), value, `${scene.dataset.device}[${index}].${property}`)
+        assertFrameGeometry(styles, position)
+        const image = layer.querySelector('img')
+        const photo = photosByKey.get(keys[slot])
+        const aspect = photo.width && photo.height ? photo.width / photo.height : 1
+        const covered = Math.max(position.w, position.h / ASPECT[scene.dataset.device] * aspect)
+        const expectedSizes = peakSizes({ pos: { ...position, w: covered } }, INTENSITY.balanced, scene.dataset.device)
+        assert.equal(image.getAttribute('sizes'), expectedSizes.first, `${scene.dataset.device}[${index}] first-paint sizes follow the model`)
+        assert.equal(image.getAttribute('data-sizes-peak'), expectedSizes.peak, `${scene.dataset.device}[${index}] peak sizes follow the model`)
+        assert.notEqual(expectedSizes.peak, expectedSizes.first, 'peak sizes request a larger rendition than first paint')
+        const urls = [image.getAttribute('src'), ...image.getAttribute('srcset').split(',').map(candidate => candidate.trim().split(/\s+/)[0])]
+        for (const url of urls) {
+          assert.match(url, /^\/photos\//, 'manifest provides local image URLs')
+          const path = decodeURIComponent(new URL(url, 'https://phos.test').pathname)
+          assert.ok(existsSync(join(ROOT, 'public', path)), `${scene.dataset.device} source exists: ${url}`)
+        }
       }
     }
-  }
+  })
 })

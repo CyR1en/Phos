@@ -11,6 +11,7 @@ import { accessibleName, formControlName } from './helpers/accessibility.mjs'
 import { assertFixtureContract } from './helpers/fixture-contracts.mjs'
 import { nginxBlocks, nginxDirectives, nginxHeaderMap, dockerCopiesFile } from './helpers/nginx.mjs'
 import { rawConfigImports, hasRevealRootGate } from './helpers/source-contracts.mjs'
+import { assertImmersiveScene, assertImmersivePrint, assertImmersiveImages } from './helpers/immersive-contracts.mjs'
 
 const repoRoot = fileURLToPath(new URL('../', import.meta.url))
 const dist = join(repoRoot, 'dist')
@@ -306,19 +307,52 @@ test('built site contracts', {
           }
         }
       }
-      // Read entry chunks and one level of their static/dynamic imports.
+      // Include island roots and recursively inspect every public dependency.
+      for (const attrs of tags(body, 'astro-island')) {
+        for (const field of ['component-url', 'renderer-url']) {
+          const url = attrs.get(field) && assetUrl(attrs.get(field))
+          if (url) roots.add(url)
+        }
+      }
       const graph = new Set(roots)
-      for (const url of roots) {
-        for (const specifier of imports(await assetText(url))) {
+      for (const url of graph) {
+        const code = await assetText(url)
+        assert.doesNotMatch(code, heavy, url)
+        for (const specifier of imports(code)) {
           const dependency = assetUrl(specifier, url)
           if (dependency) graph.add(dependency)
         }
       }
-      for (const url of graph) assert.doesNotMatch(await assetText(url), heavy, url)
-      if (name === 'index.html' && !config.home?.immersiveGallery?.enabled) {
-        assert.doesNotMatch(body, /<astro-island\b/i, 'disabled immersive gallery ships no home island')
+    })
+    await t.test(name + ': immersive gallery has no client island', () => {
+      for (const attrs of tags(body, 'astro-island')) {
+        assert.doesNotMatch(attrs.get('component-url') || '', /immersive/i)
       }
     })
+    if (name === 'index.html') {
+      const gallery = config.home?.immersiveGallery
+      const keys = new Set(manifest.categories.flatMap(category => category.photos.map(photo => `${category.slug}/${photo.filename}`)))
+      const populated = ['mobilePhotos', 'desktopPhotos'].some(field => gallery?.[field]?.some(key => keys.has(key)))
+      const expected = !!gallery?.enabled && populated
+      await t.test('home immersive section matches the generated enabled/photo config', async () => {
+        assert.equal(dom.querySelectorAll('section.immersive[data-immersive-gallery]').length, expected ? 1 : 0)
+        if (expected) assertImmersiveScene(html, await styles(body), { ...gallery, print: false })
+      })
+      if (expected) {
+        await t.test('built Selected work shares at most one scene photo', () => {
+          const section = dom.querySelector('[data-immersive-gallery]')
+          const selected = dom.querySelector('[data-config="home.selectedWork.heading"]')?.closest('section')
+          if (selected) {
+            const key = image => decodeURIComponent((image.getAttribute('src') ?? '').replace(/^\/photos\/[^/]+\//, '').replace(/\.[^.]+$/, ''))
+            const sceneKeys = new Set(section.querySelectorAll('.immersive-layer img').map(key))
+            const overlap = new Set(selected.querySelectorAll('img').map(key).filter(k => sceneKeys.has(k)))
+            assert.ok(overlap.size <= 1, 'Selected work shares at most one scene photo: ' + [...overlap].join(', '))
+          }
+        })
+        await t.test('built immersive print CSS collapses the scene', async () => assertImmersivePrint(await styles(body)))
+        await t.test('built immersive images carry LQIP and device srcset caps', () => assertImmersiveImages(dom.querySelector('[data-immersive-gallery]')))
+      }
+    }
     await t.test(name + ': hero loading and responsive sources', () => {
       const slides = [...body.matchAll(/<div\b[^>]*\bdata-hero-slide\s*=[^>]*>([\s\S]*?)<\/div\s*>/gi)]
       const hasHero = tags(body, 'section').some((attrs) =>

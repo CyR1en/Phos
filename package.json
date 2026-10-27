@@ -38,7 +38,6 @@
     "clsx": "^2.1.1",
     "datatables.net-dt": "^2.3.8",
     "dropzone": "^6.0.0-beta.2",
-    "framer-motion": "^12.40.0",
     "jquery": "^4.0.0",
     "js-yaml": "^4.2.0",
     "lodash": "^4.18.1",

@@ -5,11 +5,12 @@ interface Props {
   path: string
   label: string
   options: Array<{ value: string; label: string }>
+  fallbackValue?: string
 }
 
-export function SelectField({ path, label, options }: Props) {
+export function SelectField({ path, label, options, fallbackValue = '' }: Props) {
   const { getValue, setValue, flushSave } = useConfig()
-  const value = (getValue(path) as string | undefined) ?? ''
+  const value = (getValue(path) as string | undefined) ?? fallbackValue
   const inputId = path.replace(/\./g, '-')
   return (
     <div class="space-y-1.5">

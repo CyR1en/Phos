@@ -7,7 +7,6 @@ import { ToggleField } from './ToggleField'
 import { NumberField } from './NumberField'
 import { ArrayField } from './ArrayField'
 import { HeroPhotosField } from './HeroPhotosField'
-import { ImmersiveLayoutEditor } from './ImmersiveLayoutEditor'
 import { Section } from '../ui/Section'
 
 interface Props {
@@ -36,6 +35,8 @@ export function ObjectField({ path }: Props) {
         if (SKIP_KEYS.has(key)) return null
         // Legacy home.portfolio data predates Selected work and has no public consumer.
         if (path === 'home' && key === 'portfolio') return null
+        // The dedicated Home card owns the immersive gallery controls.
+        if (path === 'home' && key === 'immersiveGallery') return null
         const fieldPath = `${path}.${key}`
         const label = prettify(key)
 
@@ -56,27 +57,6 @@ export function ObjectField({ path }: Props) {
         }
         if (fieldPath === 'home.hero.photos') {
           return <HeroPhotosField key={fieldPath} path={fieldPath} label={label} limit={5} />
-        }
-        // The immersive gallery is curated entirely inside the layout editor
-        // (photo add/remove + per-device positioning). Render the editor once
-        // (at the first split key) and skip standard array fields for the rest.
-        if (fieldPath === 'home.immersiveGallery.mobilePhotos') {
-          return <ImmersiveLayoutEditor key={fieldPath} path="home.immersiveGallery" />
-        }
-        if (
-          fieldPath === 'home.immersiveGallery.mobilePositions' ||
-          fieldPath === 'home.immersiveGallery.desktopPhotos' ||
-          fieldPath === 'home.immersiveGallery.desktopPositions'
-        ) {
-          return null
-        }
-        // Defensive: hide any lingering pre-separation keys (photos/positions)
-        // so stale data from older SQLite blobs doesn't render duplicate fields.
-        if (
-          fieldPath === 'home.immersiveGallery.photos' ||
-          fieldPath === 'home.immersiveGallery.positions'
-        ) {
-          return null
         }
         if (Array.isArray(value)) {
           return <ArrayField key={fieldPath} path={fieldPath} label={label} />

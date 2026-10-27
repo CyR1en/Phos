@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
+import { useState, useRef, useEffect, useCallback, useId } from 'preact/hooks'
 import { useConfig } from '../../../lib/admin/store'
 import type { PhotoPosition } from '../../../lib/admin/types'
 import { Button } from '../ui/Button'
+import { STAGE, resolveLayers, layerScale, layerOpacity, taglineFrame, INTENSITY, type Intensity } from '../../../lib/immersive-motion'
+import { useModalFocus } from './immersive/dialog'
 import manifest from '../../../generated/categories.json'
 import {
   AlertDialog,
@@ -26,11 +28,17 @@ import {
   brOf,
   mobileDefs,
   desktopDefs,
-  syncPositions,
   thumbUrl,
   rectsIntersect,
   applyPatch,
   computeSnap,
+  reorderDepth,
+  applyTypedDepth,
+  layoutSnapshot,
+  copyMobilePositionsToDesktop,
+  nudgePositions,
+  readDeviceDraft,
+  type DepthMove,
   type Guide,
 } from './immersive/utils'
 import { PlusIcon, TrashIcon, CropIcon } from './immersive/icons'
@@ -45,7 +53,7 @@ interface Props {
 }
 
 export function ImmersiveLayoutEditor({ path }: Props) {
-  const { getValue, setValue, flushSave, pushToast } = useConfig()
+  const { getValue, setValue, flushSave, pushToast, toasts } = useConfig()
 
   const [open, setOpen] = useState(false)
   const [device, setDevice] = useState<'mobile' | 'desktop'>('mobile')
@@ -61,6 +69,16 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const [localMobilePositions, setLocalMobilePositions] = useState<PhotoPosition[]>([])
   const [localDesktopPositions, setLocalDesktopPositions] = useState<PhotoPosition[]>([])
   const [dirty, setDirty] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const saveToastIdsRef = useRef<Set<number>>(new Set())
+  const [openNotice, setOpenNotice] = useState('')
+  const [previewProgress, setPreviewProgress] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const [layoutMenuOpen, setLayoutMenuOpen] = useState(false)
+  const snapshotRef = useRef<{ value: unknown } | null>(null)
+  const deviceSelectionsRef = useRef<{ mobile: number[]; desktop: number[] }>({ mobile: [], desktop: [] })
+  const id = useId()
   const [snap, setSnap] = useState(false)
   const [smartAlign, setSmartAlign] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
@@ -86,6 +104,8 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     actionCallback?: () => void
   }>({ open: false, title: '', description: '' })
 
+  const dialogRef = useModalFocus(open, pickerOpen || cropOpen !== null || alertState.open)
+
   // ---- Marquee selection state -------------------------------------------
   // `marquee` holds the current drag-rectangle in canvas-relative px while the
   // user is dragging on the empty canvas. `null` = no active marquee.
@@ -103,14 +123,9 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const dragRafRef = useRef<number | null>(null)
   const dragRawPosRef = useRef<{ x: number; y: number } | null>(null)
   const latestDragRef = useRef<{ index: number; d: { x: number; y: number; deltaX: number; deltaY: number } } | null>(null)
-  const dragIndexRef = useRef<number | null>(null)
   // Snapshot of positions at drag start to measure delta from a stable origin.
   const dragStartPosRef = useRef<PhotoPosition[] | null>(null)
   const dragStartHandleRef = useRef<{ x: number; y: number } | null>(null)
-
-  // Read-only snapshots of the stored config arrays (for labels / counts).
-  const storedMobilePhotos = (getValue(`${path}.mobilePhotos`) as string[]) ?? []
-  const storedDesktopPhotos = (getValue(`${path}.desktopPhotos`) as string[]) ?? []
 
   // Active-device derived state (the canvas + properties panel operate on
   // these, so all the drag/resize/keyboard logic below stays device-agnostic).
@@ -118,10 +133,31 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   const activePositions = device === 'mobile' ? localMobilePositions : localDesktopPositions
   const defPicker = device === 'mobile' ? mobileDefs : desktopDefs
   const setActivePhotos = device === 'mobile' ? setLocalMobilePhotos : setLocalDesktopPhotos
-  const setActivePositions = device === 'mobile' ? setLocalMobilePositions : setLocalDesktopPositions
+  const setActivePositions = (update: PhotoPosition[] | ((previous: PhotoPosition[]) => PhotoPosition[])) => {
+    const setter = device === 'mobile' ? setLocalMobilePositions : setLocalDesktopPositions
+    setter(update)
+  }
+  const layers = resolveLayers(activePositions, activePhotos.length, device)
+  const visibleLayers = layers.filter((layer) => !layer.hidden && layer.pos.w > 0 && layer.pos.h > 0)
+  const frontLayer = [...visibleLayers].sort((a, b) => b.z - a.z || b.index - a.index)[0]
+  const previewing = previewProgress > 0 || playing
+  // resolveLayers already caps the scene; photos beyond the cap are sized but hidden.
+  const deviceCap = device === 'mobile' ? 6 : 8
+  const sizedCount = layers.filter((layer) => layer.pos.w > 0 && layer.pos.h > 0).length
+  const intensityName = getValue(`${path}.intensity`) as Intensity | undefined
+  const intensity = INTENSITY[intensityName ?? 'dramatic'] ?? INTENSITY.dramatic
+  const tagline = String(getValue(`${path}.text`) ?? '')
+  const eyebrow = String(getValue(`${path}.eyebrow`) ?? '')
 
   // Use the measured canvas size; fall back to the initial state if somehow 0.
   const canvas = canvasSize.w > 0 ? canvasSize : { w: 280, h: 607 }
+
+  // Keep the server's precise failure visible after its transient toast expires.
+  useEffect(() => {
+    if (!saveError) return
+    const failure = [...toasts].reverse().find((toast) => toast.kind === 'error' && !saveToastIdsRef.current.has(toast.id))
+    if (failure) setSaveError(failure.message)
+  }, [saveError, toasts])
 
   // Keep refs to values the keydown handler reads so it doesn't need to
   // re-register on every state toggle (avoids stale-closure confirm dialogs).
@@ -131,9 +167,6 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   alertOpenRef.current = alertState.open
   const selectedRef = useRef<number[]>([])
   selectedRef.current = selected
-  const deviceRef = useRef<'mobile' | 'desktop'>('mobile')
-  deviceRef.current = device
-
   // Ref to the workspace div, used to measure available space for the canvas.
   const workspaceRef = useRef<HTMLDivElement>(null)
   // Ref to the canvas div (the device-viewport rectangle), used to convert
@@ -193,7 +226,10 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     const el = canvasRef.current
     if (!el) return { x: 0, y: 0 }
     const rect = el.getBoundingClientRect()
-    return { x: clientX - rect.left, y: clientY - rect.top }
+    return {
+      x: (clientX - rect.left - canvas.w / 2) / STAGE.scale + canvas.w / 2,
+      y: (clientY - rect.top - canvas.h / 2 - canvas.h * STAGE.offsetY / 100) / STAGE.scale + canvas.h / 2,
+    }
   }
 
   /**
@@ -202,7 +238,8 @@ export function ImmersiveLayoutEditor({ path }: Props) {
    * MARQUEE_THRESHOLD (so a plain click clears the selection instead).
    */
   const handleCanvasMouseDown = (e: MouseEvent) => {
-    if (e.target !== workspaceRef.current && e.target !== canvasRef.current) return
+    if (previewing || pickerOpen || cropOpen !== null) return
+    if (e.target !== workspaceRef.current && e.target !== canvasRef.current && !(e.target as HTMLElement).hasAttribute('data-stage')) return
     if (e.button !== 0) return
     // Shift/Cmd-drag on the background adds to the existing selection rather
     // than replacing it; we remember the starting set so mouseup can union.
@@ -253,6 +290,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     // Find photos whose rendered rect (canvas-relative px) intersects the box.
     const hits: number[] = []
     activePositions.forEach((pos, i) => {
+      if (pos.w === 0 || pos.h === 0) return
       const w = vwToPx(pos.w, canvas.w)
       const h = vhToPx(pos.h, canvas.h)
       const left = canvas.w / 2 + vwToPx(pos.x, canvas.w) - w / 2
@@ -262,34 +300,54 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setSelected(hits)
   }
 
-  // Attach window-level mousemove/mouseup only while the editor is open. The
-  // handlers early-return when the marquee start ref is null, so always-on
-  // attachment is cheap and avoids re-binding on every marquee state change.
+  // Read fresh state through refs without rebinding listeners on every drag.
+  const marqueeHandlersRef = useRef({ move: handleWindowMouseMove, up: handleWindowMouseUp })
+  marqueeHandlersRef.current = { move: handleWindowMouseMove, up: handleWindowMouseUp }
   useEffect(() => {
     if (!open) return
-    window.addEventListener('mousemove', handleWindowMouseMove)
-    window.addEventListener('mouseup', handleWindowMouseUp)
+    const move = (event: MouseEvent) => marqueeHandlersRef.current.move(event)
+    const up = () => marqueeHandlersRef.current.up()
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
     return () => {
-      window.removeEventListener('mousemove', handleWindowMouseMove)
-      window.removeEventListener('mouseup', handleWindowMouseUp)
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
     }
-  }, [open, canvas.w, canvas.h, activePositions]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open])
 
   // ---- Actions -------------------------------------------------------------
 
-  const openEditor = useCallback(() => {
-    const storedMobilePos = getValue(`${path}.mobilePositions`) as PhotoPosition[] | null
-    const storedDesktopPos = getValue(`${path}.desktopPositions`) as PhotoPosition[] | null
-    setLocalMobilePhotos([...storedMobilePhotos])
-    setLocalDesktopPhotos([...storedDesktopPhotos])
-    setLocalMobilePositions(syncPositions(storedMobilePos, storedMobilePhotos.length, mobileDefs))
-    setLocalDesktopPositions(syncPositions(storedDesktopPos, storedDesktopPhotos.length, desktopDefs))
-    setDirty(false)
+  const openEditor = () => {
+    snapshotRef.current = { value: clone(getValue(path)) }
+    const available = new Set<string>((manifest as any).categories.flatMap((category: any) =>
+      category.photos.map((photo: any) => `${category.slug}/${photo.filename}`)))
+    let removed = 0
+    const readDevice = (target: 'mobile' | 'desktop') => {
+      const draft = readDeviceDraft(getValue(`${path}.${target}Photos`) as string[] | undefined,
+        getValue(`${path}.${target}Positions`) as PhotoPosition[] | null, target, available)
+      removed += draft.removed
+      return draft
+    }
+    const mobile = readDevice('mobile')
+    const desktop = readDevice('desktop')
+    setLocalMobilePhotos(mobile.photos)
+    setLocalDesktopPhotos(desktop.photos)
+    setLocalMobilePositions(mobile.positions)
+    setLocalDesktopPositions(desktop.positions)
+    setOpenNotice(removed ? `${removed} unavailable photo${removed === 1 ? '' : 's'} removed from this draft, together with their positions.` : '')
+    setSaveError('')
+    setDirty(removed > 0)
     setSelected([])
+    deviceSelectionsRef.current = { mobile: [], desktop: [] }
     setPendingAdd([])
+    setCropOpen(null)
+    setPickerOpen(false)
+    setPreviewProgress(0)
+    setPlaying(false)
+    setLayoutMenuOpen(false)
     setDevice('mobile')
     setOpen(true)
-  }, [path, storedMobilePhotos, storedDesktopPhotos]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   /** Apply a clamped patch to a single photo's position. Used by resize,
    *  keyboard nudge and single-field edits (NOT by group drag — that goes
@@ -304,7 +362,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setDirty(true)
   }
 
-  /** Apply the same patch to every selected photo. Used for bulk Z-index and
+  /** Apply the same patch to every selected photo. Used for bulk depth and
    *  bulk border-radius edits. Indices outside the active array are skipped. */
   const updatePositionsBulk = (indices: number[], patch: Partial<PhotoPosition>) => {
     if (indices.length === 0) return
@@ -320,14 +378,18 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
   // ---- Group drag (transient delta approach) -------------------------------
 
-  const handlePhotoDragStart = (index: number, d: { x: number; y: number }) => {
+  const handlePhotoDragStart = (_index: number, d: { x: number; y: number }) => {
     dragStartPosRef.current = activePositions.map((p) => ({ ...p }))
-    dragIndexRef.current = index
     dragStartHandleRef.current = { x: d.x, y: d.y }
     dragRawPosRef.current = { x: d.x, y: d.y }
   }
 
   const handlePhotoDrag = (index: number, d: { x: number; y: number; deltaX: number; deltaY: number }) => {
+    // Accumulate every event, even when several pointer updates share a frame.
+    if (dragRawPosRef.current) {
+      dragRawPosRef.current.x += d.deltaX
+      dragRawPosRef.current.y += d.deltaY
+    } else dragRawPosRef.current = { x: d.x, y: d.y }
     latestDragRef.current = { index, d }
     if (dragRafRef.current) return
     dragRafRef.current = requestAnimationFrame(() => {
@@ -344,9 +406,6 @@ export function ImmersiveLayoutEditor({ path }: Props) {
         if (!dragRawPosRef.current) {
           dragRawPosRef.current = { x: d.x, y: d.y }
         }
-        dragRawPosRef.current.x += d.deltaX
-        dragRawPosRef.current.y += d.deltaY
-
         const snapData = computeSnap(index, dragRawPosRef.current.x, dragRawPosRef.current.y, activePositions, canvas.w, canvas.h, smartAlign)
         setGuides(snapData.guides)
         const pos = activePositions[index]
@@ -386,6 +445,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   }
 
   const handlePhotoDragStop = (index: number, d: { x: number; y: number }) => {
+    const raw = dragRawPosRef.current ?? d
     dragRawPosRef.current = null
     if (dragRafRef.current) {
       cancelAnimationFrame(dragRafRef.current)
@@ -402,11 +462,14 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setActivePositions((prev) => {
       const copy = prev.map((p) => ({ ...p }))
       if (!isGroupDrag || !startList) {
-        // Single drag: apply grid snap to the already-updated position.
+        // Commit the final event even if the last scheduled frame was cancelled.
         const pos = prev[index]
         if (pos) {
-          const patch = snap ? { x: snapVal(pos.x), y: snapVal(pos.y) } : {}
-          copy[index] = applyPatch(copy[index], patch)
+          const aligned = computeSnap(index, raw.x, raw.y, prev, canvas.w, canvas.h, smartAlign)
+          let x = pxToVw(aligned.left + vwToPx(pos.w, canvas.w) / 2 - canvas.w / 2, canvas.w)
+          let y = pxToVh(aligned.top + vhToPx(pos.h, canvas.h) / 2 - canvas.h / 2, canvas.h)
+          if (snap) { x = snapVal(x); y = snapVal(y) }
+          copy[index] = applyPatch(copy[index], { x, y })
         }
       } else {
         // Group drag: apply delta + optional grid snap to every selected photo.
@@ -423,7 +486,6 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     })
 
     dragStartPosRef.current = null
-    dragIndexRef.current = null
     dragStartHandleRef.current = null
     setDirty(true)
   }
@@ -453,9 +515,12 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     if (raw === undefined) return
     if (raw !== '' && raw !== '-' && raw !== '.') {
       const num = Number(raw)
-      if (!Number.isNaN(num)) {
+      if (Number.isFinite(num)) {
         const sel = selectedRef.current
-        if (sel.length > 1) updatePositionsBulk(sel, { [field]: num } as Partial<PhotoPosition>)
+        if (field === 'z' && sel.length === 1) {
+          setActivePositions((prev) => applyTypedDepth(prev, sel[0], num))
+          setDirty(true)
+        } else if (sel.length > 1) updatePositionsBulk(sel, { [field]: num } as Partial<PhotoPosition>)
         else if (sel.length === 1) updatePosition(sel[0], { [field]: num } as Partial<PhotoPosition>)
       }
     }
@@ -472,87 +537,82 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
   const handleDeviceToggle = (next: 'mobile' | 'desktop') => {
     if (next === device) return
-    if (dirtyRef.current) {
-      confirm('Unsaved Changes', 'You have unsaved changes. Switch device anyway?', 'Switch Device', () => {
-        setDevice(next)
-        setSelected([])
-      })
-      return
-    }
+    deviceSelectionsRef.current[device] = selectedRef.current
     setDevice(next)
-    setSelected([])
+    setSelected(deviceSelectionsRef.current[next])
+    setCropOpen(null)
+    setPlaying(false)
+    setPreviewProgress(0)
   }
 
   const handleCopyMobileToDesktop = () => {
-    confirm(
-      'Overwrite Positions',
-      'Overwrite desktop positions with the current mobile positions for all overlapping photos? Continue?',
-      'Overwrite',
-      () => {
-        setLocalDesktopPositions((prev) => {
-          const result: PhotoPosition[] = []
-          for (let i = 0; i < prev.length; i++) {
-            // Only copy where mobile has a corresponding photo; leave the rest as-is.
-            result.push(i < localMobilePositions.length ? clone(localMobilePositions[i]) : prev[i])
-          }
-          return result
-        })
-        setDirty(true)
-      },
-    )
-  }
-
-  const handleReset = () => {
-    confirm(
-      'Reset Positions',
-      `Reset ${device} positions to the hardcoded defaults?`,
-      'Reset',
-      () => {
-        setActivePositions((prev) => prev.map((_, i) => defPicker(i)))
-        setDirty(true)
-      },
-    )
-  }
-
-  const handleFront = () => {
-    if (selected.length === 0) return
-    if (selected.length === 1) {
-      const maxZ = Math.max(...activePositions.map((p) => p.z))
-      updatePosition(selected[0], { z: maxZ + 1 })
-    } else {
-      // Bulk: bring all selected to the front, preserving their relative order.
-      const baseMax = Math.max(...activePositions.map((p) => p.z))
-      const sorted = [...selected].sort((a, b) => activePositions[a].z - activePositions[b].z)
-      setActivePositions((prev) => {
-        const copy = prev.map((p) => ({ ...p }))
-        sorted.forEach((idx, i) => { if (copy[idx]) copy[idx].z = baseMax + 1 + i })
-        return copy
-      })
+    setLayoutMenuOpen(false)
+    confirm('Copy mobile → desktop', 'Copy the mobile photo selection and its layout to desktop? This replaces the desktop selection.', 'Copy', () => {
+      setLocalDesktopPhotos([...localMobilePhotos])
+      setLocalDesktopPositions(copyMobilePositionsToDesktop(localMobilePositions))
+      const mobileSelection = device === 'mobile' ? selectedRef.current : deviceSelectionsRef.current.mobile
+      const selectedPhotos = mobileSelection.map((index) => localMobilePhotos[index])
+      const desktopSelection = localMobilePhotos.flatMap((photo, index) => selectedPhotos.includes(photo) ? [index] : [])
+      deviceSelectionsRef.current.desktop = desktopSelection
+      if (device === 'desktop') setSelected(desktopSelection)
       setDirty(true)
-    }
+    })
   }
 
-  const handleBack = () => {
-    if (selected.length === 0) return
-    if (selected.length === 1) {
-      const minZ = Math.min(...activePositions.map((p) => p.z))
-      updatePosition(selected[0], { z: Math.max(RANGES.z.min, minZ - 1) })
-    } else {
-      const baseMin = Math.min(...activePositions.map((p) => p.z))
-      const sorted = [...selected].sort((a, b) => activePositions[b].z - activePositions[a].z)
-      setActivePositions((prev) => {
-        const copy = prev.map((p) => ({ ...p }))
-        sorted.forEach((idx, i) => { if (copy[idx]) copy[idx].z = Math.max(RANGES.z.min, baseMin - 1 - i) })
-        return copy
+  const handleReset = (resetAppearance = false) => {
+    setLayoutMenuOpen(false)
+    confirm(resetAppearance ? 'Reset layout, crops & radius' : 'Reset to original',
+      resetAppearance ? `Reset ${device} positions, crops and corner radii?` : `Reset ${device} positions and depth? Crops and corner radii are kept.`,
+      'Reset', () => {
+        setActivePositions((prev) => prev.map((pos, i) => {
+          const defaults = defPicker(i)
+          if (resetAppearance) return defaults
+          return { ...pos, ...defaults, br: pos.br, cropX: pos.cropX, cropY: pos.cropY, cropZoom: pos.cropZoom }
+        }))
+        setDirty(true)
       })
-      setDirty(true)
-    }
+  }
+
+  const reorderSelection = (direction: DepthMove) => {
+    if (!selectedRef.current.length) return
+    setActivePositions((prev) => {
+      const chosen = [...selectedRef.current].sort((a, b) => prev[a].z - prev[b].z || a - b)
+      if (direction === 'back' || direction === 'up') chosen.reverse()
+      return chosen.reduce((next, index) => reorderDepth(next, index, direction), prev)
+    })
+    setDirty(true)
+  }
+  const handleFront = () => reorderSelection('front')
+  const handleBack = () => reorderSelection('back')
+
+  const handleRemoveAll = () => {
+    setLayoutMenuOpen(false)
+    confirm('Remove all photos', `Remove every photo from the ${device} layout?`, 'Remove all', () => {
+      setActivePhotos([]); setActivePositions([]); setSelected([]); setDirty(true)
+    })
+  }
+
+  // New/explicitly shown photos must be visible; Reset keeps the original hidden slot.
+  const visibleDefault = (index: number) => {
+    const pos = defPicker(index)
+    return pos.w === 0 && pos.h === 0 ? { ...mobileDefs(0), x: 0, y: 0 } : pos
+  }
+
+  const showPhoto = (index: number) => {
+    const defaults = visibleDefault(index)
+    setActivePositions((prev) => prev.map((pos, i) => i === index ? { ...pos, w: defaults.w, h: defaults.h } : pos))
+    setDirty(true)
+  }
+  // A sized photo behind the device cap only enters the scene by moving forward.
+  const bringForward = (index: number) => {
+    setActivePositions((prev) => reorderDepth(prev, index, 'front'))
+    setDirty(true)
   }
 
   const handleRemoveSelected = () => {
     if (selected.length === 0) return
     const count = selected.length
-    const label = count === 1 ? `photo #${selected[0]}` : `${count} photos`
+    const label = count === 1 ? `photo #${selected[0] + 1}` : `${count} photos`
     confirm(`Remove Photos`, `Remove ${label} from the ${device} layout?`, 'Remove', () => {
       // Remove in descending index order so earlier removals don't shift
       // the indices of later ones.
@@ -566,7 +626,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
   const togglePendingAdd = (photoPath: string) => {
     setPendingAdd((prev) =>
-      prev.includes(photoPath) ? prev.filter((p) => p !== photoPath) : [...prev, photoPath],
+      prev.includes(photoPath) ? prev.filter((p) => p !== photoPath) : prev.length + activePhotos.length < 24 ? [...prev, photoPath] : prev,
     )
   }
 
@@ -579,7 +639,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     setActivePhotos((prev) => [...prev, ...pendingAdd])
     setActivePositions((prev) => {
       const next = [...prev]
-      for (let i = 0; i < pendingAdd.length; i++) next.push(defPicker(prev.length + i))
+      for (let i = 0; i < pendingAdd.length; i++) next.push(visibleDefault(prev.length + i))
       return next
     })
     setSelected([firstNewIndex])
@@ -589,89 +649,122 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   }
 
   const closeEditor = () => {
+    if (snapshotRef.current && JSON.stringify(getValue(path)) !== JSON.stringify(snapshotRef.current.value)) {
+      setValue(path, clone(snapshotRef.current.value))
+    }
     setOpen(false)
     setPickerOpen(false)
+    setCropOpen(null)
+    setPlaying(false)
+    setPreviewProgress(0)
+    setDirty(false)
+    setAlertState((previous) => ({ ...previous, open: false }))
   }
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (dirtyRef.current) {
-      confirm('Unsaved Changes', 'You have unsaved changes. Close anyway?', 'Close Anyway', closeEditor)
+      confirm('Unsaved Changes', 'You have unsaved changes. Close anyway? Your draft will be discarded.', 'Close Anyway', closeEditor)
       return
     }
     closeEditor()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const handleSave = useCallback(async () => {
-    // Write the whole immersiveGallery object in a single setValue call (the
-    // established save pattern in this codebase) so flushSave sees a coherent
-    // snapshot. Constructing the object explicitly — rather than spreading the
-    // stored value — also drops any lingering pre-separation `photos` /
-    // `positions` keys from older SQLite blobs, keeping the stored schema clean.
+    setSaveError('')
+    saveToastIdsRef.current = new Set(toasts.map((toast) => toast.id))
+    // Preserve the gallery's copy and Feel settings in one coherent snapshot.
+    // Omit only obsolete pre-separation keys from the client snapshot; the API
+    // merges existing data, so this is not a deletion of legacy SQLite keys.
     const stored = getValue(path) as Record<string, unknown> | undefined
-    setValue(path, {
-      enabled: (stored?.enabled as boolean) ?? true,
-      text: (stored?.text as string) ?? '',
+    setValue(path, layoutSnapshot(stored, {
       mobilePhotos: localMobilePhotos,
       mobilePositions: localMobilePositions,
       desktopPhotos: localDesktopPhotos,
       desktopPositions: localDesktopPositions,
-    })
-    if (!(await flushSave())) return
+    }))
+    if (!(await flushSave())) return setSaveError('Could not save the layout. Resolve any field errors, check your connection, and try again.')
     setDirty(false)
     setOpen(false)
     pushToast('success', 'Layout saved. Click Republish to apply to the live site.')
-  }, [path, localMobilePhotos, localMobilePositions, localDesktopPhotos, localDesktopPositions]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [path, localMobilePhotos, localMobilePositions, localDesktopPhotos, localDesktopPositions, toasts]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Effects -------------------------------------------------------------
 
-  // Escape -> close (with dirty confirm); Arrow keys -> nudge selected photo(s)
+  const keyHandlerRef = useRef<(event: KeyboardEvent) => void>(() => {})
+  keyHandlerRef.current = (e) => {
+    if (alertOpenRef.current || cropOpen !== null || pickerOpen || e.defaultPrevented) return
+    const target = e.target as HTMLElement
+    const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      if (previewing) { setPlaying(false); setPreviewProgress(0); return }
+      if (layoutMenuOpen) { setLayoutMenuOpen(false); return }
+      if (selectedRef.current.length) { setSelected([]); return }
+      handleClose()
+      return
+    }
+    if (typing || previewing) return
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+      e.preventDefault(); setSelected(activePhotos.map((_, i) => i)); return
+    }
+    if (!selectedRef.current.length) return
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); handleRemoveSelected(); return }
+    if (e.key === '[' || e.key === ']') { e.preventDefault(); reorderSelection(e.key === ']' ? 'up' : 'down'); return }
+    if (e.key === 'Enter' && (target.tagName !== 'BUTTON') && selectedRef.current.length === 1) {
+      if (activePositions[selectedRef.current[0]]?.w > 0) setCropOpen(selectedRef.current[0])
+      e.preventDefault(); return
+    }
+    const step = e.shiftKey ? 5 : 1
+    const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
+    const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
+    if (dx || dy) {
+      e.preventDefault()
+      setActivePositions((prev) => nudgePositions(prev, selectedRef.current, dx, dy))
+      setDirty(true)
+    }
+  }
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (alertOpenRef.current) return
-      if (e.key === 'Escape') {
-        if (pickerOpen) { setPickerOpen(false); return }
-        if (selectedRef.current.length > 0) { setSelected([]); return }
-        if (dirtyRef.current) {
-          confirm('Unsaved Changes', 'You have unsaved changes. Close anyway?', 'Close Anyway', closeEditor)
-          return
-        }
-        setOpen(false)
-        return
-      }
-      // Don't nudge the canvas while the photo picker is open.
-      if (pickerOpen) return
-      // Cmd/Ctrl+A: select all photos on the active device.
-      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
-        if (activePhotos.length === 0) return
-        const target = e.target as HTMLElement
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
-        e.preventDefault()
-        setSelected(activePhotos.map((_, i) => i))
-        return
-      }
-      // Arrow-key nudge: move every selected photo by 1vw/vh (Shift = 5vw/vh).
-      // Skip if the user is typing in an input/textarea so arrow keys still
-      // work for editing number fields.
-      if (selectedRef.current.length === 0) return
-      const target = e.target as HTMLElement
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
-      const sel = selectedRef.current
-      const step = e.shiftKey ? 5 : 1
-      const base = (deviceRef.current === 'mobile' ? localMobilePositions : localDesktopPositions)[sel[0]] ?? { x: 0, y: 0 }
-      const nudge =
-        e.key === 'ArrowLeft' ? { x: base.x - step } :
-        e.key === 'ArrowRight' ? { x: base.x + step } :
-        e.key === 'ArrowUp' ? { y: base.y - step } :
-        e.key === 'ArrowDown' ? { y: base.y + step } : undefined
-      if (nudge) {
-        updatePositionsBulk(sel, nudge as Partial<PhotoPosition>)
-        e.preventDefault()
-      }
-    }
+    const onKey = (event: KeyboardEvent) => keyHandlerRef.current(event)
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, selected, device, localMobilePositions, localDesktopPositions, pickerOpen, activePhotos.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open])
+
+  useEffect(() => {
+    if (!open || !dirty) return
+    // returnValue is deprecated, but older WebKit still needs it to show the prompt.
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); (event as { returnValue: string }).returnValue = '' }
+    window.addEventListener('beforeunload', beforeUnload)
+    return () => window.removeEventListener('beforeunload', beforeUnload)
+  }, [open, dirty])
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReducedMotion(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (!open || !playing || reducedMotion) { if (reducedMotion) setPlaying(false); return }
+    let frame = 0
+    let start: number | undefined
+    const tick = (time: number) => {
+      start ??= time
+      const progress = Math.min(1, (time - start) / 3000)
+      setPreviewProgress(progress)
+      if (progress < 1) frame = requestAnimationFrame(tick)
+      else setPlaying(false)
+    }
+    setPreviewProgress(0)
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [open, playing, reducedMotion])
+
+  useEffect(() => () => {
+    if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current)
+  }, [open])
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -693,7 +786,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       const availW = el.clientWidth - pad
       const availH = el.clientHeight - pad
       if (availW <= 0 || availH <= 0) return
-      const r = ratio.w / ratio.h
+      const r = ratio
       let w = availW
       let h = w / r
       if (h > availH) { h = availH; w = h * r }
@@ -710,6 +803,9 @@ export function ImmersiveLayoutEditor({ path }: Props) {
   // The position shown in single-edit mode (X/Y/W/H/Z/br).
   const selectedPos: PhotoPosition | null =
     primary !== null && activePositions[primary] ? activePositions[primary] : null
+  const distinctDepths = [...new Set(visibleLayers.map((layer) => layer.z))].sort((a, b) => a - b)
+  const selectedDepthRank = selectedPos ? distinctDepths.indexOf(selectedPos.z) + 1 : 1
+  const maxDepthRank = new Set(visibleLayers.filter((layer) => layer.index !== primary).map((layer) => layer.z)).size + 1
 
   // Shared value for bulk-editable fields across the selection. When all
   // selected photos share the same value, show it; otherwise show a blank
@@ -719,7 +815,6 @@ export function ImmersiveLayoutEditor({ path }: Props) {
     const vals = selected.map(pick)
     return vals.every((v) => v === vals[0]) ? vals[0] : undefined
   }
-  const bulkZ = sharedValue((i) => activePositions[i]?.z)
   const bulkBr = sharedValue((i) => brOf(activePositions[i]))
 
   // Flatten the build-time manifest into a category-grouped list for the picker.
@@ -737,7 +832,8 @@ export function ImmersiveLayoutEditor({ path }: Props) {
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-2.5 py-1 text-sm font-medium border rounded-sm transition-colors ${
+      aria-pressed={active}
+      className={`min-h-11 min-w-11 px-2.5 py-1 text-sm font-medium border rounded-sm transition-colors ${
         active ? 'bg-primary text-primary-text border-primary' : 'bg-canvas text-muted border-border hover:text-ink'
       }`}
     >
@@ -747,297 +843,205 @@ export function ImmersiveLayoutEditor({ path }: Props) {
 
   return (
     <>
-      <div className="space-y-1.5">
-        <Button variant="secondary" size="sm" onClick={openEditor}>
-          Edit Layout
+      <div className="space-y-2">
+        <Button type="button" variant="primary" size="md" onClick={openEditor} aria-haspopup="dialog">
+          Edit layout…
         </Button>
         <p className="text-sm text-muted">
           Curate and position photos separately for mobile and desktop.
-          {storedMobilePhotos.length > 0 || storedDesktopPhotos.length > 0
-            ? ` Mobile: ${storedMobilePhotos.length}, Desktop: ${storedDesktopPhotos.length}.`
-            : ' No photos yet — add them inside the editor.'}
         </p>
       </div>
 
       {open && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose() }}
-        >
-          {/* overflow-hidden fixes the squared-corner glitch where the inner
-              header/body/footer bg-surface spilled past the rounded modal frame. */}
-          <div className="bg-canvas border border-border rounded-lg w-full max-w-5xl h-[85vh] flex flex-col shadow-xl overflow-hidden">
-            {/* ---- Header ---- */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface">
-              <h2 className="text-base font-semibold text-ink">Immersive Gallery Layout Editor</h2>
-              <div className="flex items-center gap-3">
-                <div className="flex bg-canvas border border-border rounded-sm overflow-hidden">
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-2 sm:p-4"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose() }}>
+          <style>{`
+            .immersive-resize-handle { position:absolute; width:8px; height:8px; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--color-primary); border-radius:2px; pointer-events:none; }
+            @media (pointer:coarse) {
+              .immersive-editor { --immersive-handle-hit:calc(44px / ${STAGE.scale}); }
+              .immersive-editor .immersive-resize-handle { width:calc(24px / ${STAGE.scale}); height:calc(24px / ${STAGE.scale}); }
+            }
+          `}</style>
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} tabIndex={-1}
+            className="immersive-editor bg-canvas border border-border rounded-lg w-full max-w-7xl h-[90vh] flex flex-col shadow-xl overflow-hidden"
+            inert={pickerOpen || cropOpen !== null || alertState.open ? true : undefined}>
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-border bg-surface">
+              <h2 id={`${id}-title`} className="text-base font-semibold text-ink">Immersive Gallery Layout Editor</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex bg-canvas border border-border rounded-sm overflow-hidden" role="group" aria-label="Device layout">
                   {(['mobile', 'desktop'] as const).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => handleDeviceToggle(d)}
-                      className={`px-3 py-1 text-sm font-medium transition-colors ${
-                        device === d ? 'bg-primary text-primary-text' : 'text-muted hover:text-ink'
-                      }`}
-                    >
+                    <button key={d} type="button" aria-pressed={device === d} onClick={() => handleDeviceToggle(d)}
+                      className={`min-h-11 min-w-11 px-3 text-sm font-medium transition-colors ${device === d ? 'bg-primary text-primary-text' : 'text-muted hover:text-ink'}`}>
                       {d === 'mobile' ? 'Mobile' : 'Desktop'}
                     </button>
                   ))}
                 </div>
-                {toggleBtn(showGrid, () => setShowGrid((s) => !s), 'Show grid lines on the canvas', 'Show Grid')}
-                {toggleBtn(smartAlign, () => setSmartAlign((s) => !s), 'Snap positions dynamically to other photos and canvas center', 'Smart Alignment')}
-                {toggleBtn(snap, () => setSnap((s) => !s), 'Snap positions/sizes to a 2vw/2vh grid', 'Snap to grid')}
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="text-muted hover:text-ink transition-colors text-lg leading-none px-1"
-                  aria-label="Close"
-                >
-                  &times;
-                </button>
+                {toggleBtn(showGrid, () => setShowGrid((s) => !s), 'Show grid lines on the canvas', 'Grid')}
+                {toggleBtn(smartAlign, () => setSmartAlign((s) => !s), 'Snap to other photos and canvas center', 'Smart align')}
+                {toggleBtn(snap, () => setSnap((s) => !s), 'Snap positions and sizes to a 2vw/2vh grid', 'Snap')}
+                <div className="relative">
+                  <button type="button" aria-expanded={layoutMenuOpen} aria-controls={`${id}-layout-actions`} disabled={previewing}
+                    className="min-h-11 px-3 border border-border rounded-sm text-sm text-ink"
+                    onClick={() => setLayoutMenuOpen((previous) => !previous)}>Layout ▾</button>
+                  {layoutMenuOpen && <div id={`${id}-layout-actions`} role="group" aria-label="Layout actions"
+                    className="absolute right-0 top-full z-[250] w-64 bg-canvas border border-border rounded-sm shadow-xl p-1">
+                    <button type="button" onClick={() => handleReset()} className="w-full min-h-11 text-left px-3 text-sm text-ink">Reset to original</button>
+                    <button type="button" onClick={() => handleReset(true)} className="w-full min-h-11 text-left px-3 text-sm text-ink">Reset layout, crops & radius…</button>
+                    <button type="button" onClick={handleCopyMobileToDesktop} className="w-full min-h-11 text-left px-3 text-sm text-ink">Copy mobile → desktop</button>
+                    <button type="button" onClick={handleRemoveAll} className="w-full min-h-11 text-left px-3 text-sm text-error">Remove all</button>
+                  </div>}
+                </div>
+                <button type="button" onClick={handleClose} className="min-w-11 min-h-11 text-muted hover:text-ink text-xl" aria-label="Close layout editor">×</button>
               </div>
             </div>
-
-            {/* ---- Body: canvas (left) + properties (right) ---- */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Workspace — scrollable dark area. The canvas (viewport) is
-                  centered here with overflow:visible so photos with negative
-                  coordinates render outside it (in the dark workspace),
-                  visually indicating "off-screen" on the live site. No Rnd
-                  bounds constraint; clamping in updatePosition limits to
-                  ±50vw / ±60vh. */}
-              <div
-                ref={workspaceRef}
-                className="flex-1 flex items-center justify-center p-10 overflow-auto"
-                style={{ background: 'rgba(0,0,0,0.5)' }}
-                onMouseDown={handleCanvasMouseDown}
-              >
-                <div
-                  ref={canvasRef}
-                  className="relative bg-surface border-2 border-border shadow-inner"
-                  style={{
-                    width: canvas.w,
-                    height: canvas.h,
-                    overflow: 'visible',
-                    ...(showGrid ? {
-                      backgroundImage: `
-                        linear-gradient(to right, rgba(128,128,128,0.1) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(128,128,128,0.1) 1px, transparent 1px)
-                      `,
-                      backgroundSize: `${vwToPx(2, canvas.w)}px ${vhToPx(2, canvas.h)}px`,
-                      backgroundPosition: 'center center',
-                    } : {}),
-                  }}
-                >
-                  {/* Smart Alignment Guides */}
-                  {guides.map((g, i) => (
-                    <div
-                      key={`guide-${i}`}
-                      className="absolute pointer-events-none z-[150]"
-                      style={
-                        g.type === 'x'
-                          ? { left: g.pos, top: g.spanMin, height: g.spanMax - g.spanMin, width: 1, borderLeft: '1px dotted var(--color-primary)' }
-                          : { top: g.pos, left: g.spanMin, width: g.spanMax - g.spanMin, height: 1, borderTop: '1px dotted var(--color-primary)' }
-                      }
-                    />
-                  ))}
-
-                  {/* Horizontal/Vertical Center Crosshairs */}
-                  {showGrid && (
-                    <>
-                      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-border/50 pointer-events-none z-0" />
-                      <div className="absolute left-0 right-0 top-1/2 h-px bg-border/50 pointer-events-none z-0" />
-                    </>
-                  )}
-
-                  {activePhotos.length === 0 ? (
-                    <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">
-                      No photos — use “Add Photo” to start
-                    </div>
-                  ) : (
-                    activePhotos.map((photo, i) => (
-                      <CanvasPhoto
-                        key={`${photo}-${i}`}
-                        photo={photo}
-                        index={i}
-                        pos={activePositions[i] ?? defPicker(i)}
-                        isSelected={selected.includes(i)}
-                        selectedCount={selected.length}
-                        canvas={canvas}
-                        onDragStart={handlePhotoDragStart}
-                        onDrag={handlePhotoDrag}
-                        onDragStop={handlePhotoDragStop}
-                        onResizeStop={handleResizeStop}
-                        onSelect={selectPhoto}
-                        onDoubleClick={(idx) => setCropOpen(idx)}
-                      />
-                    ))
-                  )}
-
-                  {/* Marquee selection box — rendered above photos while the
-                      user is drag-selecting on the background. */}
-                  {marquee && (
-                    <div
-                      className="absolute border border-primary bg-primary/20 pointer-events-none z-[150]"
-                      style={{ left: marquee.left, top: marquee.top, width: marquee.w, height: marquee.h }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Properties panel */}
-              <div className="w-64 border-l border-border bg-surface overflow-y-auto flex flex-col">
-                <div className="p-4 border-b border-border">
-                  <h3 className="text-sm font-semibold text-ink">
-                    {isMulti
-                      ? `${selected.length} photos · ${device}`
-                      : primary !== null
-                        ? `Photo ${primary} · ${device}`
-                        : `${device} · ${activePhotos.length} photo${activePhotos.length === 1 ? '' : 's'}`}
-                  </h3>
-                  {isMulti && (
-                    <p className="text-xs text-muted mt-1">
-                      Shift/Cmd-click or drag on the background to select. X/Y/W/H hidden for multi-select.
-                    </p>
-                  )}
-                </div>
-
-                {selectedPos ? (
-                  <div className="p-4 space-y-5 flex-1">
-                    {/* Position & Size — only editable when a single photo is
-                        selected. For multi-select, per-photo geometry isn't a
-                        meaningful batch operation, so hide these inputs. */}
-                    {!isMulti && (
-                      <FieldGroup label="Position (vw / vh)" fields={['x', 'y']} pos={selectedPos} draft={inputDraft} setDraft={setInputDraft} onCommit={commitInput} />
-                    )}
-                    {!isMulti && (
-                      <FieldGroup label="Size (vw / vh)" fields={['w', 'h']} pos={selectedPos} draft={inputDraft} setDraft={setInputDraft} onCommit={commitInput} />
-                    )}
-
-                    {/* Z-index — editable only for single selection. */}
-                    {!isMulti && (
-                      <div className="space-y-1.5">
-                        <label className="text-sm text-muted uppercase tracking-wide">Z-index</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={inputDraft.z ?? selectedPos.z}
-                            step={1}
-                            min={RANGES.z.min}
-                            max={RANGES.z.max}
-                            onInput={(e) => setInputDraft((d) => ({ ...d, z: (e.currentTarget as HTMLInputElement).value }))}
-                            onBlur={() => commitInput('z')}
-                            onKeyDown={(e) => { if (e.key === 'Enter') commitInput('z') }}
-                            className="w-20 h-10 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
-                          />
-                          <button type="button" onClick={handleFront} className="h-10 px-2 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Front</button>
-                          <button type="button" onClick={handleBack} className="h-10 px-2 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors">Back</button>
+            {openNotice && <p role="status" className="px-4 py-2 text-sm text-muted bg-surface">{openNotice}</p>}
+            <div className="flex-1 flex min-h-0 overflow-hidden">
+              <div className="flex-1 min-w-0 flex flex-col">
+                <div ref={workspaceRef} className="flex-1 min-h-0 flex items-center justify-center p-10 overflow-hidden isolate"
+                  style={{ background: 'rgba(0,0,0,0.5)' }} onMouseDown={handleCanvasMouseDown}>
+                  <div ref={canvasRef} data-canvas-viewport className="relative bg-surface shrink-0"
+                    style={{ width: canvas.w, height: canvas.h, overflow: 'visible', outline: '1px solid var(--color-border)' }}>
+                    {showGrid && <div className="absolute inset-0 pointer-events-none" style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(128,128,128,.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(128,128,128,.15) 1px, transparent 1px)',
+                      backgroundSize: `${vwToPx(2, canvas.w)}px ${vhToPx(2, canvas.h)}px`, backgroundPosition: 'center',
+                    }} />}
+                    <div data-stage className="absolute inset-0" style={{
+                      transform: `translateY(${STAGE.offsetY}%) scale(${STAGE.scale})`, transformOrigin: 'center', pointerEvents: 'none',
+                    }}>
+                      {visibleLayers.map((layer) => (
+                        <div key={activePhotos[layer.index]} data-layer={layer.index} className="absolute inset-0" style={{
+                          zIndex: layer.z, transform: `scale(${layerScale(previewProgress, layer, intensity)})`,
+                          transformOrigin: 'center', opacity: layerOpacity(previewProgress, layer, intensity),
+                          visibility: previewProgress >= 0.8 ? 'hidden' : 'visible', pointerEvents: 'none',
+                        }}>
+                          <CanvasPhoto photo={activePhotos[layer.index]} index={layer.index} pos={layer.pos} device={device}
+                            isSelected={selected.includes(layer.index)} selectedCount={selected.length} canvas={canvas}
+                            readOnly={previewing} fliesFirst={layer.index === frontLayer?.index}
+                            onDragStart={handlePhotoDragStart} onDrag={handlePhotoDrag} onDragStop={handlePhotoDragStop}
+                            onResizeStop={handleResizeStop} onSelect={selectPhoto}
+                            onDoubleClick={(index) => setCropOpen(index)} />
                         </div>
-                      </div>
-                    )}
-
-                    {!isMulti && (
-                      <div className="pt-2">
-                        <Button variant="secondary" size="sm" onClick={() => setCropOpen(primary)} className="w-full">
-                          <CropIcon size={14} /> Crop & Pan Photo
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Border Radius — range slider for both single and bulk.
-                        Sliders only emit valid integers, so we commit directly
-                        to state on every change (no inputDraft needed). */}
-                    <BorderRadiusSlider
-                      value={bulkBr}
-                      isMulti={isMulti}
-                      isMixed={isMulti && bulkBr === undefined}
-                      onChange={(v) => {
-                        if (isMulti) updatePositionsBulk(selected, { br: v })
-                        else if (primary !== null) updatePosition(primary, { br: v })
-                      }}
-                    />
-
-                    {/* Remove + Reset */}
-                    <div className="space-y-2 pt-2 border-t border-border">
-                      <button
-                        type="button"
-                        onClick={handleRemoveSelected}
-                        className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-error hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-1.5"
-                      >
-                        <TrashIcon size={14} /> Remove {isMulti ? `${selected.length} Photos` : 'Photo'}
-                      </button>
-                      {device === 'desktop' && (
-                        <button
-                          type="button"
-                          onClick={handleCopyMobileToDesktop}
-                          className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors"
-                        >
-                          Copy mobile &rarr; desktop
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleReset}
-                        className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-error hover:opacity-80 transition-opacity"
-                      >
-                        Reset to default
-                      </button>
+                      ))}
+                      {guides.map((g, i) => <div key={i} className="absolute pointer-events-none z-[150]" style={g.type === 'x'
+                        ? { left: g.pos, top: g.spanMin, height: g.spanMax - g.spanMin, width: 1, borderLeft: '1px dotted var(--color-primary)' }
+                        : { top: g.pos, left: g.spanMin, width: g.spanMax - g.spanMin, height: 1, borderTop: '1px dotted var(--color-primary)' }} />)}
+                      {marquee && !previewing && <div className="absolute border border-primary bg-primary/20 pointer-events-none z-[150]"
+                        style={{ left: marquee.left, top: marquee.top, width: marquee.w, height: marquee.h }} />}
                     </div>
+                    {activePhotos.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-sm text-muted pointer-events-none p-3 text-center">No photos — use “Add Photo” to start</div>}
+                    {tagline && <div data-tagline-ghost aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none z-[150]" style={{
+                      transform: `translateY(${(device === 'mobile' ? 64 : 72) / 2 * canvas.w / (device === 'mobile' ? 393 : 1440)}px)`,
+                    }}>
+                      <div className="text-center text-ink" style={{ maxWidth: '90%' }}>
+                        {eyebrow && <p style={{
+                          fontSize: 12 * canvas.w / (device === 'mobile' ? 393 : 1440), fontWeight: 500, letterSpacing: '.16em', textTransform: 'uppercase',
+                          marginBottom: 20 * canvas.w / (device === 'mobile' ? 393 : 1440),
+                          opacity: taglineFrame(previewProgress + .03).opacity, transform: `scale(${taglineFrame(previewProgress + .03).scale})`,
+                        }}>{eyebrow}</p>}
+                        <p className="font-display" style={{
+                          fontWeight: 400, fontSize: (tagline.length > 90
+                            ? Math.min(36, Math.max(24, 20 + (device === 'mobile' ? 393 : 1440) * .01))
+                            : Math.min(52, Math.max(32, 24 + (device === 'mobile' ? 393 : 1440) * .02))) * canvas.w / (device === 'mobile' ? 393 : 1440),
+                          lineHeight: tagline.length > 90 ? 1.18 : 1.12, letterSpacing: 'var(--text-h2--letter-spacing, -.022em)',
+                          maxWidth: tagline.length > 90 ? '30ch' : '22ch', textWrap: 'balance', margin: '0 auto',
+                          opacity: taglineFrame(previewProgress).opacity, transform: `scale(${taglineFrame(previewProgress).scale})`,
+                        }}>{tagline}</p>
+                      </div>
+                    </div>}
+                    <div aria-hidden="true" className="absolute inset-0 pointer-events-none z-[200]" style={{ boxShadow: '0 0 0 100vmax rgba(0,0,0,.6)' }} />
+                    <div aria-hidden="true" className="absolute top-0 inset-x-0 pointer-events-none z-[210] border-b border-dashed border-border bg-canvas/60" style={{
+                      height: (device === 'mobile' ? 64 : 72) * canvas.w / (device === 'mobile' ? 393 : 1440),
+                    }}><span className="absolute top-0 left-1 text-xs text-muted">Header safe zone</span></div>
                   </div>
-                ) : (
-                  <div className="p-4 flex-1 flex flex-col items-center justify-center gap-3">
-                    <p className="text-sm text-muted text-center">Select a photo on the canvas to edit its position.</p>
-                    <p className="text-xs text-muted/70 text-center -mt-1">Shift/Cmd-click or drag on the background to multi-select · Cmd+A for all</p>
-                    <button
-                      type="button"
-                      onClick={() => { setPendingAdd([]); setPickerOpen(true) }}
-                      className="inline-flex items-center gap-1.5 text-sm bg-surface border border-border text-ink px-3 py-1.5 rounded-sm hover:bg-surface-hover transition-colors"
-                    >
-                      <PlusIcon size={14} /> Add Photo
+                </div>
+                <div className="border-t border-border bg-surface px-4 py-2">
+                  <div className="flex items-center gap-3">
+                    <label htmlFor={`${id}-progress`} className="text-sm text-ink whitespace-nowrap">Scroll preview</label>
+                    <input id={`${id}-progress`} type="range" min={0} max={100} step={1} value={Math.round(previewProgress * 100)}
+                      aria-valuetext={`${Math.round(previewProgress * 100)} percent`}
+                      onInput={(e) => { setPlaying(false); setPreviewProgress(Number(e.currentTarget.value) / 100) }} className="flex-1 min-h-11 min-w-0 accent-primary" />
+                    <output htmlFor={`${id}-progress`} className="text-xs font-mono text-muted">{Math.round(previewProgress * 100)}%</output>
+                    <button type="button" disabled={reducedMotion || playing} className="min-h-11 min-w-11 px-3 text-sm border border-border rounded-sm text-ink disabled:opacity-50"
+                      title={reducedMotion ? 'Playback is disabled while reduced motion is preferred' : 'Play one three-second pass'}
+                      onClick={() => setPlaying(true)}>{playing ? 'Playing…' : 'Play'}</button>
+                    <button type="button" className="min-h-11 px-2 text-sm text-ink" onClick={() => { setPlaying(false); setPreviewProgress(0) }}>Edit</button>
+                  </div>
+                  <p className="text-xs text-muted">{reducedMotion ? 'Reduced motion: Play is disabled. Scrub manually to inspect frames.' : previewing ? 'Preview is read-only. Return to 0% or choose Edit to arrange photos.' : 'Drag to arrange. Scroll preview shows how photos fly past.'}</p>
+                  {sizedCount > deviceCap && <p className="text-xs text-muted">Only the front {deviceCap} photos appear in the live scene on this device. Bring a photo forward to include it.</p>}
+                </div>
+              </div>
+              <div className="w-56 sm:w-64 shrink-0 border-l border-border bg-surface overflow-y-auto flex flex-col">
+                <div className="p-3 border-b border-border">
+                  <h3 className="text-sm font-semibold text-ink mb-2">Photos · {device}</h3>
+                  <div role="group" aria-label="Photos in depth order, front first" className="max-h-44 overflow-y-auto space-y-1">
+                    {[...layers].sort((a, b) => b.z - a.z || b.index - a.index).map((layer) => (
+                      <div key={activePhotos[layer.index]} className="flex items-center gap-1">
+                        <button type="button" aria-pressed={selected.includes(layer.index)}
+                          className={`flex-1 min-w-0 min-h-11 px-2 text-left border rounded-sm ${selected.includes(layer.index) ? 'border-primary text-ink' : 'border-border text-muted'}`}
+                          onClick={(e) => selectPhoto(layer.index, e)}
+                          onDblClick={() => { if (!previewing && !layer.hidden) setCropOpen(layer.index) }}>
+                          <span className="block text-xs truncate">{layer.index + 1}. {activePhotos[layer.index].split('/').pop()}</span>
+                          {(layer.pos.w === 0 || layer.pos.h === 0) ? <span className="block text-xs">Hidden on this device</span>
+                            : layer.hidden ? <span className="block text-xs">Behind the front {deviceCap}; not in the live scene</span>
+                            : layer.index === frontLayer?.index && <span className="block text-xs">flies first</span>}
+                        </button>
+                        {(layer.pos.w === 0 || layer.pos.h === 0) ? <button type="button" disabled={previewing}
+                          aria-label={`Show photo ${layer.index + 1}: ${activePhotos[layer.index].split('/').pop()}`}
+                          className="min-h-11 min-w-11 text-xs text-ink border border-border rounded-sm" onClick={() => showPhoto(layer.index)}>Show</button>
+                        : layer.hidden && <button type="button" disabled={previewing}
+                          aria-label={`Bring photo ${layer.index + 1} to the front: ${activePhotos[layer.index].split('/').pop()}`}
+                          className="min-h-11 min-w-11 px-1 text-xs text-ink border border-border rounded-sm" onClick={() => bringForward(layer.index)}>Front</button>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-3 border-b border-border">
+                  <h3 className="text-sm font-semibold text-ink">{isMulti ? `${selected.length} photos selected` : primary !== null ? `Photo ${primary + 1}` : 'Select a photo'}</h3>
+                  {primary !== null && !isMulti && <p className="text-xs text-muted break-all mt-1">{activePhotos[primary]?.split('/').pop()}</p>}
+                </div>
+                <fieldset disabled={previewing} className="min-w-0 border-0 p-0 m-0 flex-1 disabled:opacity-60">
+                  {selectedPos ? <div className="p-4 space-y-4">
+                    {!isMulti && <FieldGroup label="Position (vw / vh)" fields={['x', 'y']} pos={selectedPos} draft={inputDraft} setDraft={setInputDraft} onCommit={commitInput} />}
+                    {!isMulti && selectedPos.w > 0 && selectedPos.h > 0 && <FieldGroup label="Size (vw / vh)" fields={['w', 'h']} pos={selectedPos} draft={inputDraft} setDraft={setInputDraft} onCommit={commitInput} />}
+                    <div className="space-y-1.5">
+                      {isMulti ? <p className="text-xs text-muted uppercase tracking-wide">Depth (bulk)</p>
+                        : <label htmlFor={`${id}-depth`} className="text-xs text-muted uppercase tracking-wide">Depth</label>}
+                      <div className="flex flex-wrap gap-2">
+                        {!isMulti && selectedPos.w > 0 && selectedPos.h > 0 && <input id={`${id}-depth`} type="number" value={inputDraft.z ?? selectedDepthRank} step={1} min={1} max={maxDepthRank}
+                          onInput={(e) => setInputDraft((d) => ({ ...d, z: e.currentTarget.value }))} onBlur={() => commitInput('z')}
+                          onKeyDown={(e) => { if (e.key === 'Enter') commitInput('z') }} className="w-16 min-h-11 px-2 text-sm bg-canvas border border-border rounded-sm text-ink" />}
+                        <button type="button" onClick={handleFront} className="min-h-11 min-w-11 px-2 text-sm border border-border rounded-sm text-ink">Front</button>
+                        <button type="button" onClick={handleBack} className="min-h-11 min-w-11 px-2 text-sm border border-border rounded-sm text-ink">Back</button>
+                      </div>
+                      <p className="text-xs text-muted">Front photos fly past first and fastest</p>
+                    </div>
+                    {!isMulti && selectedPos.w > 0 && selectedPos.h > 0 && <Button variant="secondary" size="sm" className="w-full min-h-11" onClick={() => setCropOpen(primary)}><CropIcon size={14} /> Crop & Pan Photo</Button>}
+                    <BorderRadiusSlider value={bulkBr} isMulti={isMulti} isMixed={isMulti && bulkBr === undefined} onChange={(v) => {
+                      if (isMulti) updatePositionsBulk(selected, { br: v })
+                      else if (primary !== null) updatePosition(primary, { br: v })
+                    }} />
+                    <button type="button" onClick={handleRemoveSelected} className="w-full min-h-11 px-3 text-sm border border-border rounded-sm text-error inline-flex items-center justify-center gap-1.5">
+                      <TrashIcon size={14} /> Remove {isMulti ? `${selected.length} Photos` : 'Photo'}
                     </button>
-                  </div>
-                )}
-
-                {/* Add Photo is always reachable from the panel footer. */}
-                {selectedPos && (
-                  <div className="p-3 border-t border-border">
-                    <button
-                      type="button"
-                      onClick={() => { setPendingAdd([]); setPickerOpen(true) }}
-                      className="w-full h-10 px-3 text-sm bg-surface border border-border rounded-sm text-ink hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-1.5"
-                    >
-                      <PlusIcon size={14} /> Add Photo
-                    </button>
-                  </div>
-                )}
+                  </div> : <div className="p-4 space-y-2"><p className="text-sm text-muted">Select a photo on the canvas or in the list to edit it.</p><p className="text-xs text-muted">Shift/Cmd-click for multiple photos · Cmd+A for all · arrow keys to nudge · [ / ] for depth.</p></div>}
+                </fieldset>
+                <div className="p-3 border-t border-border">
+                  <button type="button" disabled={previewing || activePhotos.length >= 24} onClick={() => { setPendingAdd([]); setPickerOpen(true) }}
+                    className="w-full min-h-11 px-3 text-sm border border-border rounded-sm text-ink inline-flex items-center justify-center gap-1.5 disabled:opacity-50"><PlusIcon size={14} /> Add Photo</button>
+                </div>
               </div>
             </div>
-
-            {/* ---- Footer ---- */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface">
-              <p className="text-sm text-muted">
-                Changes save to config. Run &ldquo;Republish&rdquo; to apply to the live site.
-              </p>
+            {saveError && <p role="alert" className="px-4 py-2 text-sm text-error border-t border-border">{saveError}</p>}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-t border-border bg-surface">
+              <p className="text-xs text-muted">Save changes, then Republish to update the live site.</p>
               <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
-                <Button variant="primary" size="sm" onClick={handleSave}>Save</Button>
+                <Button variant="secondary" size="sm" className="min-h-11" onClick={handleClose}>Cancel</Button>
+                <Button variant="primary" size="sm" className="min-h-11" onClick={handleSave}>Save</Button>
               </div>
             </div>
           </div>
-
-          {/* ---- Photo picker (rendered above the editor modal) ---- */}
-          {pickerOpen && (
-            <PhotoPicker
-              device={device}
-              categories={pickerCategories}
-              pendingAdd={pendingAdd}
-              activePhotos={activePhotos}
-              onToggle={togglePendingAdd}
-              onConfirm={handleConfirmAdd}
-              onClose={() => setPickerOpen(false)}
-            />
-          )}
+          {pickerOpen && <PhotoPicker device={device} categories={pickerCategories} pendingAdd={pendingAdd} activePhotos={activePhotos}
+            onToggle={togglePendingAdd} onConfirm={handleConfirmAdd} onClose={() => setPickerOpen(false)} />}
         </div>
       )}
 
@@ -1058,7 +1062,7 @@ export function ImmersiveLayoutEditor({ path }: Props) {
         </AlertDialogContent>) as any}
       </AlertDialog>
 
-      {cropOpen !== null && activePositions[cropOpen] && (
+      {open && cropOpen !== null && activePositions[cropOpen] && (
         <CropEditor
           photoUrl={thumbUrl(activePhotos[cropOpen])}
           w={activePositions[cropOpen].w}
@@ -1102,14 +1106,16 @@ function FieldGroup({
   setDraft: (upd: (prev: Record<string, string>) => Record<string, string>) => void
   onCommit: (field: keyof PhotoPosition) => void
 }) {
+  const id = useId()
   return (
     <div className="space-y-1.5">
-      <label className="text-sm text-muted uppercase tracking-wide">{label}</label>
+      <p className="text-sm text-muted uppercase tracking-wide">{label}</p>
       <div className="grid grid-cols-2 gap-2">
         {fields.map((field) => (
           <div key={field} className="space-y-1">
-          <span className="text-xs text-muted">{FIELD_LABELS[field]}</span>
+          <label htmlFor={`${id}-${field}`} className="text-xs text-muted">{FIELD_LABELS[field]}</label>
           <input
+            id={`${id}-${field}`}
             type="number"
             value={draft[field] ?? (pos[field] as number)}
             step={0.5}
@@ -1118,7 +1124,7 @@ function FieldGroup({
             onInput={(e) => setDraft((d) => ({ ...d, [field]: (e.currentTarget as HTMLInputElement).value }))}
             onBlur={() => onCommit(field)}
             onKeyDown={(e) => { if (e.key === 'Enter') onCommit(field) }}
-            className="w-full h-10 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
+            className="w-full min-h-11 px-2 text-sm bg-canvas border border-border rounded-sm text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
           />
           </div>
         ))}

@@ -28,6 +28,7 @@ npm install && ADMIN_PASSWORD=admin npm run dev
 - **Dark mode** — three-state toggle (light / dark / auto), persisted and system-aware
 - **Contact form** — SMTP-powered, configurable from the admin dashboard
 - **Galleries** — DB-backed curated collections beyond folder-based categories
+- **Immersive gallery** — a server-rendered home-page collage that flies past the viewer on scroll and reveals a tagline, animated by CSS scroll-driven keyframes with a 1.2 KB fallback; layouts are authored per device in the admin
 
 ## Configuration and checks
 
@@ -117,6 +118,40 @@ pixel: a 2201 px wide source whose maximum edge is within 3840 px encodes a 2201
 Manifest URLs resolve to existing files, and responsive srcsets retain the same
 candidate widths. Legacy duplicate tiers from earlier runs are kept until the source
 changes; replacing a source removes obsolete tier files before encoding its new ladder.
+
+The home page immersive gallery is a server-rendered photo collage that flies past the
+viewer as they scroll, then reveals an optional eyebrow and tagline against seeded,
+theme-aware stars. Depth follows each photo's stacking order: front photographs pass first.
+The stage is one viewport tall and stays pinned while the page scrolls 200lvh by default;
+existing saved section order is preserved.
+
+Configure `home.immersiveGallery` with `enabled`, `text`, `eyebrow`, `mobilePhotos`,
+`mobilePositions`, `desktopPhotos` and `desktopPositions`. `intensity` accepts `dramatic`
+(default), `balanced` or `subtle`; `scrollLength` accepts `short` (140lvh), `standard`
+(200lvh, default) or `long` (260lvh); `atmosphere` accepts `stars` (default), `vignette` or
+`none`. Photos and positions stay paired per device. Missing positions use the shared
+defaults, a zero-width/zero-height position hides that photo on that device, and empty device
+layouts have no runway. The live scene shows the front six photos on mobile and eight on desktop. Text is displayed as stored; the admin warns about placeholder copy
+instead of hiding it. Fresh installs enable the gallery with the default tagline and place
+it second on the home page.
+
+The engine uses sampled CSS transform/opacity keyframes and native scroll timelines where
+supported (Chromium, Safari 26). Other modern browsers scrub the same keyframes with a small
+`requestAnimationFrame` fallback. Responsive image candidates come from the manifest, stay at
+or below 2200w (1100w on the mobile scene), and upgrade only after decoding; Save-Data keeps
+the first rendition. The public scene needs no client island or Framer Motion.
+Reduced-motion and JavaScript-disabled browsers receive the same composed still collage
+with readable copy below it, and print collapses the runway.
+
+In the admin, **Home → Immersive gallery** controls visibility, tagline, optional eyebrow,
+and the gallery's Feel (intensity, scroll length, atmosphere). The status pill reads Off,
+Needs desktop photos, Mobile empty, Placeholder tagline or Live. The layout editor previews
+the scroll with the same motion model as the public page, orders depth by stacking order
+(front photos pass first; renumbering happens only on explicit moves), can hide a photo on
+mobile, copies a mobile layout to desktop with aspect-aware conversion, and discards a draft
+reliably. The server validates `home.immersiveGallery` only when a save includes it. An
+unchanged legacy tagline or eyebrow over the length limit, or an unchanged photo list over
+24 entries, is tolerated so it never blocks an unrelated save.
 
 Run `npm test` for tests or `npm run check:full` to build and run all checks. The latter
 uses `scripts/check-full.mjs` and works on Windows too; coordinate builds in a shared checkout.

@@ -320,6 +320,22 @@ test('admin config GET and PUT use no-store and refresh normalized generated con
     assert.notEqual((await stat(generated)).ino, before.ino, 'rename replaces the old file rather than writing through it')
     assert.deepEqual((await readdir(join(ROOT, 'src/generated'))).filter(name => name.endsWith('.tmp')), [])
     assert.equal(await readFile(join(ROOT, 'public/site-config.json'), 'utf8'), publicConfigJson(expected))
+    await t.test('immersive PUT validation skips absent galleries and preserves unchanged over-limit stored copy', async () => {
+      const text = 'legacy '.repeat(41)
+      assert.ok(text.length > 280)
+      db(`db.writeFullConfig({ home: { immersiveGallery: { enabled: true, text: ${JSON.stringify(text)}, intensity: 'invalid-legacy-feel' } } })`)
+      const save = async body => {
+        const response = await request('/api/config', { method: 'PUT', headers, body: JSON.stringify(body) })
+        return { status: response.status, body: await response.json() }
+      }
+      assert.equal((await save({ site: { title: 'Unrelated edit' }, home: { cta: { enabled: false } } })).status, 200, 'PUT without home.immersiveGallery skips an invalid stored gallery')
+      assert.equal((await save({ home: { immersiveGallery: { text, intensity: 'balanced' } } })).status, 200, 'unchanged legacy tagline passes both body and merged validation')
+      assert.equal((await save({ home: { immersiveGallery: { atmosphere: 'none' } } })).status, 200, 'omitted tagline survives merged validation')
+      const changed = await save({ home: { immersiveGallery: { text: text + 'changed' } } })
+      assert.equal(changed.status, 400)
+      assert.match(changed.body.error, /home\.immersiveGallery\.text/)
+      assert.equal(JSON.parse(db('console.log(JSON.stringify(db.assembleConfig()))').stdout).home.immersiveGallery.text, text, 'failed PUT does not write the changed copy')
+    })
   } finally {
     if (child.exitCode === null && child.signalCode === null) {
       const stopped = once(child, 'close')

@@ -1,3 +1,4 @@
+import type { JSX } from 'preact'
 import { useEffect } from 'preact/hooks'
 import { useConfig } from '../../../lib/admin/store'
 
@@ -5,14 +6,14 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length
 }
 
-interface Props {
+interface Props extends Omit<JSX.IntrinsicElements['textarea'], 'value' | 'onInput' | 'onBlur'> {
   path: string
   label: string
   rows?: number
   maxWords?: number
 }
 
-export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
+export function TextAreaField({ path, label, rows = 4, maxWords, ...textareaAttributes }: Props) {
   const { getValue, setValue, flushSave, setError } = useConfig()
   const value = (getValue(path) as string | undefined) ?? ''
   const wordCount = countWords(value)
@@ -36,6 +37,7 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
         {label}
       </label>
       <textarea
+        {...textareaAttributes}
         id={inputId}
         rows={rows}
         value={value}
@@ -49,7 +51,7 @@ export function TextAreaField({ path, label, rows = 4, maxWords }: Props) {
           }
         }}
         aria-invalid={isOverLimit}
-        aria-describedby={maxWords ? `${inputId}-help` : undefined}
+        aria-describedby={[textareaAttributes['aria-describedby'], maxWords ? `${inputId}-help` : ''].filter(Boolean).join(' ') || undefined}
         class={`flex min-h-[60px] w-full rounded-sm border bg-canvas px-3 py-2 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y ${
           isOverLimit
             ? 'border-error focus-visible:ring-error focus-visible:border-error'

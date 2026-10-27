@@ -93,6 +93,7 @@ async function publicPalette() {
   const { default: postcss } = await import('postcss')
   const referenced = new Set()
   const collect = (url, pattern) => {
+    if (!existsSync(url)) return // a scanned file may be deleted; never let that disable trimming
     for (const match of readFileSync(url, 'utf8').matchAll(pattern)) referenced.add(match[1])
   }
   const cssFiles = [
@@ -104,7 +105,6 @@ async function publicPalette() {
     ...sourceFiles(new URL('../src/components/', import.meta.url), '.astro'),
     ...sourceFiles(new URL('../src/layouts/', import.meta.url), '.astro'),
     ...sourceFiles(new URL('../src/pages/', import.meta.url), '.astro', true),
-    new URL('../src/components/ui/immersive-scroll-gallery.tsx', import.meta.url),
   ]
   for (const url of componentFiles) collect(url, /(--[a-zA-Z_][\w-]*)/g)
 

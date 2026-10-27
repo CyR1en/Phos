@@ -4,6 +4,7 @@ import { TextField } from '../fields/TextField'
 import { Section } from '../ui/Section'
 import { useConfig } from '../../../lib/admin/store'
 import { ShowcaseSection } from './ShowcaseSection'
+import { ImmersiveGallerySection } from './ImmersiveGallerySection'
 
 const FRIENDLY_NAMES: Record<string, string> = {
   subheading: 'Hero Subheading & Description',
@@ -121,6 +122,7 @@ export function HomePage() {
         </Section>
 
         <ShowcaseSection />
+        <ImmersiveGallerySection />
         <ObjectField path="home" />
       </div>
     </div>
