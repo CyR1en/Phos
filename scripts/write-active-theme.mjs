@@ -31,7 +31,7 @@ const publicConfigUrl = new URL('../src/generated/site-config.public.json', impo
 const defaultsBytes = readFileSync(defaultsUrl)
 const defaults = JSON.parse(defaultsBytes.toString('utf8'))
 if (defaults.contact?.smtp?.pass || defaults.contact?.smtp?.user) {
-  console.warn('Tracked defaults (src/content/site-config.json) contain SMTP credentials. Confirm your settings in the admin, then restore the defaults as described in README.md.')
+  console.warn('Tracked defaults (src/content/site-config.json) contain SMTP credentials. Confirm your settings in the admin, then restore the defaults as described in docs/configuration.md.')
 }
 // A fresh clone can run type checks and build:site without opening the owner's database.
 let config
