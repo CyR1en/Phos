@@ -5,10 +5,10 @@
 
 /* Content is visible unless the head script enables reveals. Keep hiding at
    zero specificity so reduced-motion overrides always win. */
-:where(.js [data-animate-header]:not([data-animated])) {
+:where(.js:not(.reveal-timeout) [data-animate-header]:not([data-animated])) {
   opacity: 0;
 }
-:where(.js .animate-reveal:not([data-visible])) {
+:where(.js:not(.reveal-timeout) .animate-reveal:not([data-visible])) {
   opacity: 0;
   transform: translateY(28px);
 }

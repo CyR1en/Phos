@@ -1,6 +1,7 @@
 import type { CreateGestures } from './types'
+import { easing } from '../motion'
 
-const EASING = 'cubic-bezier(.32,.72,0,1)'
+const EASING = easing('sheet')
 const BACKDROP = '--lb-backdrop'
 const SAMPLE_COUNT = 32
 

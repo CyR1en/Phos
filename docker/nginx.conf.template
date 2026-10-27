@@ -116,7 +116,7 @@ http {
     }
 
     location / {
-      try_files $uri $uri.html $uri/index.html /404.html;
+      try_files $uri $uri.html $uri/index.html =404;
       add_header Cache-Control "no-cache" always;
       # Keep this complete set inline: the shared snippet uses DENY, not SAMEORIGIN.
       add_header X-Frame-Options "SAMEORIGIN" always;
@@ -127,9 +127,19 @@ http {
       add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';" always;
     }
 
+    location = /404 { return 404; }
+
     error_page 404 /404.html;
     location = /404.html {
       internal;
+      # Error responses need the same complete page headers, including CSP.
+      add_header Cache-Control "no-cache" always;
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+      add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';" always;
     }
   }
 }

@@ -1,5 +1,7 @@
 <!-- Scroll reveals only: section visibility and staggered page headers. -->
 <script>
+  const EASE_OUT_EXPO = getComputedStyle(document.documentElement).getPropertyValue('--ease-out-expo').trim() || 'cubic-bezier(.16,1,.3,1)'
+
   let scrollObserver: IntersectionObserver | undefined
   let headerObserver: IntersectionObserver | undefined
 
@@ -9,7 +11,13 @@
   }
 
   function initScrollAnimations() {
+    document.documentElement.setAttribute('data-reveals-ready', '')
     disconnectObservers()
+    if (document.documentElement.classList.contains('reveal-timeout')) {
+      document.querySelectorAll('[data-animate]').forEach(el => el.setAttribute('data-visible', ''))
+      document.querySelectorAll<HTMLElement>('[data-animate-header]').forEach(header => { header.dataset.animated = 'true' })
+      return
+    }
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
@@ -36,7 +44,7 @@
             { opacity: 1, transform: 'none' },
           ], {
             duration: 900,
-            easing: 'cubic-bezier(.16,1,.3,1)',
+            easing: EASE_OUT_EXPO,
             delay: i * 120,
             fill: 'backwards',
           })

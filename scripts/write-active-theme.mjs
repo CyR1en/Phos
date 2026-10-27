@@ -1,17 +1,48 @@
-import { readFileSync, readdirSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { atomicWriteFileSync } from '../lib/atomic-write.mjs'
 import { publicConfigJson } from '../lib/config-secrets.mjs'
+import { deepMerge } from '../lib/merge.mjs'
 
 // The public bundle carries only the active palette. The admin's live preview (an iframe of the
 // public site) switches palettes without a rebuild, so every theme is also concatenated into a
 // plain stylesheet under public/ that the preview path loads on demand.
 const allThemesUrl = new URL('../public/themes-all.css', import.meta.url)
-const configUrl = new URL('../src/content/site-config.json', import.meta.url)
+const defaultsUrl = new URL('../src/content/site-config.json', import.meta.url)
+const generatedUrl = new URL('../src/generated/', import.meta.url)
+const configUrl = new URL('site-config.json', generatedUrl)
+const pluginsUrl = new URL('plugins.mjs', generatedUrl)
 const themesUrl = new URL('../src/styles/themes/', import.meta.url)
 const outputUrl = new URL('../src/styles/active-theme.css', import.meta.url)
 // The admin field editor needs the config's SHAPE for type inference; the build config itself
 // carries SMTP credentials and must never be inlined into a public /_assets bundle.
 const publicConfigUrl = new URL('../src/generated/site-config.public.json', import.meta.url)
-const config = JSON.parse(readFileSync(configUrl, 'utf8'))
+const defaultsBytes = readFileSync(defaultsUrl)
+const defaults = JSON.parse(defaultsBytes.toString('utf8'))
+if (defaults.contact?.smtp?.pass || defaults.contact?.smtp?.user) {
+  console.warn('Tracked defaults (src/content/site-config.json) contain SMTP credentials. Confirm your settings in the admin, then restore the defaults as described in README.md.')
+}
+// A fresh clone can run type checks and build:site without opening the owner's database.
+let config
+if (existsSync(configUrl)) {
+  const existingBytes = readFileSync(configUrl, 'utf8')
+  config = deepMerge(defaults, JSON.parse(existingBytes), { skipUnknownKeys: true })
+  const content = JSON.stringify(config, null, 2)
+  if (content !== existingBytes) {
+    // Re-read right before replacing: an admin save that landed meanwhile must not be clobbered.
+    if (readFileSync(configUrl, 'utf8') !== existingBytes) {
+      console.warn('src/generated/site-config.json changed while bootstrapping; keeping the newer file')
+    } else {
+      atomicWriteFileSync(configUrl, content)
+    }
+  }
+} else {
+  atomicWriteFileSync(configUrl, defaultsBytes)
+  config = defaults
+}
+// Match discover-plugins' empty output without loading SQLite or replacing a discovered manifest.
+if (!existsSync(pluginsUrl)) {
+  atomicWriteFileSync(pluginsUrl, 'export const plugins = []\nexport const components = {}\n')
+}
 const themeFiles = readdirSync(themesUrl, { withFileTypes: true })
   .filter(entry => entry.isFile() && entry.name.endsWith('.css'))
   .map(entry => entry.name)
@@ -25,7 +56,7 @@ if (configuredTheme && !themes.has(configuredTheme)) {
 
 function writeChanged(url, content) {
   if (existsSync(url) && readFileSync(url, 'utf8') === content) return false
-  writeFileSync(url, content, 'utf8')
+  atomicWriteFileSync(url, content)
   return true
 }
 
@@ -105,7 +136,6 @@ try {
   content = `@import "./themes/${theme.slice('theme-'.length)}.css";\n`
 }
 if (writeChanged(outputUrl, content)) console.log(`Wrote active theme: ${theme}`)
-mkdirSync(new URL('../src/generated/', import.meta.url), { recursive: true })
 const publicConfig = publicConfigJson(config)
 writeChanged(publicConfigUrl, publicConfig)
 // The static copy under public/ (served by hosts without the admin proxy) must be stripped too,

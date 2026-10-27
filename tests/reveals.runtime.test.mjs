@@ -8,6 +8,87 @@ const grid = await fixture('photo-grid')
 const smoothScripts = await astroScripts('src/components/SmoothScroll.astro')
 const gridScripts = await astroScripts('src/components/PhotoGrid.astro')
 
+for (const token of ['cubic-bezier(0.2, 0.3, 0.4, 1)', '']) {
+  for (const component of ['SmoothScroll', 'PhotoGrid']) {
+    test(`${component}: animate receives ${token ? 'the computed easing token' : 'the literal fallback'}`, t => {
+      const e = environment(t)
+      const reads = []
+      globalThis.getComputedStyle = root => {
+        assert.equal(root, e.document.documentElement)
+        return { getPropertyValue: name => { reads.push(name); return token ? `  ${token}  ` : ' \n ' } }
+      }
+      e.parseHTML(component === 'SmoothScroll' ? reveals : grid, e.document.body)
+      ;(component === 'SmoothScroll' ? smoothScripts : gridScripts).forEach(code => e.run(code, component))
+      const target = e.document.querySelector(component === 'SmoothScroll' ? '[data-animate-header]' : '.photo-card-wrap')
+      e.ios.find(io => io.targets.has(target)).fire([[target, true]])
+      assert.ok(e.animations.length > 0, 'the observed element actually animates')
+      assert.ok(reads.includes('--ease-out-expo'))
+      assert.deepEqual([...new Set(e.animations.map(animation => animation.o.easing))], [token || 'cubic-bezier(.16,1,.3,1)'])
+    })
+  }
+}
+
+test('SmoothScroll: reveal-timeout makes sections and headers visible without animation and stamps readiness', t => {
+  const e = environment(t)
+  e.document.documentElement.classList.add('reveal-timeout')
+  e.parseHTML(reveals, e.document.body)
+  smoothScripts.forEach(code => e.run(code, 'SmoothScroll'))
+  const sections = e.document.querySelectorAll('[data-animate]')
+  const headers = e.document.querySelectorAll('[data-animate-header]')
+  assert.ok(sections.length > 0 && headers.length > 0)
+  assert.ok(sections.every(section => section.hasAttribute('data-visible')))
+  assert.ok(headers.every(header => header.dataset.animated === 'true'))
+  for (const io of e.ios) io.fire([...io.targets].map(target => [target, true]))
+  assert.equal(e.animations.length, 0)
+  assert.ok(e.document.documentElement.hasAttribute('data-reveals-ready'))
+})
+
+test('PhotoGrid: reveal-timeout never opts cards into pending hiding', t => {
+  const e = environment(t)
+  e.document.documentElement.classList.add('reveal-timeout')
+  e.parseHTML(grid, e.document.body)
+  gridScripts.forEach(code => e.run(code, 'PhotoGrid'))
+  const cards = e.document.querySelectorAll('.photo-card-wrap')
+  assert.ok(cards.length > 0)
+  assert.ok(cards.every(card => !card.hasAttribute('data-reveal-pending')))
+  assert.equal(e.animations.length, 0)
+})
+
+test('PhotoGrid: pending hiding is cleared before animate even when animate throws', t => {
+  const e = environment(t)
+  e.parseHTML(grid, e.document.body)
+  gridScripts.forEach(code => e.run(code, 'PhotoGrid'))
+  const card = e.document.querySelector('.photo-card-wrap')
+  assert.ok(card.hasAttribute('data-reveal-pending'))
+  let calls = 0
+  let pendingAtAnimate
+  const animate = card.animate
+  card.animate = () => {
+    calls++
+    pendingAtAnimate = card.hasAttribute('data-reveal-pending')
+    card.animate = animate
+    throw new Error('WAAPI unavailable')
+  }
+  try { e.ios[0].fire([[card, true]]) }
+  catch (error) { assert.equal(error.message, 'WAAPI unavailable') }
+  assert.equal(calls, 1, 'the throwing animate stub was reached')
+  assert.equal(pendingAtAnimate, false)
+  assert.ok(!card.hasAttribute('data-reveal-pending'))
+})
+
+for (const reduced of [false, true]) {
+  test(`SmoothScroll: every init stamps data-reveals-ready (reduced=${reduced})`, t => {
+    const e = environment(t, { reduced })
+    e.parseHTML(reveals, e.document.body)
+    smoothScripts.forEach(code => e.run(code, 'SmoothScroll'))
+    for (let nav = 0; nav <= 3; nav++) {
+      assert.equal(e.document.documentElement.getAttribute('data-reveals-ready'), '', 'init ' + nav)
+      e.document.documentElement.removeAttribute('data-reveals-ready')
+      if (nav < 3) swapBody(e, reveals)
+    }
+  })
+}
+
 for (const reduced of [false, true]) {
   test(`SmoothScroll: one-time sections and staggered headers survive three swaps (reduced=${reduced})`, async t => {
     const e = environment(t, { reduced })

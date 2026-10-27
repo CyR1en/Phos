@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
 export const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
@@ -34,19 +34,31 @@ export function astroScripts(entryPath, { inline = false } = {}) {
     const source = await readFile(resolve(repoRoot, entryPath), 'utf8')
     const blocks = astroScriptBlocks(source).filter(block => block.inline === inline && block.code.trim())
     if (!blocks.length) throw new Error(`No ${inline ? 'inline ' : ''}script blocks in ${entryPath}`)
-    return Promise.all(blocks.map(async ({ code }, index) => "'use strict';\n" + (await transform(code, {
-      loader: inline ? 'js' : 'ts', target: 'es2022', sourcefile: `${entryPath}:${index}`, sourcemap: 'inline'
-    })).code))
+    return Promise.all(blocks.map(async ({ code }, index) => {
+      const sourcefile = `${entryPath}:${index}`
+      // Processed Astro scripts can import shared TS modules (for example motion).
+      // Bundle from the component directory so the executed script is self-contained.
+      const output = inline
+        ? (await transform(code, { loader: 'js', target: 'es2022', sourcefile, sourcemap: 'inline' })).code
+        : (await build({
+          absWorkingDir: repoRoot,
+          stdin: { contents: code, loader: 'ts', resolveDir: dirname(resolve(repoRoot, entryPath)), sourcefile },
+          bundle: true, write: false, format: 'iife', platform: 'browser', target: 'es2022', sourcemap: 'inline'
+        })).outputFiles[0].text
+      return "'use strict';\n" + output
+    }))
   })())
   return astro.get(key)
 }
 
 /** Bundle the current TypeScript source once per entry per test worker. */
-export function bundle(entryPath) {
+let instance = 0
+export function bundle(entryPath, { fresh = false } = {}) {
   const entry = resolve(repoRoot, entryPath)
-  if (!modules.has(entry)) {
+  const key = fresh ? `${entry}:${++instance}` : entry
+  if (!modules.has(key)) {
     modules.set(
-      entry,
+      key,
       build({
         absWorkingDir: repoRoot,
         entryPoints: [entry],
@@ -58,9 +70,9 @@ export function bundle(entryPath) {
         sourcemap: 'inline'
       }).then((result) => {
         const source = result.outputFiles[0].text
-        return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)
+        return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}#${key}`)
       })
     )
   }
-  return modules.get(entry)
+  return modules.get(key)
 }

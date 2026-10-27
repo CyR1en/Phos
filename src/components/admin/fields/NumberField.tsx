@@ -3,14 +3,15 @@ import { useConfig } from '../../../lib/admin/store'
 interface Props {
   path: string
   label: string
+  pluginName?: string
   min?: number
   max?: number
 }
 
-export function NumberField({ path, label, min, max }: Props) {
-  const { getValue, setValue, flushSave } = useConfig()
-  const value = getValue(path)
-  const inputId = path.replace(/\./g, '-')
+export function NumberField({ path, label, pluginName, min, max }: Props) {
+  const { getValue, setValue, flushSave, getPluginValue, setPluginValue, flushPluginSaves } = useConfig()
+  const value = pluginName === undefined ? getValue(path) : getPluginValue(pluginName, path)
+  const inputId = pluginName === undefined ? path.replace(/\./g, '-') : `plugin-${pluginName}-${path}`
   return (
     <div class="space-y-1.5">
       <label for={inputId} class="text-sm font-medium text-ink block">
@@ -24,9 +25,11 @@ export function NumberField({ path, label, min, max }: Props) {
         max={max}
         onInput={(e) => {
           const v = (e.currentTarget as HTMLInputElement).value
-          setValue(path, v === '' ? null : Number(v))
+          const next = v === '' ? null : Number(v)
+          if (pluginName === undefined) setValue(path, next)
+          else setPluginValue(pluginName, path, next)
         }}
-        onBlur={() => flushSave()}
+        onBlur={() => pluginName === undefined ? flushSave() : flushPluginSaves()}
         class="flex h-9.5 w-full rounded-sm border border-border bg-canvas px-3 py-1 text-sm shadow-2xs transition-colors placeholder:text-muted hover:border-border-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:border-border-focus disabled:cursor-not-allowed disabled:opacity-50"
       />
     </div>

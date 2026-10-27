@@ -1,4 +1,5 @@
 import { photoKey, type CreateNavigation } from './types'
+import { easing } from '../motion'
 
 export const createNavigation: CreateNavigation = (ctx, deps) => {
   let finishCrossfade: (() => void) | null = null
@@ -97,7 +98,7 @@ export const createNavigation: CreateNavigation = (ctx, deps) => {
         ? [{ opacity: 0 }, { opacity: 1 }]
         : [{ opacity: 0, transform: `translateX(${dir * 24}px)` }, { opacity: 1, transform: 'none' }], {
         duration: 320,
-        easing: 'cubic-bezier(.16,1,.3,1)',
+        easing: easing('out-expo'),
         fill: 'forwards',
       })
       animations.push(entering)
@@ -106,7 +107,7 @@ export const createNavigation: CreateNavigation = (ctx, deps) => {
           ? [{ opacity: 1 }, { opacity: 0 }]
           : [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-dir * 24}px)` }], {
           duration: 220,
-          easing: 'cubic-bezier(.4,0,1,1)',
+          easing: easing('exit'),
           fill: 'forwards',
         }))
       }

@@ -8,10 +8,12 @@ import nodemailer from 'nodemailer'
 import { assembleConfig, writeFullConfig, getMeta, getPluginConfig, setPluginConfig, getGalleries, getGallery, createGallery, updateGallery, deleteGallery, setGalleryPhotos } from '../lib/db.mjs'
 import { deepMerge } from '../lib/merge.mjs'
 import { stripSecrets, publicConfigJson } from '../lib/config-secrets.mjs'
+import { atomicWriteFileSync } from '../lib/atomic-write.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const DEFAULT_CONFIG_PATH = join(ROOT, 'src', 'content', 'site-config.json')
+const BUILD_CONFIG_PATH = join(ROOT, 'src', 'generated', 'site-config.json')
 const BUILT_ADMIN_PATH = join(ROOT, 'dist', 'admin', 'index.html')
 const PHOTOS_SOURCE = process.env.PHOTOS_SOURCE || (existsSync('/photos') ? '/photos' : join(ROOT, 'photos'))
 const PLUGINS_DIR = join(ROOT, 'plugins')
@@ -46,7 +48,7 @@ function serveFile(res, path, type = 'text/html; charset=utf-8') {
 }
 
 function json(res, data, status = 200, extraHeaders = {}) {
-  res.writeHead(status, { 'Content-Type': 'application/json', ...extraHeaders })
+  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...extraHeaders })
   res.end(JSON.stringify(data))
 }
 
@@ -343,8 +345,12 @@ createServer(async (req, res) => {
     const baseline = deepMerge(defaults, current)
     const merged = deepMerge(baseline, body)
     writeFullConfig(merged)
+    // Reassemble normalized SQLite values with the same schema filter as merge-config.
+    const buildConfig = deepMerge(defaults, assembleConfig(), { skipUnknownKeys: true })
+    // Astro dev watches this build input; deployed static pages still need a build.
+    atomicWriteFileSync(BUILD_CONFIG_PATH, JSON.stringify(buildConfig, null, 2))
     // Static hosts serve public/ directly, so never persist credentials there.
-    writeFileSync(join(ROOT, 'public', 'site-config.json'), publicConfigJson(merged))
+    atomicWriteFileSync(join(ROOT, 'public', 'site-config.json'), publicConfigJson(buildConfig))
 
     const oldPhotos = baseline?.home?.hero?.photos || []
     const newPhotos = merged?.home?.hero?.photos || []
@@ -600,7 +606,7 @@ createServer(async (req, res) => {
     const defaults = readJSON(DEFAULT_CONFIG_PATH) || {}
     const live = assembleConfig()
     const merged = deepMerge(defaults, live)
-    // This endpoint is unauthenticated (fetched by BaseLayout.astro at runtime)
+    // This endpoint is unauthenticated (fetched by BaseLayout.astro in the admin preview only)
     // and has Access-Control-Allow-Origin: *, so strip SMTP credentials before
     // serving. The frontend never needs them — /api/contact reads SMTP server-side.
     return json(res, stripSecrets(merged), 200, {

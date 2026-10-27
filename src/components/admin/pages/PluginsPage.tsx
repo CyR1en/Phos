@@ -1,4 +1,7 @@
+import { useRef } from 'preact/hooks'
 import { useConfig } from '../../../lib/admin/store'
+import { isSecretKey } from '../secret-keys'
+import { NumberField } from '../fields/NumberField'
 import { Section } from '../ui/Section'
 import { Toggle } from '../ui/Toggle'
 
@@ -34,6 +37,8 @@ interface PluginConfigFieldProps {
 
 function PluginConfigField({ name }: PluginConfigFieldProps) {
   const { pluginConfigs, getPluginValue, setPluginValue } = useConfig()
+  // The manifest config supplies each field's type; keep it when an edit stores null.
+  const fieldTypes = useRef(new Map<string, string>())
   const plugin = pluginConfigs?.find((p) => p.name === name)
   if (!plugin) return null
   const config = plugin.config
@@ -45,6 +50,8 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
         const fieldPath = key
         const label = prettify(key)
         const fieldId = `plugin-${name}-${key}`
+        if (value !== null && value !== undefined) fieldTypes.current.set(key, typeof value)
+        const fieldType = fieldTypes.current.get(key)
 
         if (Array.isArray(value)) {
           return (
@@ -66,7 +73,26 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
             </div>
           )
         }
-        if (key.startsWith('toggle_') || typeof value === 'boolean') {
+        if (fieldType === 'string' && !key.startsWith('toggle_') && isSecretKey(fieldPath)) {
+          return (
+            <div key={fieldPath} class="space-y-1.5">
+              <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
+              <input
+                id={fieldId}
+                type="password"
+                autocomplete="new-password"
+                data-1p-ignore
+                data-lpignore="true"
+                data-bwignore
+                data-form-type="other"
+                value={String(getPluginValue(name, fieldPath) ?? '')}
+                onInput={(e) => setPluginValue(name, fieldPath, e.currentTarget.value)}
+                class={inputCls()}
+              />
+            </div>
+          )
+        }
+        if (key.startsWith('toggle_') || fieldType === 'boolean') {
           const checked = !!getPluginValue(name, fieldPath)
           return (
             <div key={fieldPath} class="flex items-center justify-between py-2.5">
@@ -81,27 +107,8 @@ function PluginConfigField({ name }: PluginConfigFieldProps) {
             </div>
           )
         }
-        if (typeof value === 'number') {
-          return (
-            <div key={fieldPath} class="space-y-1.5">
-              <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
-              <input
-                id={fieldId}
-                type="number"
-                value={
-                  getPluginValue(name, fieldPath) === undefined ||
-                  getPluginValue(name, fieldPath) === null
-                    ? ''
-                    : String(getPluginValue(name, fieldPath))
-                }
-                onInput={(e) => {
-                  const v = (e.currentTarget as HTMLInputElement).value
-                  setPluginValue(name, fieldPath, v === '' ? null : Number(v))
-                }}
-                class={inputCls()}
-              />
-            </div>
-          )
+        if (fieldType === 'number') {
+          return <NumberField key={fieldPath} pluginName={name} path={fieldPath} label={label} />
         }
         if (typeof value === 'string') {
           const useTextarea = value.length > 80 || value.includes('\n')

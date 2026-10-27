@@ -22,7 +22,7 @@ npm run check:full
 compresses the site with `PHOS_SKIP_CONFIG_SYNC=1` before running `check`. It defaults
 `PUBLIC_SITE_URL` to `https://phos.test` so OG checks run; an explicit URL is honored. You can also
 run `npm run build` separately. In a shared checkout, coordinate builds with the
-integrator. The dist smoke test skips the whole file when `dist/` is absent. When
+integrator. The dist smoke suite skips its built-output group when `dist/` is absent; source guards still run. When
 `dist/` exists, it **fails** if `dist/index.html` predates the newest file under
 `src/`, and tells you to rebuild. `PHOS_ALLOW_STALE_DIST=1` explicitly bypasses
 only that freshness assertion; every other built-output invariant still runs.
@@ -44,14 +44,20 @@ node --test tests/dist.smoke.test.mjs
 | `lightbox.modules.test.mjs` | Dialog, zoom, gestures, morph, history, navigation and loader factories, including races, decode errors, fallback behavior and listener cleanup. |
 | `header.runtime.test.mjs` | Drawer cases A–J: focus/top layer, two-frame opening, Escape/fallback/transition close, reduced motion, outside pointerdown geometry, synthetic/in-panel clicks, router clicks, three swaps, native and queued close races, with/without button prefocus, explicit focus restoration, immediate after-preparation close and hero-overlay observer geometry; desktop/drawer Contact fixture contract. |
 | `hero.runtime.test.mjs` | First-load decode/reveal, sources-before-img warming, idle/1500ms fallback, autoplay/crossfade finish and fallback, credit/roles/dots, hover/focus/visibility/offscreen/user pause, pointer/initial focus, decode-pause and rapid-dot races, credit hidden state, reduced motion and swap cleanup. |
-| `reveals.runtime.test.mjs` | SmoothScroll section visibility and one-time 900ms/120ms header staggering, immediate reduced-motion headers, three swaps; PhotoGrid pending opt-in, reveal order, backwards fill, 300ms delay cap, reduced motion/no IO and observer cleanup. |
-| `theme.runtime.test.mjs` | BaseLayout first-statement `js`, mode bootstrap/current-root preparation with blocked storage, skip-link focus, destination-based preview gating, public zero-fetch behavior, exact preview gating, parser-time stylesheet order, parent theme, config updates and one fetch per navigation; ThemeToggle cycle/labels/storage/colors, silent-on-load live status, View Transition ready/finish/rejection/overlap and direct reduced-motion fallback. |
-| `pipeline.test.mjs` | Synthetic sharp images, oriented dimensions/pixels, responsive descriptors, P3-to-sRGB conversion, ICC/alpha preservation, original copies, blur, metadata, galleries, caches/backfill/pruning, WebP tiers, hero-only AVIF ladders, no-upscale crops, CSS focus offsets, OG images, config-sync isolation and unreadable-DB preservation; default/explicit cache paths, legacy migration and duplicate-cache cleanup with single log lines; direct immutable SMTP-block stripping. |
-| `dist.smoke.test.mjs` | Build freshness; public/admin palettes and dependencies; hero loading/sources; HD tiles/prefetch/compression/photo references; layout/dialog/JSON; skip-link placement/CSS, form/control name heuristics, browser colors, non-vacuous OG checks, matched fixture behaviour attributes/nesting, no-JS tile/hero visibility, canvas/light scheme, motion tokens and root/header transitions; all-asset SMTP scans, raw TSX config import prevention and nginx/Docker security completeness. Astro redirect stubs are checked separately. |
+| `reveals.runtime.test.mjs` | Computed easing tokens and literal fallback passed to WAAPI; SmoothScroll readiness on every init, section visibility, 900ms/120ms header staggering, reduced motion, three swaps and reveal-timeout visibility; PhotoGrid pending opt-in/order, backwards fill, 300ms stagger cap, reduced motion/no IO/timeout, observer cleanup and pending removal before a throwing animate call. |
+| `theme.runtime.test.mjs` | BaseLayout first-statement `js`, exact 4000ms reveal failsafe, readiness suppression, timer replacement across three swaps and incoming-root timeout carryover only before readiness; mode bootstrap/current-root preparation with blocked storage, skip-link focus, destination-based preview gating, public zero-fetch behavior, parser-time stylesheet order, parent theme, config updates and one fetch per navigation; ThemeToggle cycle/labels/storage/colors, silent-on-load live status, View Transition ready/finish/rejection/overlap and direct reduced-motion fallback. |
+| `motion.runtime.test.mjs` | Shared `easing(name)` trims and caches all four tokens independently; missing, throwing, whitespace-only and CSS.supports-rejected values use cached literal fallbacks. Explicit read counters detect re-reads even when motion.ts catches a reader exception. Fresh module instances isolate cache cases. |
+| `merge-config.test.mjs` | Admin/SQLite versus persisted JSON precedence, SMTP serialization, generated DEST with unchanged defaults, noncanonical byte-for-byte bootstrap, owner-preserving schema merge/default fill, unchanged-config mtime, matching empty plugin stubs, defaults credential warnings and migration no-op/skip. A sandboxed admin login/GET/PUT checks no-store, normalized generated config, atomic replacement and public stripping; its server is killed on every path. |
+| `config-hygiene.test.mjs` | Read-only Git checks for tracked defaults, untracked public/generated config, index/work-tree diff against HEAD and effective check-ignore rules; Git checks clearly skip outside a work tree. Docker excludes config/generated/test/AppData/env inputs and has no negations; migration precedes generation. |
+| `admin-fields.test.mjs` | TSX source contracts for native input/password/autocomplete/ignore-attribute forwarding, SMTP numeric port bounds and email types, and PluginsPage API-key password inference before textarea handling; the actual secret-key predicate is bundled. |
+| `plugins.test.mjs` | Every Astro script block and src JS/TS module respects the build-time manifest boundary; directive keys are filtered before spreading props. Sandboxes scan every regular file for private sentinels, load colliding/digit-leading/quoted names and entry paths, and check secret-key warnings without printing values. |
+| `og.test.mjs` | Pure bundled OG resolver: configured/absolute/home-pass-through images, explicit versus automatic hero alt, OG/full dimensions, page gallery alt isolation and empty fallback. |
+| `pipeline.test.mjs` | Synthetic sharp images, oriented dimensions/pixels, responsive descriptors, P3-to-sRGB conversion, ICC/alpha preservation, original copies, blur, metadata, galleries, caches/backfill/pruning, WebP tiers, hero-only AVIF ladders, no-upscale crops, CSS focus offsets, OG images, config-sync isolation and unreadable-DB preservation; generated-config hero precedence, unchanged defaults and fallback when the generated file is absent; default/explicit cache paths, legacy migration and duplicate-cache cleanup with single log lines; direct immutable SMTP-block stripping. |
+| `dist.smoke.test.mjs` | Build freshness and generated/default build-config selection; public/admin palettes and dependencies; hero loading/sources; HD tiles/prefetch/compression/photo references; layout/dialog/JSON; skip-link placement/CSS, form/control name heuristics, browser colors, mandatory hero/config OG fallback with PUBLIC_SITE_URL diagnostics, Twitter/OG equality, alt provenance and dimensions, route canonical/og:url equality, noindex 404 and admin-free sitemap, matched fixture behaviour attributes/nesting, no-JS visibility and reveal-timeout CSS gates, canvas/light scheme, motion tokens and root/header transitions; centralized source easing, fine-pointer service hover with keyboard equivalents; all-asset SMTP scans, raw/default/generated/@lib/config TSX imports, server-level nginx error routing, exact 404/public header-map equality including CSP, and recursive Docker snippet coverage. Astro redirect stubs are checked separately. |
 | `contrast.test.mjs` | Actual light/dark gallery theme text, muted, subtle and error colors on base/surface backgrounds meet 4.5:1 WCAG AA contrast. |
-| `helpers/bundle.mjs` | Bundles current TypeScript modules and extracts/transforms every selected `.astro` script block with esbuild, cached per worker. Any script attribute except `src` selects inline JavaScript (Astro semantics); attribute-free or src-only scripts use TypeScript processing. Self-closing external scripts cannot swallow the following block. Extracted scripts run in strict mode. No dist chunks or generated bundle files. Missing esbuild errors say `npm i -D esbuild`. |
-| `bundle.test.mjs`, `smoke-helpers.test.mjs` | Script extraction/strict mode and regression checks for the accessible-name and fixture drift heuristics, plus nginx block ancestry and Docker glob coverage. |
-| `helpers/accessibility.mjs`, `helpers/fixture-contracts.mjs`, `helpers/nginx.mjs` | Small name/label heuristics, element-matched behaviour/nesting assertions and nginx block/Docker copy readers; no accessibility-tree or computed-layout claims. |
+| `helpers/bundle.mjs` | Bundles current TypeScript modules and selected processed `.astro` scripts with esbuild, resolving component-relative imports; cached per worker, with optional fresh module instances for cache tests. Any script attribute except `src` selects inline JavaScript (Astro semantics), which is transformed without bundling. Self-closing external scripts cannot swallow the following block. Extracted scripts run in strict mode. No dist chunks or generated bundle files. Missing esbuild errors say `npm i -D esbuild`. |
+| `bundle.test.mjs`, `smoke-helpers.test.mjs` | Script extraction/strict mode; negative fixtures for accessible names, fixture drift, reveal-root compounds and raw/plugin imports; nginx direct directives/header values and Docker glob coverage. |
+| `helpers/accessibility.mjs`, `helpers/fixture-contracts.mjs`, `helpers/nginx.mjs`, `helpers/source-contracts.mjs` | Small name/label heuristics, element-matched behaviour/nesting assertions and nginx block/Docker copy readers; no accessibility-tree or computed-layout claims. |
 | `world.test.mjs` | Finished WAAPI animations with `fill: 'both'` and `'forwards'` stay observable until cancelled; other fill modes disappear. |
 | `helpers/world.mjs` | Minimal fake DOM, propagation/capture, history/router, image decode, WAAPI, pointer capture and View Transitions with a deterministic clock. |
 | `helpers/dom.mjs`, `helpers/runtime.mjs` | Component fake DOM with HTML fixtures, modal focus/inert top layer and native Escape, mutation-order image/decode logging, deterministic timers/rAF/idle, manual IO/media queries, head writes, parent preview and controllable View Transitions. Restores global descriptors after every case; models root/head/body router swaps. |
@@ -70,7 +76,7 @@ HTML parsing, modal inertness/focus, head/parser ordering and idle/source mutati
 tracking. Merging these would change the established lightbox model substantially.
 Both use simulated time; the complete suite should stay below roughly 25 seconds.
 
-## Component fixtures and pending shared contracts
+## Component fixtures and shared contracts
 
 Re-sync these fixtures when their component markup changes. They omit decorative
 paths and most styling utilities; URLs, text and image counts are synthetic.
@@ -100,8 +106,10 @@ in the body. This is a selected behaviour contract, not an all-attributes compar
 The name heuristic ignores `aria-hidden="true"` text, accepts `aria-labelledby`
 and image alt names, and requires form controls to have a `label[for]`, `aria-label`
 or `aria-labelledby`. It does not implement the browser accessibility tree.
-The CSS bezier count covers public stylesheets only; WAAPI easing literals in
-JavaScript are outside that check. Header Escape cases include Safari/iOS-style
+The CSS bezier count covers public stylesheets; a separate source check prevents
+literal curves in Astro components/pages/layouts and scripts unless the same line
+references an `--ease-` token. `motion.ts` owns shared JavaScript fallback curves.
+Header Escape cases include Safari/iOS-style
 clicks without button prefocus: native noncancelable Escape may restore `body`.
 Cancelable Escape and close-button cases separately verify the script's own
 `menuBtn.focus()` call so the fake browser cannot mask a missing restore path.
@@ -113,13 +121,12 @@ PHOS_ALLOW_STALE_DIST=1 node --test tests/
 ```
 
 When current source or stale dist does not yet satisfy an agreed shared contract,
-put `{ todo: 'X: <contract>' }` on that individual test, replacing `X` with the
-owning fixer's name (for example `X1`). The assertion still executes and reports
+put `{ todo: 'Y: <contract>' }` on that individual test. The assertion still executes and reports
 its failure without making the suite fail. Remove the option after the source
 lands or the integrator rebuilds; keep the assertion. Existing satisfied checks
-have no placeholder wrapper. Pages without `og:image` explicitly skip OG assertions
-with `no og:image: build with PUBLIC_SITE_URL`; rebuilding with a site URL activates
-them.
+have no placeholder wrapper. OG checks require an image when the manifest has a
+hero or `site.og.image` is configured. They skip only when neither exists and the
+page has no image. Build with `PUBLIC_SITE_URL=https://phos.test` for these checks.
 
 ## Add a scenario
 
@@ -155,11 +162,14 @@ generator, installs a test-only merge-config execution tripwire, and symlinks on
 `node_modules`. No real merge-config or `lib/` support files are copied. All inputs,
 SQLite data, config, cache and generated outputs live in that directory. Cleanup
 runs through `t.after()` on success or failure. It never generates into the checkout's
-`public/photos` or `src/content`. A `sharp` load failure **fails** by default because
+`public/photos`, `src/content` or `src/generated`. A `sharp` load failure **fails** by default because
 the real generator requires sharp. `PHOS_ALLOW_NO_SHARP=1` is the explicit opt-out
 for environments that cannot install it; the skip message includes the load error.
 `PHOS_SKIP_CONFIG_SYNC=1` keeps the synthetic configuration intact, and the
 tripwire verifies merge-config was never executed.
+The synthetic hero selection lives under `src/generated/`; conflicting tracked
+defaults prove generated-config precedence. The tiny cache fixture removes that
+file to exercise the `src/content/` fallback without re-encoding the full matrix.
 
 Update the constants at the top of `pipeline.test.mjs` with a deliberate generator
 contract change: `CACHE_VERSION`, `MAX_EDGE`, `TIERS`, `STAGE_TIERS`, `GRID_TIERS`,

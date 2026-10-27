@@ -2,7 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { makeEnv } from './helpers/dom.mjs'
 import { accessibleName, formControlName } from './helpers/accessibility.mjs'
-import { nginxBlocks, dockerCopiesFile } from './helpers/nginx.mjs'
+import { nginxBlocks, nginxDirectives, nginxHeaderMap, dockerCopiesFile } from './helpers/nginx.mjs'
+import { rawConfigImports, hasRevealRootGate, pluginManifestImports } from './helpers/source-contracts.mjs'
 import { assertBehaviourMatches, assertFixtureContract } from './helpers/fixture-contracts.mjs'
 
 const dom = html => { const env = makeEnv(); env.parseHTML(html, env.document.body); return env.document.body }
@@ -49,4 +50,30 @@ test('Docker snippet copy check accepts covering globs and directory copies', ()
   for (const copy of ['COPY docker/*.template /app/docker/', 'COPY docker/*.conf /elsewhere/', 'COPY docker/other.conf /app/docker/']) {
     assert.ok(!dockerCopiesFile(copy, file), copy)
   }
+})
+
+test('reveal hiding requires the timeout exemption on the js root compound', () => {
+  for (const selector of ['.js:not(.reveal-timeout) [data-animate]', 'html.js:not(.reveal-timeout) .photo-card-wrap[data-reveal-pending]', ':where(.js:not(.reveal-timeout) [data-animate-header]:not([data-animated]))']) assert.ok(hasRevealRootGate(selector), selector)
+  for (const selector of ['.js .photo-card-wrap:not(.reveal-timeout)', '.js:not(.something) .card:not(.reveal-timeout)', '.js :not(.reveal-timeout) .card', '.js-other:not(.reveal-timeout) .card']) assert.ok(!hasRevealRootGate(selector), selector)
+})
+
+test('browser source guards reject raw generated config and build-time manifests in every import form', () => {
+  for (const specifier of ['../content/site-config.json', '../../../generated/site-config.json', '@lib/config']) {
+    for (const source of [`import config from '${specifier}'`, `import '${specifier}'`, `const config = import('${specifier}')`, `const config = require('${specifier}')`, `export { default } from '${specifier}'`]) {
+      assert.deepEqual(rawConfigImports(source), [specifier], source)
+    }
+  }
+  assert.deepEqual(rawConfigImports("import config from '../../../generated/site-config.public.json'"), [])
+  for (const source of ["import p from '../generated/plugins.mjs'", "import('../generated/plugins')", "require('../generated/plugins.js')"]) assert.equal(pluginManifestImports(source).length, 1, source)
+})
+
+test('nginx direct directives exclude nested error_page and header maps retain CSP values', () => {
+  const source = 'location / { error_page 404 /404.html; add_header CSP "nested" always; } error_page 500 /500.html;'
+  assert.doesNotMatch(nginxDirectives(source), /error_page 404/)
+  assert.match(nginxDirectives(source), /error_page 500/)
+  const headers = 'add_header Content-Security-Policy "default-src \'self\'; object-src \'none\';" always; add_header Cache-Control "no-cache" always;'
+  const values = nginxHeaderMap(headers)
+  assert.equal(values.size, 2)
+  assert.equal(values.get('content-security-policy'), '"default-src \'self\'; object-src \'none\';" always')
+  assert.notDeepEqual(nginxHeaderMap(headers.replace("object-src 'none'", "object-src 'self'")), values)
 })

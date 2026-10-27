@@ -42,10 +42,50 @@ npm install && ADMIN_PASSWORD=admin npm run dev
 | `PHOTOS_SOURCE` | Source category folders; `/photos` when present, otherwise `photos/` in the project. Dotfiles and dot-directories are ignored. |
 | `DB_PATH` | SQLite database; project `config/site.db`, or `/config/site.db` in Docker. |
 | `PHOTOS_CACHE_PATH` | Photo cache override; defaults to `photos-cache.json` beside the resolved SQLite database (Docker: `/config/photos-cache.json`). |
-| `CONFIG_PATH` | Persisted JSON used only while the database holds no owner configuration yet (never migrated and never saved from the admin); defaults to project `config/site-config.json`, Docker to `/config/site-config.json`. Once the database has configuration it is authoritative. |
-| `PHOS_SKIP_CONFIG_SYNC=1` | Skip the generator's SQLite-to-build-config sync, preserving synthetic/test config. |
+| `CONFIG_PATH` | Persisted JSON used to seed a database that has no owner configuration yet; defaults to project `config/site-config.json`, Docker to `/config/site-config.json`. SQLite is authoritative after migration or an admin save. Docker rewrites this file from SQLite on every boot. It contains SMTP credentials; keep it private. |
+| `PHOS_SKIP_CONFIG_SYNC=1` | Skip JSON-to-SQLite migration and the generator's SQLite-to-build-config sync, preserving synthetic/test config. |
 | `PHOS_ALLOW_STALE_DIST=1` | Bypass only the test suite's dist freshness assertion; does not validate new build output. |
 | `PHOS_ALLOW_NO_SHARP=1` | Explicitly skip pipeline tests when sharp cannot load; sharp is still required to generate photos. |
+
+`src/content/site-config.json` is the tracked defaults file. Scripts read it but never
+write owner settings back into it. The merged build input is
+`src/generated/site-config.json`; it can contain SMTP credentials and is gitignored.
+`scripts/write-active-theme.mjs` copies the defaults there byte-for-byte when the generated
+file is missing. For an existing file, it preserves owner values, fills missing default
+keys and removes keys outside the defaults schema, writing only when the bytes change.
+It also bootstraps a missing plugin manifest with empty exports, so checks and direct
+`build:site` runs work without creating a database.
+The script generates `src/generated/site-config.public.json` for the admin editor and
+`public/site-config.json` for static hosts, both with the entire SMTP block removed.
+The public copy is generated and gitignored too. `.dockerignore` excludes `config/`,
+`src/generated/`, `public/site-config.json`, `tests/`, `AppData/`, and `.env.*` from the
+image build context. Docker regenerates its build config at startup from defaults
+and the mounted owner data.
+
+Local `dev`, `build`, and `generate` commands run `scripts/migrate-config.mjs` before
+generating photos. The first local `npm run dev` or `npm run build` copies the defaults
+(merged with `CONFIG_PATH` when present) into SQLite and records `migrated_at`, just
+as Docker does on its first boot. `npm run generate` can also perform this first migration.
+Later runs skip migration; databases already saved by the admin are also preserved.
+Once SQLite contains owner
+settings, it takes precedence over the persisted JSON. From then on, the defaults file
+only fills keys the database lacks; editing an existing default value will not change
+the saved setting. Change settings in the admin, or reseed by stopping Phos and removing
+`config/site.db` (Docker: `/config/site.db`). The next run seeds a new database from
+defaults and any `CONFIG_PATH` file, so remove that file too if you want only defaults.
+Removing the database also removes saved galleries and plugin settings.
+`npm run check` does not run migration or config sync and does not create `config/site.db`.
+
+When upgrading a checkout where the old sync wrote owner settings or SMTP credentials
+into tracked files, first confirm those settings are present in the admin. Then restore
+the tracked defaults with `git restore src/content/site-config.json` and delete
+`public/site-config.json`. The next check or build recreates a public copy with SMTP removed.
+The theme writer warns if the tracked defaults still contain an SMTP user or password.
+
+Admin saves update SQLite, the generated build input, and the stripped public copy.
+Astro dev can pick up the generated input immediately. Use the admin's **Republish site** action
+to publish changed settings to static pages; it runs `npm run build`, which syncs
+the generated input from SQLite before building.
 
 On the next generator run, a legacy `public/photos/.cache.json` moves to the resolved
 cache path if that destination does not exist (including across volumes). If both
@@ -57,10 +97,21 @@ uses `scripts/check-full.mjs` and works on Windows too; coordinate builds in a s
 It defaults an unset `PUBLIC_SITE_URL` to `https://phos.test` for OG checks; that verification
 dist is not deployable. Rebuild with your actual public URL before deployment.
 
-On a fresh clone, run `node scripts/discover-plugins.mjs && node scripts/write-active-theme.mjs`
-before invoking `tsc` or `astro check` directly so the generated plugin manifest and
-theme/config files exist. `npm run check`, `npm run dev`, and
-`npm run build:site` run this step automatically.
+On a fresh clone, `npm run check` bootstraps both the generated config and plugin
+manifest, along with the theme files. `npm run build:site` does the same. Before invoking
+`tsc` or `astro check` directly, run `node scripts/write-active-theme.mjs` once.
+`npm run dev`, `npm run build`, and `npm run generate` also discover installed plugins;
+the empty bootstrap manifest never replaces an existing one. Plugin discovery may read
+SQLite for installed admin plugins.
+
+Plugin discovery merges each plugin's JSON configuration with SQLite overrides for
+admin-enabled plugins. The generated `src/generated/plugins.mjs` contains build-time
+configuration and must not be imported into browser code. Phos renders plugin entries
+without hydration directives. If a plugin creates a `client:*` island, pass only explicitly
+selected public values: Astro serializes island props into public HTML, so forwarding the
+complete configuration can expose credentials. Anything a plugin renders or ships to the
+browser is public: island props, `define:vars`, attributes, or a client script importing its
+own config. Discovery warns about secret-looking config keys.
 
 ## Images
 **Admin page** `/admin`

@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { migrateFromJson, getMeta, open } from '../lib/db.mjs'
+import { migrateFromJson, getMeta, hasOwnerConfig, open } from '../lib/db.mjs'
 import { deepMerge } from '../lib/merge.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -19,11 +19,23 @@ function readJSON(p) {
 }
 
 function main() {
+  // Return before opening SQLite so isolated checks do not create or change a database.
+  if (process.env.PHOS_SKIP_CONFIG_SYNC === '1') {
+    console.log('Skipping config migration (PHOS_SKIP_CONFIG_SYNC=1)')
+    return
+  }
+
   open()
 
   const migratedAt = getMeta('migrated_at')
   if (migratedAt) {
     console.log(`Already migrated at ${migratedAt}, skipping.`)
+    return
+  }
+
+  // Existing local installs may have admin edits without ever having run this migration.
+  if (hasOwnerConfig()) {
+    console.log('SQLite already contains owner configuration, skipping JSON migration.')
     return
   }
 

@@ -45,7 +45,7 @@ for (const [stored, darkOS, expectedMode, dark] of [
     assert.equal(root.classList.contains('dark'), dark)
     assert.ok(!root.hasAttribute('data-preview'))
     assert.equal(e.document.count('astro:before-swap'), 1, 'unconditional root-preparation listener')
-    assert.equal(e.document.count('astro:after-swap'), 0, 'public bootstrap needs no fetch hook')
+    assert.equal(e.document.count('astro:after-swap'), 1, 'one unconditional reveal failsafe hook')
     for (let n = 0; n < 3; n++) {
       const incoming = next(e)
       // Assert before the router copies attributes, so ThemeToggle cannot mask a missing hook.
@@ -93,6 +93,65 @@ test('BaseLayout: before-swap copies the current root mode and dark class', t =>
   e.fire('astro:before-swap', { newDocument: incoming, to: new URL('/about', e.window.location) })
   assert.equal(incoming.documentElement.getAttribute('data-theme-mode'), 'auto')
   assert.ok(!incoming.documentElement.classList.contains('dark'))
+})
+
+for (const ready of [false, true]) {
+  test(`BaseLayout: reveal failsafe checks readiness at exactly 4000ms (ready=${ready})`, async t => {
+    const e = boot(t)
+    const root = e.document.documentElement
+    if (ready) root.setAttribute('data-reveals-ready', '')
+    await e.advance(3999)
+    assert.ok(!root.classList.contains('reveal-timeout'))
+    await e.advance(1)
+    assert.equal(root.classList.contains('reveal-timeout'), !ready)
+    assert.equal(e.fetches.length, 0, 'failsafe does not enable public config fetching')
+  })
+}
+
+test('BaseLayout: before-swap carries reveal-timeout onto the incoming root', async t => {
+  const e = boot(t)
+  await e.advance(4000)
+  const incoming = next(e)
+  navigate(e, incoming, doc => {
+    assert.ok(doc.documentElement.classList.contains('reveal-timeout'), 'copied before root attributes are replaced')
+  })
+  assert.ok(e.document.documentElement.classList.contains('reveal-timeout'))
+})
+
+test('BaseLayout: readiness after a timeout stops that timeout carrying into the next page', async t => {
+  const e = boot(t)
+  await e.advance(4000)
+  const root = e.document.documentElement
+  assert.ok(root.classList.contains('reveal-timeout'))
+  root.setAttribute('data-reveals-ready', '')
+  navigate(e, next(e), doc => {
+    assert.ok(!doc.documentElement.classList.contains('reveal-timeout'), 'a recovered current page grants the incoming page its own reveal window')
+  })
+  assert.ok(!root.classList.contains('reveal-timeout'))
+  await e.advance(3999)
+  assert.ok(!root.classList.contains('reveal-timeout'))
+  await e.advance(1)
+  assert.ok(root.classList.contains('reveal-timeout'))
+})
+
+test('BaseLayout: each of three swaps cancels the prior failsafe and grants a new 4000ms window', async t => {
+  const e = boot(t)
+  const root = e.document.documentElement
+  root.setAttribute('data-reveals-ready', '')
+  for (const ready of [false, true, false]) {
+    await e.advance(1000)
+    root.classList.remove('reveal-timeout')
+    root.setAttribute('data-reveals-ready', '')
+    navigate(e, next(e))
+    assert.ok(!root.hasAttribute('data-reveals-ready'), 'incoming root does not inherit stale readiness')
+    if (ready) root.setAttribute('data-reveals-ready', '')
+    await e.advance(3999)
+    assert.ok(!root.classList.contains('reveal-timeout'), 'old deadline cannot reveal the incoming page early')
+    await e.advance(1)
+    assert.equal(root.classList.contains('reveal-timeout'), !ready)
+  }
+  assert.equal(e.document.count('astro:before-swap'), 1)
+  assert.equal(e.document.count('astro:after-swap'), 1)
 })
 
 test('BaseLayout: skip-link document listener prevents URL navigation and focuses main', t => {

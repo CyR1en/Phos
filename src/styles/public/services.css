@@ -5,7 +5,7 @@
   transition: opacity var(--duration-reveal) var(--ease-out-expo) calc(var(--stagger-i, 0) * var(--duration-reveal) / 10),
     transform var(--duration-reveal) var(--ease-out-expo) calc(var(--stagger-i, 0) * var(--duration-reveal) / 10);
 }
-:where(.js [data-animate]:not([data-visible]) :is(.service-list, .testimonial-grid) > *) {
+:where(.js:not(.reveal-timeout) [data-animate]:not([data-visible]) :is(.service-list, .testimonial-grid) > *) {
   opacity: 0;
   transform: translateY(24px);
 }
@@ -40,14 +40,16 @@
   z-index: -1;
   transition: opacity var(--duration-ui) var(--ease-out-expo);
 }
-.service-item:hover::before { opacity: 1; }
+.service-item:focus-visible::before { opacity: 1; }
 .service-item img { width: 96px; height: 112px; object-fit: cover; transition: transform var(--duration-hover) var(--ease-out-expo); }
 .service-item:focus-visible img { transform: scale(1.03); }
 .service-item svg { width: 24px; height: 24px; transition: transform var(--duration-ui) var(--ease-out-expo); }
-.service-item:hover svg { transform: translateX(4px); }
+.service-item:focus-visible svg { transform: translateX(4px); }
 
 @media (hover: hover) and (pointer: fine) {
+  .service-item:hover::before { opacity: 1; }
   .service-item:hover img { transform: scale(1.03); }
+  .service-item:hover svg { transform: translateX(4px); }
 }
 
 @media (max-width: 767px) {
@@ -59,5 +61,5 @@
 @media (prefers-reduced-motion: reduce) {
   .service-list > *, .testimonial-grid > * { opacity: 1; transform: none; }
   .service-item:is(:hover, :focus-visible) img,
-  .service-item:hover svg { transform: none; }
+  .service-item:is(:hover, :focus-visible) svg { transform: none; }
 }

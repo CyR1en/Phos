@@ -37,6 +37,21 @@ export function ObjectField({ path }: Props) {
         const fieldPath = `${path}.${key}`
         const label = prettify(key)
 
+        if (fieldPath === 'contact.smtp.pass') {
+          return <TextField key={fieldPath} path={fieldPath} label={label} type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" />
+        }
+        if (fieldPath === 'contact.smtp.user') {
+          return <TextField key={fieldPath} path={fieldPath} label={label} autocomplete="off" />
+        }
+        if (fieldPath === 'contact.smtp.port') {
+          return <NumberField key={fieldPath} path={fieldPath} label={label} min={1} max={65535} />
+        }
+        if (fieldPath === 'contact.smtp.fromEmail') {
+          return <TextField key={fieldPath} path={fieldPath} label={label} type="email" />
+        }
+        if (fieldPath === 'contact.smtp.toEmail') {
+          return <TextField key={fieldPath} path={fieldPath} label={label} type="email" />
+        }
         if (fieldPath === 'home.hero.photos') {
           return <HeroPhotosField key={fieldPath} path={fieldPath} label={label} limit={5} />
         }

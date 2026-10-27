@@ -1,4 +1,4 @@
 import type { SiteConfig } from './admin/types'
-import rawConfig from '@content/site-config.json'
+import rawConfig from '../generated/site-config.json'
 
-export default rawConfig as SiteConfig
+export default rawConfig as unknown as SiteConfig

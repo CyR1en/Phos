@@ -9,13 +9,17 @@ import path from 'node:path'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  site: import.meta.env.PUBLIC_SITE_URL || 'https://yourdomain.com',
+  // Read at config-load time, where import.meta.env does not yet carry PUBLIC_* values.
+  site: process.env.PUBLIC_SITE_URL || import.meta.env.PUBLIC_SITE_URL || 'https://yourdomain.com',
   redirects: {
     '/portfolio/':             '/galleries/',
     '/portfolio/[gallery]':    '/galleries/[gallery]',
     '/photo/all/':             '/photos/all/',
   },
-  integrations: [sitemap(), preact({ compat: true })],
+  integrations: [sitemap({
+    filter: page => !/\/admin(?:\/|$)/.test(new URL(page).pathname)
+      && !/^\/404(?:\.html)?\/?$/.test(new URL(page).pathname),
+  }), preact({ compat: true })],
   prefetch: {
     prefetchAll: true,
     defaultStrategy: 'hover',

@@ -60,7 +60,8 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
   <Lightbox photos={allPhotos} />
 
   <script>
-    import type { LightboxPhoto } from '../../scripts/lightbox/types'
+    const EASE_OUT_EXPO = getComputedStyle(document.documentElement).getPropertyValue('--ease-out-expo').trim() || 'cubic-bezier(.16,1,.3,1)'
+    type LightboxPhotos = Parameters<NonNullable<Window['__updateLightboxData']>>[0]
 
     const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
@@ -75,7 +76,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
       const pageTitle = pageHeader?.querySelector('[data-page-title]') || pageHeader?.querySelector('h1')
       const pageMeta = pageHeader?.querySelector('[data-page-meta]')
       const lightboxData = document.getElementById('lightbox-data')
-      const fullData = JSON.parse(lightboxData?.textContent || '[]') as LightboxPhoto[]
+      const fullData = JSON.parse(lightboxData?.textContent || '[]') as LightboxPhotos
 
       const urlParams = new URLSearchParams(window.location.search)
       const initialCat = urlParams.get('cat')
@@ -119,7 +120,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
         }
         if (pageMeta) pageMeta.textContent = plural(visibleItems.length, 'photo')
 
-        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        if (!document.documentElement.classList.contains('reveal-timeout') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
           visibleItems
             .map((item) => ({ item, rect: item.getBoundingClientRect() }))
             .filter(({ rect }) => rect.top < window.innerHeight && rect.bottom > 0)
@@ -133,7 +134,7 @@ const allPhotos: FlatPhoto[] = categories.flatMap((cat) =>
                 ],
                 {
                   duration: 900,
-                  easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                  easing: EASE_OUT_EXPO,
                   delay: Math.min(index * 60, 300),
                   fill: 'backwards',
                 }

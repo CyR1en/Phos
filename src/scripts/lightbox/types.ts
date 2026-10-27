@@ -140,8 +140,8 @@ export interface Navigation {
    * Show `index`. Newest request wins: bumps `state.navToken`; abandoned requests never touch
    * the DOM. Keeps the OUTGOING photo visible until the incoming thumb has painted, then runs a
    * directional crossfade with WAAPI (incoming: opacity 0→1 + translateX(dir*24px→0) 320ms
-   * cubic-bezier(.16,1,.3,1); outgoing: opacity 1→0 + translateX(0→-dir*24px) 220ms
-   * cubic-bezier(.4,0,1,1)), then swaps layers and clears the old layer. Instant swap under
+   * --ease-out-expo; outgoing: opacity 1→0 + translateX(0→-dir*24px) 220ms
+   * --ease-exit), then swaps layers and clears the old layer. Instant swap under
    * reduced motion or with `instant`, after the thumb has painted. `dir = 0` means "no slide"
    * (open or filter reset): fade only unless `instant` is set.
    */
@@ -174,7 +174,7 @@ export interface Zoom {
   toggleAt(clientX?: number, clientY?: number): void
   /**
    * Zoom in at a point: scale = min(max(photo.width / rect.width, 1.75), 3), `transform-origin`
-   * at the point, `transition: transform 420ms cubic-bezier(.16,1,.3,1)`. Scales immediately and calls
+   * at the point, `transition: transform 420ms <resolved --ease-out-expo>`. Scales immediately and calls
    * `loader.upgrade(img, photo, rect.width * scale)` in the background so the larger tier swaps in
    * when it arrives (never block the zoom on the network).
    */
@@ -205,7 +205,7 @@ export interface GesturesDeps {
 
 /** Pointer Events on the stage: 1:1 horizontal swipe (0.3× resistance past the ends), commit
  *  when |dx| > 18% of innerWidth or fling > 0.45 px/ms (animate the current layer out
- *  translateX(±100vw) 260ms cubic-bezier(.32,.72,0,1), then call next/prev), otherwise spring
+ *  translateX(±100vw) 260ms --ease-sheet, then call next/prev), otherwise spring
  *  back 300ms; drag-down to dismiss (translateY(dy) scale(1 - dy/2000), backdrop fades with
  *  dy/500, close when dy > 120); when zoomed, drags pan instead. Fine pointers never swipe. */
 export interface Gestures {
@@ -285,7 +285,7 @@ export type CreateDialog = (ctx: LightboxContext, deps: DialogDeps) => Dialog
 /**
  * Same-document View Transition that grows the photo out of its grid tile on open and back
  * into it on close (`view-transition-name: lb-photo` on the tile `<img>` and the front layer;
- * group duration 460ms cubic-bezier(.32,.72,0,1)). Falls back to running `apply()` directly
+ * group duration 460ms --ease-sheet). Falls back to running `apply()` directly
  * when `document.startViewTransition` is missing, under reduced motion, or when `tile` is
  * null / off-screen.
  */

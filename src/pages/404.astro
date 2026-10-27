@@ -5,7 +5,7 @@ const ogTitle = config.notFound?.og_title || config.notFound.heading
 const ogDescription = config.notFound?.og_description
 ---
 
-<BaseLayout title={ogTitle} description={ogDescription}>
+<BaseLayout title={ogTitle} description={ogDescription} noindex>
   <section class="mx-auto flex min-h-[80vh] max-w-wide flex-col items-start justify-center px-6 lg:px-8">
     <div data-animate-header class="flex flex-col items-start">
       <p class="eyebrow">Error 404</p>

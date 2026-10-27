@@ -8,5 +8,6 @@ const componentMap = components as Record<string, any>
 {matches.map((p) => {
   const Component = componentMap[p.name]
   if (!Component) return null
-  return <Component {...p.config} />
+  const props = Object.fromEntries(Object.entries(p.config).filter(([key]) => !/^(client|server):/.test(key)))
+  return <Component {...props} />
 })}

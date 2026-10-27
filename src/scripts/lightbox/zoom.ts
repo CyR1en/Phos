@@ -1,6 +1,7 @@
 import type { CreateZoom } from './types'
+import { easing } from '../motion'
 
-const zoomTransition = 'transform 420ms cubic-bezier(.16,1,.3,1)'
+const zoomTransition = `transform 420ms ${easing('out-expo')}`
 const dragThreshold = 6
 const doubleTapDelay = 300
 const doubleTapDistance = 24

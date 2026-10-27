@@ -4,8 +4,14 @@ node_modules/
 *.md
 .env
 .env.local
+.env.*
 *.log
 dist/
 public/photos/
 .DS_Store
 .astro/
+config/
+AppData/
+src/generated/
+public/site-config.json
+tests/

@@ -12,12 +12,12 @@
   "scripts": {
     "test": "node --test tests/",
     "check": "node scripts/write-active-theme.mjs && tsc --noEmit -p tsconfig.json && astro check && node --test tests/",
-    "dev": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && node scripts/write-active-theme.mjs && (node admin/server.mjs &) && astro dev",
-    "build": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && npm run build:site",
+    "dev": "node scripts/discover-plugins.mjs && node scripts/migrate-config.mjs && node scripts/generate-content.mjs && node scripts/write-active-theme.mjs && (node admin/server.mjs &) && astro dev",
+    "build": "node scripts/discover-plugins.mjs && node scripts/migrate-config.mjs && node scripts/generate-content.mjs && npm run build:site",
     "build:site": "node scripts/write-active-theme.mjs && astro build && node scripts/compress-dist.mjs",
     "check:full": "node scripts/check-full.mjs",
     "preview": "astro preview",
-    "generate": "node scripts/discover-plugins.mjs && node scripts/generate-content.mjs && node scripts/write-active-theme.mjs",
+    "generate": "node scripts/discover-plugins.mjs && node scripts/migrate-config.mjs && node scripts/generate-content.mjs && node scripts/write-active-theme.mjs",
     "astro": "astro"
   },
   "dependencies": {

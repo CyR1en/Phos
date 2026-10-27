@@ -24,22 +24,24 @@ fi
 usermod -u "$PUID" appuser
 groupmod -g "$PGID" appuser
 
+mkdir -p /app/src/generated
 chown -R appuser:appuser /app /var/lib/nginx /var/log/nginx /photos /config 2>/dev/null || true
 chmod 750 /config
 
 DB_PATH="${DB_PATH:-/config/site.db}"
 CONFIG_PATH="${CONFIG_PATH:-/config/site-config.json}"
 export DB_PATH CONFIG_PATH
-CONFIG_DEST="/app/src/content/site-config.json"
+DEFAULT_CONFIG_PATH="/app/src/content/site-config.json"
+CONFIG_DEST="/app/src/generated/site-config.json"
 
 # Persist default config if none exists
-if [ ! -f "$CONFIG_PATH" ] && [ -f "$CONFIG_DEST" ]; then
-  su-exec appuser cp "$CONFIG_DEST" "$CONFIG_PATH"
+if [ ! -f "$CONFIG_PATH" ] && [ -f "$DEFAULT_CONFIG_PATH" ]; then
+  su-exec appuser cp "$DEFAULT_CONFIG_PATH" "$CONFIG_PATH"
   echo "Copied default config to $CONFIG_PATH"
 fi
 
 # Merge default config into persisted config (preserves user edits, adds new fields)
-su-exec appuser node /app/scripts/merge-config.mjs "$CONFIG_DEST" "$CONFIG_PATH"
+su-exec appuser node /app/scripts/merge-config.mjs "$DEFAULT_CONFIG_PATH" "$CONFIG_PATH"
 
 # Sync merged config to where Astro expects it
 su-exec appuser cp -f "$CONFIG_PATH" "$CONFIG_DEST"

@@ -9,7 +9,8 @@ import { makeEnv } from './helpers/dom.mjs'
 import { fixture } from './helpers/runtime.mjs'
 import { accessibleName, formControlName } from './helpers/accessibility.mjs'
 import { assertFixtureContract } from './helpers/fixture-contracts.mjs'
-import { nginxBlocks, dockerCopiesFile } from './helpers/nginx.mjs'
+import { nginxBlocks, nginxDirectives, nginxHeaderMap, dockerCopiesFile } from './helpers/nginx.mjs'
+import { rawConfigImports, hasRevealRootGate } from './helpers/source-contracts.mjs'
 
 const repoRoot = fileURLToPath(new URL('../', import.meta.url))
 const dist = join(repoRoot, 'dist')
@@ -64,7 +65,10 @@ test('built site contracts', {
   assert.ok(publicHtml.length, 'dist/ contains public HTML pages')
   const manifest = JSON.parse(await readFile(join(repoRoot, 'src/content/categories.json'), 'utf8'))
   const galleries = JSON.parse(await readFile(join(repoRoot, 'src/content/galleries.json'), 'utf8'))
-  const config = JSON.parse(await readFile(join(repoRoot, 'src/content/site-config.json'), 'utf8'))
+  const configPath = existsSync(join(repoRoot, 'src/generated/site-config.json'))
+    ? join(repoRoot, 'src/generated/site-config.json')
+    : join(repoRoot, 'src/content/site-config.json')
+  const config = JSON.parse(await readFile(configPath, 'utf8'))
   const emptyGalleries = (Array.isArray(galleries) ? galleries : galleries.galleries).length === 0
   const themeFiles = (await files(join(repoRoot, 'src/styles/themes'))).filter((path) => path.endsWith('.css'))
   const themeNames = new Set(themeFiles.map((path) => 'theme-' + basename(path, '.css')))
@@ -185,14 +189,40 @@ test('built site contracts', {
       assert.ok(header.querySelectorAll('a').every(anchor => anchor.textContent.trim() !== 'Contact'))
       assert.ok(drawer.querySelectorAll('nav a').some(anchor => anchor.textContent.trim() === 'Contact'))
     })
-    await t.test(name + ': photo OG dimensions', t => {
+    await t.test(name + ': OG fallback, dimensions and meaningful alt', t => {
       const metas = tags(body, 'meta')
       const images = metas.filter(attrs => attrs.get('property') === 'og:image')
-      if (!images.length) return t.skip('no og:image on this page (no page image and site.og.image is empty)')
+      if (manifest.heroPriority?.length > 0 || config.site?.og?.image) {
+        assert.equal(images.length, 1, 'every public page needs og:image when a hero/configured image exists; set PUBLIC_SITE_URL and run npm run check:full')
+      } else if (!images.length) return t.skip('no hero, page image or configured OG image')
+      const metadata = property => metas.filter(attrs => attrs.get('property') === property)
+      const twitter = name => metas.filter(attrs => attrs.get('name') === name)
+      assert.deepEqual(twitter('twitter:image').map(attrs => attrs.get('content')), images.map(attrs => attrs.get('content')), 'Twitter and OG image URLs agree')
+      assert.deepEqual(twitter('twitter:image:alt').map(attrs => attrs.get('content')), metadata('og:image:alt').map(attrs => attrs.get('content')), 'Twitter and OG alt text agree, including omission')
+      const pathname = url => new URL(url, 'https://phos.test').pathname
+      const configuredPath = config.site?.og?.image ? pathname(config.site.og.image) : null
       for (const og of images) {
-        if (!new URL(og.get('content'), 'https://phos.test').pathname.startsWith('/photos/og/')) continue
-        assert.equal(metas.find(attrs => attrs.get('property') === 'og:image:width')?.get('content'), '1200')
-        assert.equal(metas.find(attrs => attrs.get('property') === 'og:image:height')?.get('content'), '630')
+        const imagePath = pathname(og.get('content'))
+        for (const [axis, cropSize] of [['width', 1200], ['height', 630]]) {
+          const dimensions = metadata('og:image:' + axis)
+          const configuredSize = config.site?.og?.[axis === 'width' ? 'imageWidth' : 'imageHeight']
+          const expected = imagePath.startsWith('/photos/full/') ? undefined
+            : imagePath.startsWith('/photos/og/') ? cropSize
+              : imagePath === configuredPath ? configuredSize : undefined
+          if (expected) {
+            assert.equal(dimensions.length, 1, axis + ' occurs once')
+            assert.equal(dimensions[0].get('content'), String(expected))
+          } else assert.equal(dimensions.length, 0, imagePath + ': no unproven ' + axis)
+        }
+        const alternatives = metadata('og:image:alt')
+        assert.ok(alternatives.length <= 1)
+        for (const alt of alternatives) {
+          const hero = manifest.heroPriority?.find(hero => [hero.ogImage, hero.full].filter(Boolean).some(url => pathname(url) === imagePath))
+          const expected = imagePath === configuredPath ? config.site.og.imageAlt
+            : hero?.titleIsAuto === false ? hero.title : undefined
+          assert.ok(expected?.trim(), imagePath + ': alt is configured or an explicitly titled hero')
+          assert.equal(alt.get('content'), expected)
+        }
       }
     })
     await t.test(name + ': public layout and photo tiles', () => {
@@ -308,6 +338,17 @@ test('built site contracts', {
         }
       }
     })
+    await t.test(name + ': reveal and filter scripts stay inline', () => {
+      // Astro only inlines a script chunk with zero imports; an import of motion.ts would turn these
+      // into external requests and delay the ?cat= filter on client-side navigations.
+      for (const attrs of tags(body, 'script')) {
+        assert.doesNotMatch(attrs.get('src') || '', /(?:SmoothScroll|PhotoGrid|all)\.astro_astro_type_script/,
+          'reveal/filter scripts must not become external chunks')
+      }
+      const inlineModules = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)]
+        .filter(([, raw, code]) => attributes(raw).get('type') === 'module' && !attributes(raw).has('src') && /--ease-out-expo/.test(code))
+      assert.ok(inlineModules.length >= 1, 'at least one inline module reads the easing token (SmoothScroll)')
+    })
     await t.test(name + ': bounded viewport prefetch', () => {
       const prefetch = [...body.matchAll(/<[a-z][\w:-]*\b[^>]*>/gi)].map(([tag]) => attributes(tag))
         .filter((attrs) => attrs.get('data-astro-prefetch') === 'viewport')
@@ -315,10 +356,11 @@ test('built site contracts', {
       for (const attrs of prefetch) assert.doesNotMatch(attrs.get('href') || '', /\?cat=/)
     })
     await t.test(name + ': OG images use generated crops', t => {
-      // og:image in baked HTML is the evidence of PUBLIC_SITE_URL at build time.
       const images = tags(body, 'meta').filter(attrs => attrs.get('property') === 'og:image')
-      if (!images.length) return t.skip('no og:image on this page (no page image and site.og.image is empty)')
+      if (manifest.heroPriority?.length > 0 || config.site?.og?.image) assert.equal(images.length, 1)
+      else if (!images.length) return t.skip('no hero, page image or configured OG image')
       for (const attrs of images) {
+        if (config.site?.og?.image && new URL(attrs.get('content'), 'https://phos.test').pathname === new URL(config.site.og.image, 'https://phos.test').pathname) continue
         assert.match(attrs.get('content') || '', /\/photos\/og\//)
       }
     })
@@ -346,14 +388,14 @@ test('built site contracts', {
   const publicCss = [bundledCss, ...publicInlineStyles].join('\n')
   const bundleRoot = postcss.parse(bundledCss)
   const cssRoot = postcss.parse(publicCss)
-  await t.test('public reveal opacity rules are gated by js', () => {
+  await t.test('public reveal opacity rules are gated by js and the reveal timeout escape hatch', () => {
     let checked = 0
     cssRoot.walkRules(rule => {
       if (!rule.nodes.some(node => node.type === 'decl' && node.prop === 'opacity' && /^0(?:\.0+)?$/.test(node.value))) return
       for (const selector of rule.selectors) {
-        if (!/\.animate-reveal\b|\[data-animate-header\]|\.service-list\b|\.testimonial-grid\b/.test(selector)) continue
+        if (!/\.animate-reveal\b|\[data-animate-header\]|\.service-list\b|\.testimonial-grid\b|\[data-reveal-pending\]/.test(selector)) continue
         checked++
-        assert.match(selector, /\.js(?![\w-])/, selector)
+        assert.ok(hasRevealRootGate(selector), selector + ': requires .js:not(.reveal-timeout) in one root compound')
       }
     })
     assert.ok(checked > 0, 'at least one gated reveal opacity rule is emitted')
@@ -456,10 +498,10 @@ test('built site contracts', {
       assert.equal(/\bsmtp["']?\s*:\s*\{/.test(await readFile(path, 'utf8')), false, relative(dist, path) + ': no SMTP object')
     }
   })
-  await t.test('TSX components never import raw site-config JSON', async () => {
+  await t.test('TSX components never import raw config JSON or @lib/config', async () => {
     for (const path of (await files(join(repoRoot, 'src'))).filter(path => path.endsWith('.tsx'))) {
       const source = await readFile(path, 'utf8')
-      assert.doesNotMatch(source, /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["'][^"']*content\/site-config\.json["']/, relative(repoRoot, path))
+      assert.deepEqual(rawConfigImports(source), [], relative(repoRoot, path) + ': use site-config.public.json for browser-facing defaults')
     }
   })
 
@@ -506,6 +548,18 @@ test('built site contracts', {
     t.diagnostic(`${references.size} distinct photo references checked in dist/ or public/`)
   })
   const nginx = (await readFile(join(repoRoot, 'docker/nginx.conf.template'), 'utf8')).replace(/#.*$/gm, '')
+  const snippetFiles = new Set()
+  async function expandIncludes(text, stack = []) {
+    for (const [directive, file] of [...text.matchAll(/\binclude\s+\/app\/docker\/([^;\s]+)\s*;/g)]) {
+      assert.ok(!file.includes('..') && !file.includes('/'), 'local snippet name: ' + file)
+      assert.ok(!stack.includes(file), 'no recursive include cycle: ' + [...stack, file].join(' -> '))
+      snippetFiles.add(file)
+      const source = (await readFile(join(repoRoot, 'docker', file), 'utf8')).replace(/#.*$/gm, '')
+      text = text.replace(directive, await expandIncludes(source, [...stack, file]))
+    }
+    return text
+  }
+  const expandedNginx = await expandIncludes(nginx)
   await t.test('nginx rejects hidden paths at server level and before photo regex locations', t => {
     const locations = nginxBlocks(nginx).filter(block => /^location\b/.test(block.header))
     const hidden = locations.find(block => /^location\s+~\*?\s/.test(block.header) && block.header.includes('/\\.') && /(?:return\s+40[34]|deny\s+all)\s*;/.test(block.body))
@@ -522,9 +576,8 @@ test('built site contracts', {
   await t.test('nginx security includes exist and are copied by Dockerfile', async () => {
     assert.ok(existsSync(join(repoRoot, 'docker/nginx-security-headers.conf')))
     const dockerfile = (await readFile(join(repoRoot, 'Dockerfile'), 'utf8')).replace(/#.*$/gm, '')
-    const includes = [...nginx.matchAll(/\binclude\s+\/app\/docker\/([^;\s]+)\s*;/g)].map(([, file]) => file)
-    assert.ok(includes.includes('nginx-security-headers.conf'))
-    for (const file of new Set(includes)) {
+    assert.ok(snippetFiles.has('nginx-security-headers.conf'))
+    for (const file of snippetFiles) {
       assert.ok(!file.includes('..') && existsSync(join(repoRoot, 'docker', file)), file + ' exists')
       assert.ok(dockerCopiesFile(dockerfile, file), file + ' is copied into /app/docker by Dockerfile')
     }
@@ -534,9 +587,8 @@ test('built site contracts', {
     const snippet = (await readFile(join(repoRoot, 'docker/nginx-security-headers.conf'), 'utf8')).replace(/#.*$/gm, '')
     const headers = text => new Set([...text.matchAll(/\badd_header\s+([\w-]+)\b/g)].map(([, name]) => name.toLowerCase()))
     for (const name of required) assert.ok(headers(snippet).has(name.toLowerCase()), 'security snippet: ' + name)
-    const locations = nginxBlocks(nginx).filter(block => /^location\b/.test(block.header))
+    const locations = nginxBlocks(expandedNginx).filter(block => /^location\b/.test(block.header))
     for (const location of locations.filter(block => /\badd_header\b/.test(block.body))) {
-      if (/\binclude\s+\/app\/docker\/nginx-security-headers\.conf\s*;/.test(location.body)) continue
       for (const name of required) assert.ok(headers(location.body).has(name.toLowerCase()), location.header + ': ' + name)
     }
     const root = locations.find(block => /^location\s+\/$/.test(block.header))
@@ -556,9 +608,118 @@ test('built site contracts', {
     assert.deepEqual(immutable, ['^~ /_assets/'])
   })
   await t.test('nginx HTML uses no-cache', () => {
-    const location = nginx.match(/\blocation\s+\/\s*\{([\s\S]*?)\n\s*\}/)?.[1]
+    const location = nginxBlocks(expandedNginx).find(block => block.header === 'location /')?.body
     assert.ok(location, 'nginx defines location /')
     assert.match(location, /add_header\s+Cache-Control\s+"no-cache"(?:\s+always)?\s*;/)
   })
+  await t.test('nginx unknown routes return 404 through an internal page with complete page headers', () => {
+    const blocks = nginxBlocks(expandedNginx)
+    const root = blocks.find(block => block.header === 'location /')
+    assert.ok(root)
+    assert.match(root.body, /\btry_files\s+[^;]*\s=404\s*;/)
+    const server = blocks.find(block => block.header === 'server')
+    assert.ok(server)
+    assert.match(nginxDirectives(server.body), /\berror_page\s+404\s+\/404\.html\s*;/, 'error_page is a direct server directive')
+    const route = nginxBlocks(server.body).find(block => block.depth === 0 && /^location\s+=\s+\/404$/.test(block.header))
+    assert.ok(route, 'exact /404 returns an error rather than serving a successful page')
+    assert.match(nginxDirectives(route.body), /^\s*return\s+404\s*;\s*$/)
+    const error = blocks.find(block => /^location\s+=\s+\/404\.html$/.test(block.header))
+    assert.ok(error, 'exact /404.html location exists')
+    assert.match(error.body, /\binternal\s*;/)
+    const pageHeaders = nginxHeaderMap(root.body)
+    assert.ok(pageHeaders.has('content-security-policy'), 'public HTML defines CSP')
+    assert.deepEqual(nginxHeaderMap(error.body), pageHeaders, '404 and public HTML have identical header names, values and always flags, including CSP')
+    for (const [name, value] of pageHeaders) assert.match(value, /\balways$/, name + ' applies to error responses')
+  })
+  await t.test('public canonical and og:url match each route; 404 is noindex without either URL', {
+  }, async () => {
+    // Derive the build's site URL from home when the caller has not supplied it.
+    // The path contract is then checked independently for every public page.
+    const home = markup(await readFile(join(dist, 'index.html'), 'utf8'))
+    const homeCanonical = tags(home, 'link').find(attrs => attrs.get('rel') === 'canonical')?.get('href')
+    const siteUrl = (process.env.PUBLIC_SITE_URL || homeCanonical || '').replace(/\/+$/, '')
+    assert.ok(siteUrl, 'canonical checks require PUBLIC_SITE_URL; run npm run check:full')
+    for (const path of publicHtml) {
+      const body = markup(await readFile(path, 'utf8'))
+      const metas = tags(body, 'meta')
+      if (metas.some(attrs => attrs.get('http-equiv')?.toLowerCase() === 'refresh')) continue
+      const name = relative(dist, path)
+      const canonical = tags(body, 'link').filter(attrs => attrs.get('rel') === 'canonical').map(attrs => attrs.get('href'))
+      const ogUrl = metas.filter(attrs => attrs.get('property') === 'og:url').map(attrs => attrs.get('content'))
+      if (name === '404.html' || name === '404/index.html') {
+        assert.deepEqual(canonical, [], name + ': 404 has no canonical')
+        assert.deepEqual(ogUrl, [], name + ': 404 has no og:url')
+        assert.deepEqual(metas.filter(attrs => attrs.get('name') === 'robots').map(attrs => attrs.get('content')), ['noindex'], name)
+      } else {
+        const pathname = '/' + name.replace(/(?:^|\/)index\.html$/, '').replace(/\.html$/, '').replace(/\/+$/, '')
+        const expected = siteUrl + (pathname === '/' ? '/' : pathname + '/')
+        assert.deepEqual(canonical, [expected], name + ': canonical uses its own trailing-slash pathname')
+        assert.deepEqual(ogUrl, [expected], name + ': og:url equals canonical')
+      }
+    }
+  })
+  await t.test('sitemap shards contain no admin URL and use the site origin', async () => {
+    const sitemaps = all.filter(path => /^sitemap-.*\.xml$/.test(relative(dist, path)))
+    assert.ok(sitemaps.length > 0, 'dist has sitemap-*.xml')
+    // astro.config reads PUBLIC_SITE_URL at config-load time; a placeholder host here means it read the wrong env.
+    const homeCanonical = tags(markup(await readFile(join(dist, 'index.html'), 'utf8')), 'link')
+      .find(attrs => attrs.get('rel') === 'canonical')?.get('href')
+    assert.ok(homeCanonical, 'home page has a canonical URL (build with PUBLIC_SITE_URL / check:full)')
+    const origin = new URL(homeCanonical).origin
+    let urls = 0
+    for (const path of sitemaps) {
+      for (const [, value] of (await readFile(path, 'utf8')).matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)) {
+        urls++
+        const url = new URL(unescapeHtml(value))
+        assert.doesNotMatch(url.pathname, /^\/admin(?:\/|$)/, relative(dist, path))
+        assert.equal(url.origin, origin, relative(dist, path) + ': sitemap origin matches the page canonical origin')
+      }
+    }
+    assert.ok(urls > 0, 'sitemap contains URLs')
+  })
   t.diagnostic(`${pages} public pages, ${redirects} Astro redirect stubs, ${anchors} photo anchors`)
+})
+
+test('public sources use easing tokens inline or the shared motion.ts fallbacks', async () => {
+  const paths = [
+    ...(await files(join(repoRoot, 'src/components'))).filter(path => path.endsWith('.astro')),
+    ...(await files(join(repoRoot, 'src/pages'))).filter(path => path.endsWith('.astro')),
+    ...(await files(join(repoRoot, 'src/layouts'))).filter(path => path.endsWith('.astro')),
+    ...(await files(join(repoRoot, 'src/scripts'))).filter(path => /\.[cm]?[jt]sx?$/.test(path)),
+  ]
+  assert.ok(paths.length > 0)
+  for (const path of paths) {
+    const source = (await readFile(path, 'utf8')).replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm, '')
+    if (relative(repoRoot, path) === 'src/scripts/motion.ts') continue
+    for (const [index, line] of source.split(/\r?\n/).entries()) {
+      const code = line.replace(/\/\/.*$/, '')
+      if (/cubic-bezier\s*\(/.test(code)) assert.match(code, /--ease-[\w-]+/, `${relative(repoRoot, path)}:${index + 1}: literal fallback must reference its --ease- token on the same line (comments excluded)`)
+    }
+  }
+})
+
+test('service hover effects require a fine hover pointer and retain unconditional keyboard focus equivalents', async () => {
+  const css = postcss.parse(await readFile(join(repoRoot, 'src/styles/public/services.css'), 'utf8'))
+  const rules = []
+  css.walkRules(rule => rules.push(rule))
+  const hoverMedia = rule => {
+    for (let node = rule.parent; node; node = node.parent) {
+      if (node.type === 'atrule' && node.name === 'media' && /\(\s*hover\s*:\s*hover\s*\)\s+and\s+\(\s*pointer\s*:\s*fine\s*\)/.test(node.params)) return true
+    }
+    return false
+  }
+  for (const [hover, focus] of [
+    ['.service-item:hover::before', '.service-item:focus-visible::before'],
+    ['.service-item:hover svg', '.service-item:focus-visible svg'],
+  ]) {
+    const effects = rules.filter(rule => rule.selectors.includes(hover))
+    assert.ok(effects.length > 0, hover)
+    assert.ok(effects.every(hoverMedia), hover + ' is gated by hover + fine pointer')
+    const focused = rules.filter(rule => rule.selectors.includes(focus) && !hoverMedia(rule))
+    assert.ok(focused.length > 0, focus + ' works without hover capability')
+    for (const effect of effects) {
+      const declarations = rule => Object.fromEntries(rule.nodes.filter(node => node.type === 'decl').map(node => [node.prop, node.value]))
+      assert.ok(focused.some(rule => JSON.stringify(declarations(rule)) === JSON.stringify(declarations(effect))), focus + ' gives the same feedback')
+    }
+  }
 })

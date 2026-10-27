@@ -110,7 +110,7 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
 
   for (const p of ['photos', 'public', 'src/content', 'config'])
     await rm(join(ROOT, p), { recursive: true, force: true })
-  for (const p of ['photos', 'src/content', 'config', 'evidence'])
+  for (const p of ['photos', 'src/content', 'src/generated', 'config', 'evidence'])
     await mkdir(join(ROOT, p), { recursive: true })
   const schema = new Database(join(ROOT, 'config/site.db'))
   schema.exec(
@@ -309,8 +309,11 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     p3IccLength: p3Icc.length
   })
   let heroConfig = ['matrix/b-portrait.jpg', 'matrix/f-tiny.jpg', 'matrix/l-small-hero.jpg', 'matrix/gradient.png']
+  const defaultsPath = join(ROOT, 'src/content/site-config.json')
+  const defaultBytes = JSON.stringify({ home: { hero: { photos: [] } } }, null, 2) + '\n'
+  await writeFile(defaultsPath, defaultBytes)
   const writeHeroConfig = () => writeFile(
-    join(ROOT, 'src/content/site-config.json'),
+    join(ROOT, 'src/generated/site-config.json'),
     JSON.stringify({ home: { hero: { photos: heroConfig } } })
   )
   await writeHeroConfig()
@@ -977,6 +980,10 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
   const defaultCache = join(dirname(cacheDb), 'photos-cache.json')
   const legacyCache = join(OUT, '.cache.json')
   const cacheEnv = { PHOTOS_SOURCE: cacheSource, PHOTOS_CACHE_PATH: '', DB_PATH: cacheDb }
+  assert.equal(await readFile(defaultsPath, 'utf8'), defaultBytes, 'all fidelity runs leave defaults byte-equal')
+  const fallbackBytes = JSON.stringify({ home: { hero: { photos: ['probe/seed.png'] } } }, null, 2) + '\n'
+  await writeFile(defaultsPath, fallbackBytes)
+  await writeFile(join(ROOT, 'src/generated/site-config.json'), JSON.stringify({ home: { hero: { photos: [] } } }))
   await mkdir(join(cacheSource, 'Probe'), { recursive: true })
   await mkdir(dirname(cacheDb), { recursive: true })
   await cp(join(ROOT, 'config/site.db'), cacheDb)
@@ -993,6 +1000,18 @@ test('isolated content generator', { timeout: 180000 }, async (t) => {
     const cache = await json(defaultCache)
     assert.equal(cache.version, CACHE_VERSION)
     assert.ok(cache.files['probe/seed.png'])
+    assert.deepEqual((await json(join(ROOT, 'src/content/categories.json'))).heroPriority, [], 'generated empty selection takes precedence over defaults')
+  })
+
+  await t.test('hero config falls back to src/content only when src/generated is absent', async () => {
+    await rm(join(ROOT, 'src/generated/site-config.json'))
+    run('11b-default-config-fallback', cacheEnv)
+    const heroes = (await json(join(ROOT, 'src/content/categories.json'))).heroPriority
+    assert.equal(heroes.length, 1, 'fallback selects the configured hero')
+    assert.equal(heroes[0].category, 'probe')
+    assert.match(heroes[0].full, /\/probe\/seed\.png$/)
+    assert.equal(await readFile(defaultsPath, 'utf8'), fallbackBytes, 'fallback never rewrites defaults')
+    assert.ok(!existsSync(join(ROOT, 'src/generated/site-config.json')), 'generator reads fallback without inventing a generated config')
   })
 
   await t.test('legacy public cache moves beside DB_PATH with its content and warm assets preserved', async () => {

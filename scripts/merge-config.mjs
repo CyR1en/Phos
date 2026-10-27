@@ -1,14 +1,16 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deepMerge } from '../lib/merge.mjs'
 import { publicConfigJson } from '../lib/config-secrets.mjs'
+import { atomicWriteFileSync } from '../lib/atomic-write.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
 const SOURCE_JSON = process.argv[2] || join(ROOT, 'src', 'content', 'site-config.json')
-const DEST_JSON = process.argv[3] || join(ROOT, 'src', 'content', 'site-config.json')
+const DEST_JSON = process.argv[3] || join(ROOT, 'src', 'generated', 'site-config.json')
+const PERSISTED_CONFIG_PATH = process.env.CONFIG_PATH || join(ROOT, 'config', 'site-config.json')
 
 function readJSON(p) {
   try {
@@ -31,22 +33,19 @@ async function main() {
 
   let live = await readFromSqlite()
   if (!live) {
-    const persistedJson = process.env.CONFIG_PATH && existsSync(process.env.CONFIG_PATH)
-      ? readJSON(process.env.CONFIG_PATH)
+    const persistedJson = existsSync(PERSISTED_CONFIG_PATH)
+      ? readJSON(PERSISTED_CONFIG_PATH)
       : null
     live = persistedJson || {}
   }
 
   const merged = deepMerge(defaults, live, { skipUnknownKeys: true })
-  const dir = dirname(DEST_JSON)
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  writeFileSync(DEST_JSON, JSON.stringify(merged, null, 2), 'utf-8')
+  atomicWriteFileSync(DEST_JSON, JSON.stringify(merged, null, 2))
   console.log(`Wrote merged config to ${DEST_JSON}`)
 
   // Only the build-time/persisted config keeps credentials; public/ is served as-is.
   const publicDir = join(ROOT, 'public')
-  if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true })
-  writeFileSync(join(publicDir, 'site-config.json'), publicConfigJson(merged), 'utf-8')
+  atomicWriteFileSync(join(publicDir, 'site-config.json'), publicConfigJson(merged))
   console.log(`Wrote merged config to ${join(publicDir, 'site-config.json')}`)
 }
 

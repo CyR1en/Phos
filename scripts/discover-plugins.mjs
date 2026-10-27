@@ -9,8 +9,29 @@ const PLUGINS_DIR = resolve(__dirname, '..', 'plugins')
 const OUT_DIR = resolve(__dirname, '..', 'src', 'generated')
 const OUT_FILE = join(OUT_DIR, 'plugins.mjs')
 
-function safeIdent(name) {
-  return name.replace(/[^a-z0-9]/gi, '_')
+// Keep this heuristic in sync with src/components/admin/secret-keys.ts.
+function isSecretKey(path) {
+  const words = path
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+  return words.some((word, index) =>
+    /^(?:pass|password|passwd|secret|token|credential|credentials|auth|bearer)$/.test(word) ||
+    (word === 'key' && /^(?:api|private|secret|access)$/.test(words[index - 1] ?? '')),
+  )
+}
+
+function warnSecretConfigKeys(name, config, parent = '') {
+  if (!config || typeof config !== 'object') return
+  for (const [key, value] of Object.entries(config)) {
+    const path = parent ? `${parent}.${key}` : key
+    if (isSecretKey(path)) {
+      console.warn(`[plugins] ${name}: config key "${path}" looks secret; it is passed as build-time props, so never forward it to an island, define:vars or rendered markup`)
+    }
+    warnSecretConfigKeys(name, value, path)
+  }
 }
 
 function discover() {
@@ -70,6 +91,7 @@ function discover() {
         configSource = 'json+sqlite'
       }
     }
+    warnSecretConfigKeys(name, config)
     plugins.push({
       name,
       slot: manifest.slot || null,
@@ -88,10 +110,10 @@ if (plugins.length === 0) {
   writeFileSync(OUT_FILE, `export const plugins = []\nexport const components = {}\n`)
 } else {
   const importLines = plugins
-    .map((p) => `import ${safeIdent(p.name)} from '${p.entryRel}'`)
+    .map((p, index) => `import plugin${index} from ${JSON.stringify(p.entryRel)}`)
     .join('\n')
   const componentMap = plugins
-    .map((p) => `  '${p.name}': ${safeIdent(p.name)}`)
+    .map((p, index) => `  ${JSON.stringify(p.name)}: plugin${index}`)
     .join(',\n')
   const exportData = JSON.stringify(
     plugins.map((p) => ({ name: p.name, slot: p.slot, config: p.config })),

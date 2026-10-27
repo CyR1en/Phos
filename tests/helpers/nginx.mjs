@@ -22,10 +22,22 @@ export function nginxBlocks(text, offset = 0, depth = 0) {
       else if (token === '}') balance--
     }
     const body = text.slice(i + 1, end - 1)
-    result.push({ header, body, depth, index: offset + start }, ...nginxBlocks(body, offset + i + 1, depth + 1))
+    result.push({ header, body, depth, index: offset + start, end: offset + end }, ...nginxBlocks(body, offset + i + 1, depth + 1))
     i = end - 1; start = end
   }
   return result
+}
+
+export function nginxDirectives(text) {
+  for (const block of nginxBlocks(text).filter(block => block.depth === 0).reverse()) {
+    text = text.slice(0, block.index) + text.slice(block.end)
+  }
+  return text
+}
+
+export function nginxHeaderMap(text) {
+  return new Map([...nginxDirectives(text).matchAll(/\badd_header\s+([\w-]+)\s+((?:"[^"]*"|'[^']*'|[^;"'])+)\s*;/g)]
+    .map(([, name, value]) => [name.toLowerCase(), value.trim().replace(/\s+/g, ' ')]))
 }
 
 // Accept explicit snippet copies, matching docker/*.conf globs, or the whole directory.

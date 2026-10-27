@@ -636,7 +636,10 @@ async function scanPhotos(sourceDir, previousGalleries) {
 
   let config = {}
   try {
-    const configPath = join(ROOT, 'src', 'content', 'site-config.json')
+    const generatedConfigPath = join(ROOT, 'src', 'generated', 'site-config.json')
+    const configPath = existsSync(generatedConfigPath)
+      ? generatedConfigPath
+      : join(ROOT, 'src', 'content', 'site-config.json')
     if (existsSync(configPath)) {
       config = JSON.parse(await readFile(configPath, 'utf-8'))
     }
